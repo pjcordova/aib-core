@@ -1,0 +1,145 @@
+{
+  "formularioGusano": {
+    "inicio": {
+      "id": "inicio",
+      "tipo": "opciones",
+      "pregunta": "¿Qué tipo de solución digital necesitas?",
+      "opciones": ["Página Web", "Aplicación Móvil", "Backend", "Otro"],
+      "siguiente": "objetivo"
+    },
+    "objetivo": {
+      "id": "objetivo",
+      "tipo": "opciones",
+      "pregunta": "¿Cuál es el objetivo principal de tu solución?",
+      "opciones": ["Ventas", "Gestión", "Educación", "Informativo", "Entretenimiento"],
+      "siguiente": {
+        "Ventas": "funcionesVentas",
+        "Gestión": "funcionesGestion",
+        "Educación": "funcionesEducacion",
+        "Informativo": "funcionesInformativo",
+        "Entretenimiento": "funcionesEntretenimiento"
+      }
+    },
+    "funcionesVentas": {
+      "id": "funcionesVentas",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las funciones clave para ventas",
+      "opciones": ["Catálogo", "Carrito de compras", "Pasarela de pagos", "Cupones", "Panel administrativo", "Inventario"],
+      "minSeleccion": 1,
+      "siguiente": "experiencia"
+    },
+    "funcionesGestion": {
+      "id": "funcionesGestion",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las funciones clave para gestión",
+      "opciones": ["Panel de control", "Gestión de usuarios", "Reportes", "Notificaciones", "Roles y permisos"],
+      "minSeleccion": 1,
+      "siguiente": "experiencia"
+    },
+    "funcionesEducacion": {
+      "id": "funcionesEducacion",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las funciones clave para educación",
+      "opciones": ["Cursos", "Evaluaciones", "Certificados", "Panel docente", "Foro"],
+      "minSeleccion": 1,
+      "siguiente": "experiencia"
+    },
+    "funcionesInformativo": {
+      "id": "funcionesInformativo",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las funciones para contenido informativo",
+      "opciones": ["Blog", "Noticias", "Suscripción", "Comentarios", "Buscador"],
+      "minSeleccion": 1,
+      "siguiente": "experiencia"
+    },
+    "funcionesEntretenimiento": {
+      "id": "funcionesEntretenimiento",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las funciones para entretenimiento",
+      "opciones": ["Streaming", "Chat en vivo", "Gamificación", "Ranking", "Social"],
+      "minSeleccion": 1,
+      "siguiente": "experiencia"
+    },
+    "experiencia": {
+      "id": "experiencia",
+      "tipo": "multiseleccion",
+      "pregunta": "Estilo visual y experiencia deseada",
+      "opciones": ["Minimalista", "Colorido", "Oscuro", "Accesible", "Moderno"],
+      "minSeleccion": 1,
+      "siguiente": "tecnologia"
+    },
+    "tecnologia": {
+      "id": "tecnologia",
+      "tipo": "opciones",
+      "pregunta": "Preferencias técnicas (puedes dejarlo sugerido)",
+      "opciones": ["Sugerir automáticamente", "React/Next.js", "React Native", "Node/Express", "NestJS", "Django", "Otro"],
+      "siguiente": "presupuesto"
+    },
+    "presupuesto": {
+      "id": "presupuesto",
+      "tipo": "rango",
+      "pregunta": "¿Cuál es tu presupuesto estimado?",
+      "valores": ["< 1000", "1000 - 3000", "3000 - 5000", "> 5000"],
+      "siguiente": "tiempo"
+    },
+    "tiempo": {
+      "id": "tiempo",
+      "tipo": "rango",
+      "pregunta": "¿En cuánto tiempo necesitas el proyecto?",
+      "valores": ["1 semana", "2-4 semanas", "1-2 meses", "Más de 2 meses"],
+      "siguiente": "sostenibilidad"
+    },
+    "sostenibilidad": {
+      "id": "sostenibilidad",
+      "tipo": "opciones",
+      "pregunta": "¿Deseas incluir métricas de sostenibilidad?",
+      "opciones": ["Sí", "No"],
+      "siguiente": {
+        "Sí": "metricasSostenibles",
+        "No": "previsualizacion"
+      }
+    },
+    "metricasSostenibles": {
+      "id": "metricasSostenibles",
+      "tipo": "multiseleccion",
+      "pregunta": "Selecciona las métricas sostenibles que deseas incluir",
+      "opciones": ["Materiales reciclados", "Energía renovable", "Huella de carbono", "Residuos evitados", "Accesibilidad"],
+      "minSeleccion": 1,
+      "siguiente": "previsualizacion"
+    },
+    "previsualizacion": {
+      "id": "previsualizacion",
+      "tipo": "accion",
+      "accion": "GenerarPrevisualizacion",
+      "siguiente": "validacion"
+    },
+    "validacion": {
+      "id": "validacion",
+      "tipo": "opciones",
+      "pregunta": "¿Estás conforme con la previsualización?",
+      "opciones": ["Aceptar", "Rechazar"],
+      "siguiente": {
+        "Aceptar": "enviarADashboard",
+        "Rechazar": "feedback"
+      }
+    },
+    "feedback": {
+      "id": "feedback",
+      "tipo": "texto",
+      "pregunta": "Cuéntanos qué no te convence para ajustarlo",
+      "placeholder": "Ej.: cambiar colores, agregar pasarela de pagos, simplificar flujo...",
+      "siguiente": "reiniciarParcial"
+    },
+    "reiniciarParcial": {
+      "id": "reiniciarParcial",
+      "tipo": "accion",
+      "accion": "ReabrirTramoRelevante",
+      "siguiente": "previsualizacion"
+    },
+    "enviarADashboard": {
+      "id": "enviarADashboard",
+      "tipo": "accion",
+      "accion": "EmpujarPaqueteAlDashboard"
+    }
+  }
+}

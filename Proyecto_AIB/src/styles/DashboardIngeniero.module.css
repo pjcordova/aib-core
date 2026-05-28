@@ -1,0 +1,91 @@
+.dashboard {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.kpis {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: bold;
+    color: #37474f;
+}
+.actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.actions select,
+.actions button {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.actions button {
+    background: #26a69a;
+    color: #fff;
+    border: none;
+}
+
+.actions button:hover {
+    background: #2bbbad;
+}
+.charts {
+    margin-top: 24px;
+}
+
+.charts h3 {
+    margin: 16px 0 8px;
+    color: #37474f;
+}
+.actions button {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    background: #4caf50;
+    color: #fff;
+    cursor: pointer;
+}
+
+.actions button:hover {
+    background: #43a047;
+}
+.actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+}
+
+.actions button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    background: #1976d2;
+    color: #fff;
+    cursor: pointer;
+}
+
+.actions button:hover {
+    background: #1565c0;
+}
