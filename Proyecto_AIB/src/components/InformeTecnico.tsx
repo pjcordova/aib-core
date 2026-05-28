@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from '../styles/InformeTecnico.module.css';
 
@@ -19,14 +19,9 @@ const InformeTecnico: React.FC = () => {
   const navigate = useNavigate();
   const datos = location.state as DatosFormulario;
 
-  // Guardar informe en localStorage
-  useEffect(() => {
-    if (datos) {
-      const nuevosInformes = JSON.parse(localStorage.getItem('informes') || '[]');
-      nuevosInformes.push({ ...datos, fecha: new Date().toLocaleString() });
-      localStorage.setItem('informes', JSON.stringify(nuevosInformes));
-    }
-  }, [datos]);
+  // Informe data is passed via navigation state (location.state).
+  // Persistence to Supabase is handled by dashboard.ts when the user
+  // submits through the FormularioGusano flow.
 
   if (!datos) {
     return (

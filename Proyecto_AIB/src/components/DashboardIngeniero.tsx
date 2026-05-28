@@ -54,7 +54,11 @@ export const DashboardIngeniero: React.FC = () => {
   const radarRef = useRef<any>(null);
 
   useEffect(() => {
-    setPaquetes(getPaquetes());
+    const loadPaquetes = async () => {
+      const data = await getPaquetes();
+      setPaquetes(data);
+    };
+    loadPaquetes();
   }, []);
 
   const ordenar = (lista: PaqueteProyecto[]): PaqueteProyecto[] => {
