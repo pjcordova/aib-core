@@ -1,5 +1,13 @@
 import jsPDF from "jspdf";
+import type { RefObject } from "react";
 import type { PaqueteProyecto } from "../Types/form";
+
+/**
+ * Lo unico que este modulo necesita de un grafico es poder exportarlo a imagen.
+ * Tiparlo por esa capacidad evita arrastrar los genericos de Chart.js hasta aqui.
+ */
+type ExportableChart = { toBase64Image: () => string };
+type ChartRef = RefObject<ExportableChart | null>;
 
 /**
  * Genera un informe técnico en PDF con datos del proyecto y gráficos Chart.js incrustados.
@@ -11,8 +19,8 @@ import type { PaqueteProyecto } from "../Types/form";
 export function generarInformeConGraficos(
   paquete: PaqueteProyecto,
   kpis: { viabilidad: number; facilidad: number; impacto: number },
-  barChartRef: any,
-  radarChartRef: any
+  barChartRef: ChartRef,
+  radarChartRef: ChartRef
 ) {
   const doc = new jsPDF();
 

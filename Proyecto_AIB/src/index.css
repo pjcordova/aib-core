@@ -1,68 +1,235 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import 'tailwindcss';
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* ==========================================================================
+   AIB+ — Sistema de diseño
+   --------------------------------------------------------------------------
+   Un único origen de verdad para color, tipografía y elevación. Los tokens se
+   declaran en @theme, así que Tailwind genera las utilidades (bg-surface-raised,
+   text-accent, border-line…) y a la vez quedan disponibles como variables CSS
+   para los pocos sitios que necesitan CSS plano.
+   ========================================================================== */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@theme {
+  /* Superficies, de más profunda a más elevada */
+  --color-surface-deep: #080d1a;
+  --color-surface-base: #0f172a;
+  --color-surface-raised: #16203a;
+  --color-surface-overlay: #1e293b;
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  /* Bordes */
+  --color-line: #253251;
+  --color-line-strong: #33436d;
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: #f3f4f6;
-  /* mismo fondo que el formulario */
-}
+  /* Texto */
+  --color-ink: #f1f5f9;
+  --color-ink-muted: #94a3b8;
+  --color-ink-subtle: #64748b;
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  /* Acentos de marca */
+  --color-accent: #38bdf8;
+  --color-accent-strong: #0ea5e9;
+  --color-accent-alt: #818cf8;
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  /* Semánticos */
+  --color-positive: #4ade80;
+  --color-negative: #f87171;
+  --color-caution: #fbbf24;
+
+  /* Tipografía */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Elevación */
+  --shadow-card: 0 4px 24px -4px rgb(0 0 0 / 0.5);
+  --shadow-lifted: 0 20px 50px -12px rgb(0 0 0 / 0.65);
+  --shadow-glow: 0 0 0 1px rgb(56 189 248 / 0.25), 0 8px 32px -8px rgb(56 189 248 / 0.35);
+
+  /* Movimiento */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    border-color: var(--color-line);
   }
-  a:hover {
-    color: #747bff;
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
   }
-  button {
-    background-color: #f9f9f9;
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgb(56 189 248 / 0.10), transparent),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgb(129 140 248 / 0.07), transparent),
+      var(--color-surface-base);
+    background-attachment: fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* El foco visible es accesibilidad, no decoración: nunca lo quitamos, solo
+     lo hacemos coherente con la marca. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: rgb(56 189 248 / 0.3);
+    color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-deep);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 10px;
+    border: 2px solid var(--color-surface-deep);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-subtle);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Componentes recurrentes
+   -------------------------------------------------------------------------- */
+
+@layer components {
+  .card {
+    background: color-mix(in oklab, var(--color-surface-raised) 85%, transparent);
+    border: 1px solid var(--color-line);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(12px);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    padding: 0.625rem 1.125rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.18s var(--ease-out-soft);
+    white-space: nowrap;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-alt));
+    color: #0b1120;
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glow);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--color-line-strong);
+    color: var(--color-ink-muted);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-surface-overlay);
+    color: var(--color-ink);
+    border-color: var(--color-ink-subtle);
+  }
+
+  .field {
+    width: 100%;
+    padding: 0.75rem 0.9375rem;
+    border-radius: 0.625rem;
+    background: color-mix(in oklab, var(--color-surface-deep) 60%, transparent);
+    border: 1px solid var(--color-line);
+    color: var(--color-ink);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .field::placeholder {
+    color: var(--color-ink-subtle);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgb(56 189 248 / 0.15);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Utilidades de animación
+   -------------------------------------------------------------------------- */
+
+@layer utilities {
+  @keyframes aib-fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes aib-shimmer {
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-fade-up {
+    animation: aib-fade-up 0.45s var(--ease-out-soft) both;
+  }
+
+  /* Skeleton con barrido de luz — comunica "cargando" mejor que un pulso. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface-overlay);
+    border-radius: 0.5rem;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    animation: aib-shimmer 1.6s infinite;
+  }
+
+  /* Respetamos a quien ha pedido menos movimiento en su sistema. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

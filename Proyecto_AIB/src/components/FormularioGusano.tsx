@@ -4,7 +4,9 @@ import type { PasoBase, Respuestas, PaqueteProyecto } from "../Types/form";
 import { Previsualizacion } from "./Previsualizacion";
 import { pushToDashboard } from "../lib/dashboard";
 
-const mapa: Record<string, PasoBase> = gusano.formularioGusano as any;
+// El JSON se carga sin tipo; lo estrechamos una sola vez, aqui, en vez de
+// arrastrar `any` por todo el componente.
+const mapa = gusano.formularioGusano as unknown as Record<string, PasoBase>;
 
 export const FormularioGusano: React.FC = () => {
   const [pasoActual, setPasoActual] = useState<string>("inicio");
@@ -220,7 +222,7 @@ export const FormularioGusano: React.FC = () => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .gusano-container {
           max-width: 860px;
           margin: 0 auto;

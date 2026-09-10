@@ -1,266 +1,318 @@
-import React, { useState, useEffect } from 'react';
-import type { ProductOwnerResponse, QAHistory, AIBQuestion } from '../Types/productOwner';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { QAHistory, AIBQuestion } from '../Types/productOwner';
+import { generarPreguntas, generarPrototipo, ApiError, type TokenUsage } from '../lib/api';
+import { PrototypePreview } from './PrototypePreview';
+import { ErrorState, ProgressTrail, QuestionSkeleton } from './ui/Primitives';
 
 interface Props {
   servicioInicial: string;
-  onComplete: (historial: QAHistory[]) => void;
+  onComplete?: (historial: QAHistory[]) => void;
 }
 
-export const AIBProductOwner: React.FC<Props> = ({ servicioInicial, onComplete }) => {
+/** Fases del flujo. Un estado explícito evita las banderas booleanas cruzadas. */
+type Fase = 'preguntando' | 'construyendo' | 'listo' | 'error';
+
+/** Techo de rondas de discovery. Cortafuegos de gasto, no una regla de producto. */
+const MAX_RONDAS = 15;
+
+export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
+  const [fase, setFase] = useState<Fase>('preguntando');
   const [historial, setHistorial] = useState<QAHistory[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [poResponse, setPoResponse] = useState<ProductOwnerResponse | null>(null);
-  const [currentQuestions, setCurrentQuestions] = useState<AIBQuestion[]>([]);
-  const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
+  const [preguntas, setPreguntas] = useState<AIBQuestion[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [respuestasTexto, setRespuestasTexto] = useState<Record<string, string>>({});
+  const [codigo, setCodigo] = useState('');
+  const [consumo, setConsumo] = useState<TokenUsage | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Guarda la última acción fallida para que "Reintentar" repita exactamente esa.
+  const reintentar = useRef<(() => void) | null>(null);
+
+  // --- Salvaguardas contra peticiones en bucle -----------------------------
+  // `onComplete` se recrea en cada render del padre. Si entra como dependencia
+  // de un useCallback que a su vez alimenta un useEffect, cada render del padre
+  // vuelve a disparar el efecto y se abre una petición nueva: un bucle que gasta
+  // dinero real. Guardándolo en una ref, el callback deja de cambiar de
+  // identidad y el efecto se ejecuta una sola vez.
+  const onCompleteRef = useRef(onComplete);
   useEffect(() => {
-    // Initial request to get the first set of questions
-    fetchQuestions(servicioInicial, []);
-  }, [servicioInicial]);
+    onCompleteRef.current = onComplete;
+  });
 
-  const fetchQuestions = async (servicio: string, currentHistory: QAHistory[]) => {
-    setLoading(true);
+  // Cinturón y tirantes: aunque algo vuelva a disparar el efecto, ni se solapan
+  // peticiones ni se puede gastar sin techo.
+  const enVuelo = useRef(false);
+  const rondas = useRef(0);
+
+  const construirPrototipo = useCallback(async (servicio: string, hist: QAHistory[]) => {
+    setFase('construyendo');
+    setError(null);
     try {
-      const res = await fetch('http://localhost:3001/api/generar-preguntas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ servicio, historial: currentHistory })
-      });
-      
-      if (!res.ok) throw new Error('Network error from backend');
-      
-      const data: ProductOwnerResponse = await res.json();
-      setPoResponse(data);
-      
-      if (data.is_complete) {
-        // Transition to prototype generation phase
-        setTimeout(() => {
-          onComplete(currentHistory);
-        }, 2000); // Brief delay for UX so they see the completion message
-      } else if (data.questions) {
-        setCurrentQuestions(data.questions);
+      const { code, usage } = await generarPrototipo(servicio, hist);
+      setCodigo(code);
+      setConsumo(usage ?? null);
+      setFase('listo');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Error inesperado generando el prototipo.');
+      setFase('error');
+      reintentar.current = () => void construirPrototipo(servicio, hist);
+    }
+  }, []);
+
+  const pedirPreguntas = useCallback(
+    async (servicio: string, hist: QAHistory[]) => {
+      // Nunca dos rondas a la vez.
+      if (enVuelo.current) return;
+
+      if (rondas.current >= MAX_RONDAS) {
+        setError(
+          `El discovery superó las ${MAX_RONDAS} rondas sin cerrarse. Se ha detenido para no seguir consumiendo API.`
+        );
+        setFase('error');
+        setCargando(false);
+        return;
       }
-    } catch (error) {
-      console.error('[AIBProductOwner] Fetch error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleOptionClick = (question: AIBQuestion, answer: string) => {
-    const newHistoryEntry: QAHistory = {
-      question_id: question.id,
-      question: question.text,
-      answer: answer
-    };
-    
-    const nextHistory = [...historial, newHistoryEntry];
-    setHistorial(nextHistory);
-    
-    // We assume sequential answering for multiple questions or sending them all at once.
-    // If there are multiple questions in the current batch, we should ideally wait for all to be answered.
-    // For simplicity, if there's only 1 question, we fetch next immediately.
-    // If there are more, we filter out the answered one.
-    
-    const remainingQuestions = currentQuestions.filter(q => q.id !== question.id);
-    if (remainingQuestions.length === 0) {
-      // All questions in this batch answered, fetch next batch from AI
-      setCurrentQuestions([]);
-      fetchQuestions(servicioInicial, nextHistory);
+      enVuelo.current = true;
+      rondas.current += 1;
+      setCargando(true);
+      setError(null);
+
+      try {
+        const data = await generarPreguntas(servicio, hist);
+
+        if (data.is_complete) {
+          onCompleteRef.current?.(hist);
+          await construirPrototipo(servicio, hist);
+          return;
+        }
+
+        setPreguntas(data.questions ?? []);
+        setFase('preguntando');
+      } catch (e) {
+        setError(
+          e instanceof ApiError ? e.message : 'Error inesperado consultando al Product Owner.'
+        );
+        setFase('error');
+        reintentar.current = () => {
+          rondas.current = Math.max(0, rondas.current - 1); // el reintento no penaliza
+          void pedirPreguntas(servicio, hist);
+        };
+      } finally {
+        enVuelo.current = false;
+        setCargando(false);
+      }
+    },
+    [construirPrototipo]
+  );
+
+  // Depende solo del servicio: `pedirPreguntas` ya no cambia de identidad.
+  useEffect(() => {
+    rondas.current = 0;
+    void pedirPreguntas(servicioInicial, []);
+  }, [servicioInicial, pedirPreguntas]);
+
+  const responder = (pregunta: AIBQuestion, respuesta: string) => {
+    const siguiente: QAHistory[] = [
+      ...historial,
+      { question_id: pregunta.id, question: pregunta.text, answer: respuesta },
+    ];
+    setHistorial(siguiente);
+
+    const restantes = preguntas.filter((q) => q.id !== pregunta.id);
+    if (restantes.length === 0) {
+      setPreguntas([]);
+      void pedirPreguntas(servicioInicial, siguiente);
     } else {
-      setCurrentQuestions(remainingQuestions);
+      setPreguntas(restantes);
     }
   };
 
-  const handleTextSubmit = (question: AIBQuestion) => {
-    const answer = textAnswers[question.id];
-    if (!answer || answer.trim() === '') return;
-    
-    handleOptionClick(question, answer);
+  const enviarTexto = (pregunta: AIBQuestion) => {
+    const respuesta = respuestasTexto[pregunta.id]?.trim();
+    if (!respuesta) return;
+    responder(pregunta, respuesta);
   };
 
-  if (poResponse?.is_complete) {
+  /* ----------------------------------------------------------------- error */
+
+  if (fase === 'error' && error) {
     return (
-      <div className="po-container text-center">
-        <h2 className="pulse-text">Generando prototipo visual...</h2>
-        <p>El Product Owner ha recolectado toda la información necesaria.</p>
-        <style>{`
-          .pulse-text {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            color: #38bdf8;
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-          }
-        `}</style>
+      <div className="py-16">
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            const accion = reintentar.current;
+            if (accion) accion();
+          }}
+        />
       </div>
     );
   }
 
+  /* ------------------------------------------------------------- prototipo */
+
+  if (fase === 'listo' && codigo) {
+    return (
+      <PrototypePreview
+        code={codigo}
+        servicio={servicioInicial}
+        respuestas={historial.length}
+        usage={consumo}
+        onRegenerar={() => void construirPrototipo(servicioInicial, historial)}
+      />
+    );
+  }
+
+  /* ---------------------------------------------------------- construyendo */
+
+  if (fase === 'construyendo') {
+    return <PantallaConstruyendo respuestas={historial.length} />;
+  }
+
+  /* ------------------------------------------------------------- discovery */
+
   return (
-    <div className="po-container">
-      <div className="chat-history">
-        {historial.map((item, idx) => (
-          <div key={idx} className="chat-bubble user-response">
-            <span className="q-text">{item.question}</span>
-            <span className="a-text">{item.answer}</span>
-          </div>
-        ))}
+    <div className="mx-auto max-w-3xl py-8">
+      <div className="mb-8">
+        <ProgressTrail answered={historial.length} label="Discovery en curso" />
       </div>
 
-      {loading ? (
-        <div className="loading-skeleton pulse">
-          <div className="skeleton-line" />
-          <div className="skeleton-line short" />
-          <div className="skeleton-box" />
-        </div>
+      {historial.length > 0 && (
+        <ol className="mb-8 space-y-2">
+          {historial.map((item, idx) => (
+            <li
+              key={item.question_id + idx}
+              className="animate-fade-up rounded-xl border border-line bg-surface-raised/40 px-4 py-3"
+            >
+              <p className="text-xs text-ink-subtle">{item.question}</p>
+              <p className="mt-0.5 font-medium text-ink">{item.answer}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {cargando ? (
+        <QuestionSkeleton />
       ) : (
-        <div className="active-questions">
-          {currentQuestions.map(q => (
-            <div key={q.id} className="question-card">
-              <h3>{q.text}</h3>
-              
-              {q.type === 'multiple_choice' && q.options && (
-                <div className="options-grid">
-                  {q.options.map((opt, i) => (
-                    <button 
-                      key={i} 
-                      className="option-btn"
-                      onClick={() => handleOptionClick(q, opt)}
+        <div className="space-y-4">
+          {preguntas.map((q) => (
+            <article key={q.id} className="card animate-fade-up p-6 sm:p-7">
+              <h2 className="text-lg font-semibold text-balance">{q.text}</h2>
+
+              {q.type === 'multiple_choice' && q.options?.length ? (
+                <div className="mt-5 grid gap-2">
+                  {q.options.map((opcion) => (
+                    <button
+                      key={opcion}
+                      type="button"
+                      onClick={() => responder(q, opcion)}
+                      className="group flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-overlay/50 px-4 py-3 text-left text-[15px] transition-all hover:border-accent/60 hover:bg-surface-overlay"
                     >
-                      {opt}
+                      <span>{opcion}</span>
+                      <span
+                        aria-hidden="true"
+                        className="text-ink-subtle opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        →
+                      </span>
                     </button>
                   ))}
                 </div>
-              )}
-
-              {q.type === 'text' && (
-                <div className="text-input-group">
-                  <input 
-                    type="text" 
-                    value={textAnswers[q.id] || ''}
-                    onChange={(e) => setTextAnswers({...textAnswers, [q.id]: e.target.value})}
-                    onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit(q)}
-                    placeholder="Escribe tu respuesta aquí..."
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    enviarTexto(q);
+                  }}
+                  className="mt-5 flex flex-col gap-2 sm:flex-row"
+                >
+                  <input
+                    type="text"
+                    value={respuestasTexto[q.id] ?? ''}
+                    onChange={(e) =>
+                      setRespuestasTexto({ ...respuestasTexto, [q.id]: e.target.value })
+                    }
+                    placeholder="Escribe tu respuesta…"
+                    className="field flex-1"
+                    aria-label={q.text}
                   />
-                  <button onClick={() => handleTextSubmit(q)}>Enviar</button>
-                </div>
+                  <button
+                    type="submit"
+                    disabled={!respuestasTexto[q.id]?.trim()}
+                    className="btn btn-primary"
+                  >
+                    Enviar
+                  </button>
+                </form>
               )}
-            </div>
+            </article>
           ))}
         </div>
       )}
-
-      <style>{`
-        .po-container {
-          max-width: 700px;
-          margin: 0 auto;
-          font-family: 'Inter', system-ui, sans-serif;
-        }
-        .chat-history {
-          margin-bottom: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .chat-bubble {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          padding: 12px 16px;
-          border-radius: 12px;
-        }
-        .q-text {
-          display: block;
-          font-size: 13px;
-          color: #64748b;
-          margin-bottom: 4px;
-        }
-        .a-text {
-          display: block;
-          font-weight: 500;
-          color: #0f172a;
-        }
-        .question-card {
-          background: #ffffff;
-          border: 2px solid #38bdf8;
-          border-radius: 16px;
-          padding: 24px;
-          box-shadow: 0 4px 20px rgba(56, 189, 248, 0.15);
-          margin-bottom: 16px;
-        }
-        .question-card h3 {
-          margin-top: 0;
-          color: #0f172a;
-          font-size: 18px;
-        }
-        .options-grid {
-          display: grid;
-          gap: 10px;
-          margin-top: 16px;
-        }
-        .option-btn {
-          padding: 12px 16px;
-          background: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          text-align: left;
-          cursor: pointer;
-          font-size: 15px;
-          transition: all 0.2s;
-        }
-        .option-btn:hover {
-          background: #e0f2fe;
-          border-color: #7dd3fc;
-        }
-        .text-input-group {
-          display: flex;
-          gap: 8px;
-          margin-top: 16px;
-        }
-        .text-input-group input {
-          flex: 1;
-          padding: 12px;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-        }
-        .text-input-group button {
-          padding: 0 20px;
-          background: #0ea5e9;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-        }
-        .pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        .loading-skeleton {
-          padding: 24px;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-        }
-        .skeleton-line {
-          height: 20px;
-          background: #e2e8f0;
-          border-radius: 4px;
-          margin-bottom: 12px;
-        }
-        .skeleton-line.short {
-          width: 60%;
-        }
-        .skeleton-box {
-          height: 100px;
-          background: #e2e8f0;
-          border-radius: 8px;
-          margin-top: 20px;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .5; }
-        }
-        .text-center { text-align: center; }
-      `}</style>
     </div>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+
+const PASOS = [
+  'Cerrando el discovery',
+  'Definiendo la arquitectura de la interfaz',
+  'Escribiendo los componentes React',
+  'Compilando la vista previa',
+];
+
+/**
+ * Pantalla de construcción. Generar el dashboard tarda cerca de un minuto, así
+ * que en vez de un spinner mudo vamos contando qué está pasando: una espera
+ * larga con explicación se percibe bastante más corta que una sin ella.
+ */
+function PantallaConstruyendo({ respuestas }: { respuestas: number }) {
+  const [paso, setPaso] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPaso((p) => Math.min(p + 1, PASOS.length - 1));
+    }, 9000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="animate-fade-up mx-auto max-w-lg py-20 text-center">
+      <div className="relative mx-auto mb-8 h-16 w-16">
+        <div className="absolute inset-0 animate-ping rounded-full bg-accent/20" />
+        <div className="absolute inset-0 grid place-items-center rounded-full border border-accent/40 bg-surface-raised">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-accent" />
+        </div>
+      </div>
+
+      <h2 className="text-2xl font-semibold">Construyendo tu interfaz</h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        El Product Owner cerró el discovery con {respuestas}{' '}
+        {respuestas === 1 ? 'respuesta' : 'respuestas'}. Ahora AIB+ programa y compila el
+        código React en tiempo real.
+      </p>
+
+      <ul className="mt-9 space-y-3 text-left">
+        {PASOS.map((texto, i) => (
+          <li key={texto} className="flex items-center gap-3 text-sm">
+            <span
+              className={
+                'grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] transition-colors ' +
+                (i < paso
+                  ? 'border-positive bg-positive/15 text-positive'
+                  : i === paso
+                    ? 'border-accent bg-accent/15 text-accent'
+                    : 'border-line text-ink-subtle')
+              }
+            >
+              {i < paso ? '✓' : i + 1}
+            </span>
+            <span className={i <= paso ? 'text-ink' : 'text-ink-subtle'}>{texto}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

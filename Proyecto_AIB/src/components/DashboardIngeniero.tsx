@@ -45,13 +45,16 @@ const calcularKPIs = (paquete: PaqueteProyecto): KPIProyecto => {
     impacto: sostenibilidad * 20
   };
 };
+/** Criterios por los que se puede ordenar la tabla de paquetes. */
+type Criterio = "viabilidad" | "impacto" | "facilidad";
+
 export const DashboardIngeniero: React.FC = () => {
   const [paquetes, setPaquetes] = useState<PaqueteProyecto[]>([]);
-  const [criterio, setCriterio] = useState<"viabilidad" | "impacto" | "facilidad">("viabilidad");
+  const [criterio, setCriterio] = useState<Criterio>("viabilidad");
 
   // Referencias a los gráficos
-  const barRef = useRef<any>(null);
-  const radarRef = useRef<any>(null);
+  const barRef = useRef<ChartJS<'bar'> | null>(null);
+  const radarRef = useRef<ChartJS<'radar'> | null>(null);
 
   useEffect(() => {
     const loadPaquetes = async () => {
@@ -109,7 +112,7 @@ export const DashboardIngeniero: React.FC = () => {
 
       <div className={styles.actions}>
         <label>Ordenar por: </label>
-        <select value={criterio} onChange={(e) => setCriterio(e.target.value as any)}>
+        <select value={criterio} onChange={(e) => setCriterio(e.target.value as Criterio)}>
           <option value="viabilidad">Viabilidad</option>
           <option value="impacto">Impacto sostenible</option>
           <option value="facilidad">Facilidad</option>

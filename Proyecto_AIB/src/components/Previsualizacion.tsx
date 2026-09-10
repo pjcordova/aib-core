@@ -71,7 +71,7 @@ export const Previsualizacion: React.FC<{ paquete: PaqueteProyecto | null }> = (
         {artefactos.diagramaUrl && <div>Diagrama: {artefactos.diagramaUrl}</div>}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .preview {
           border: 1px solid #e0e0e0;
           border-radius: 12px;
