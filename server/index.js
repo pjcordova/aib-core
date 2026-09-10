@@ -1,90 +1,93 @@
-require('dotenv').config();
+// ---------------------------------------------------------------------------
+// AIB+ — Servidor orquestador
+// ---------------------------------------------------------------------------
+// Solo ensambla: configuración, middlewares, rutas y manejo de errores. La
+// lógica vive en src/.
+// ---------------------------------------------------------------------------
+
 const express = require('express');
 const cors = require('cors');
-const { Anthropic } = require('@anthropic-ai/sdk');
+
+const { config } = require('./src/config');
+const { TruncatedError } = require('./src/claude');
+const discoveryRoutes = require('./src/routes/discovery');
+const prototypeRoutes = require('./src/routes/prototype');
 
 const app = express();
-const port = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Sin cabecera Origin (curl, health checks) se deja pasar.
+      if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Origen no permitido: ${origin}`));
+    },
+  })
+);
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+app.use(express.json({ limit: '1mb' }));
+
+// Traza mínima de cada petición: método, ruta, estado y duración.
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    console.log(`[AIB+] ${req.method} ${req.originalUrl} → ${res.statusCode} (${Date.now() - startedAt}ms)`);
+  });
+  next();
 });
 
-const SYSTEM_PROMPT = `Eres un Product Owner Senior B2B experto en diseño de software y requerimientos.
-Tu objetivo es interrogar al cliente para descubrir los requerimientos reales de su producto.
-Recibirás el servicio solicitado y el historial de la conversación (respuestas previas del cliente).
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', model: config.model, uptime: Math.round(process.uptime()) });
+});
 
-REGLAS ESTRICTAS:
-1. DEBES responder EXCLUSIVAMENTE con un JSON válido. Ningún otro texto antes ni después.
-2. El JSON debe tener exactamente esta estructura:
-{
-  "is_complete": boolean, // true si ya tienes información suficiente para definir el MVP (normalmente tras 3-5 preguntas clave), false si necesitas más detalles.
-  "rationale": string, // Breve justificación (para uso interno) de por qué haces estas preguntas o por qué terminas.
-  "questions": [ // Arreglo de preguntas (si is_complete es false). Máximo 2 preguntas por turno.
-    {
-      "id": string, // Identificador único (ej: "target_audience")
-      "type": "text" | "multiple_choice",
-      "text": string, // La pregunta para el cliente
-      "options": string[] // Solo si type es "multiple_choice", arreglo de 2-4 opciones
-    }
-  ]
-}
+app.use('/api', discoveryRoutes);
+app.use('/api', prototypeRoutes);
 
-No abrumes al cliente. Si la idea está clara, marca is_complete: true y deja questions vacío.`;
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada.' });
+});
 
-app.post('/api/generar-preguntas', async (req, res) => {
-  try {
-    const { servicio, historial } = req.body;
-
-    if (!servicio) {
-      return res.status(400).json({ error: 'Falta el servicio solicitado.' });
-    }
-
-    const userMessage = `Servicio Solicitado: ${servicio}\n\nHistorial de respuestas del cliente:\n${
-      historial && historial.length > 0 
-        ? JSON.stringify(historial, null, 2) 
-        : 'Sin historial previo. Empieza con la primera ronda de preguntas.'
-    }`;
-
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1500,
-      temperature: 0.7,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: userMessage
-        }
-      ]
+// Manejador central. Traduce errores de dominio a respuestas con sentido para
+// el usuario y deja los inesperados como 500 sin filtrar internals en producción.
+app.use((error, _req, res, _next) => {
+  if (error instanceof TruncatedError) {
+    console.error('[AIB+] Generación truncada:', error.message);
+    return res.status(502).json({
+      success: false,
+      error: 'La IA se quedó sin espacio antes de terminar. Reduce el alcance o sube el límite de tokens.',
     });
-
-    // Extract the text block
-    let responseText = '';
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        responseText += block.text;
-      }
-    }
-
-    // Attempt to parse JSON safely
-    try {
-      const parsedJson = JSON.parse(responseText);
-      return res.json(parsedJson);
-    } catch (parseError) {
-      console.error('[AIB+ Server] Error parsing JSON from Claude:', responseText);
-      return res.status(500).json({ error: 'La respuesta de la IA no fue un JSON válido.' });
-    }
-    
-  } catch (error) {
-    console.error('[AIB+ Server] Error calling Anthropic:', error);
-    res.status(500).json({ error: 'Error al contactar con el motor de IA.' });
   }
+
+  if (error?.status === 401) {
+    console.error('[AIB+] API key rechazada por Anthropic.');
+    return res.status(500).json({ success: false, error: 'Credenciales de IA inválidas.' });
+  }
+
+  if (error?.status === 429) {
+    return res.status(429).json({
+      success: false,
+      error: 'Límite de peticiones alcanzado. Espera unos segundos y reintenta.',
+    });
+  }
+
+  console.error('[AIB+] Error no controlado:', error);
+  return res.status(500).json({
+    success: false,
+    error: config.isProduction ? 'Error interno del servidor.' : error.message,
+  });
 });
 
-app.listen(port, () => {
-  console.log(`[AIB+ Server] Motor del Product Owner escuchando en http://localhost:${port}`);
+const server = app.listen(config.port, () => {
+  console.log(`[AIB+] Servidor orquestador en http://localhost:${config.port}`);
+  console.log(`[AIB+] Modelo: ${config.model}`);
+  console.log(`[AIB+] Orígenes permitidos: ${config.allowedOrigins.join(', ')}`);
 });
+
+// Cierre ordenado: deja terminar las peticiones en vuelo (una generación de
+// prototipo puede tardar un minuto) en vez de cortarlas en seco.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    console.log(`\n[AIB+] ${signal} recibido, cerrando...`);
+    server.close(() => process.exit(0));
+  });
+}
