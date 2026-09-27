@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { SandpackProvider, SandpackPreview, SandpackCodeEditor } from '@codesandbox/sandpack-react';
 import type { TokenUsage } from '../lib/api';
 
+type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
+
 interface Props {
   code: string;
   servicio: string;
   respuestas: number;
   usage?: TokenUsage | null;
+  /** Estado de la persistencia en Supabase; solo informativo. */
+  guardado?: EstadoGuardado;
   onRegenerar?: () => void;
+  /** Se muestra el botón de aceptar solo si el proyecto ya está guardado. */
+  onAceptar?: () => void;
+  aceptacion?: 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 }
 
 type Vista = 'preview' | 'codigo';
@@ -19,7 +26,16 @@ type Vista = 'preview' | 'codigo';
  * de ver el código, sin descargarlo y sin volver atrás. El prototipo es el
  * entregable del producto, así que aquí se trata como tal.
  */
-export const PrototypePreview = ({ code, servicio, respuestas, usage, onRegenerar }: Props) => {
+export const PrototypePreview = ({
+  code,
+  servicio,
+  respuestas,
+  usage,
+  guardado = 'inactivo',
+  onRegenerar,
+  onAceptar,
+  aceptacion = 'inactivo',
+}: Props) => {
   const [vista, setVista] = useState<Vista>('preview');
   const [copiado, setCopiado] = useState(false);
 
@@ -56,6 +72,7 @@ export const PrototypePreview = ({ code, servicio, respuestas, usage, onRegenera
             <span className="text-[11px] text-ink-subtle">
               {respuestas} {respuestas === 1 ? 'respuesta' : 'respuestas'} de discovery
             </span>
+            <IndicadorGuardado estado={guardado} />
           </div>
           <h2 className="truncate text-xl font-semibold" title={servicio}>
             {servicio}
@@ -92,10 +109,35 @@ export const PrototypePreview = ({ code, servicio, respuestas, usage, onRegenera
           <button type="button" onClick={descargar} className="btn btn-ghost">
             Descargar
           </button>
-          {onRegenerar && (
-            <button type="button" onClick={onRegenerar} className="btn btn-primary">
+          {onRegenerar && aceptacion !== 'aceptado' && (
+            <button
+              type="button"
+              onClick={onRegenerar}
+              disabled={aceptacion === 'procesando'}
+              className="btn btn-ghost"
+            >
               Regenerar
             </button>
+          )}
+          {onAceptar && aceptacion !== 'aceptado' && (
+            <button
+              type="button"
+              onClick={onAceptar}
+              disabled={aceptacion === 'procesando' || guardado !== 'guardado'}
+              title={
+                guardado !== 'guardado'
+                  ? 'Se habilita cuando el proyecto queda guardado'
+                  : undefined
+              }
+              className="btn btn-primary"
+            >
+              {aceptacion === 'procesando' ? 'Preparando documentación…' : 'Aceptar propuesta'}
+            </button>
+          )}
+          {aceptacion === 'aceptado' && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm font-medium text-positive">
+              ✓ Propuesta aceptada
+            </span>
           )}
         </div>
       </div>
@@ -147,3 +189,32 @@ export const PrototypePreview = ({ code, servicio, respuestas, usage, onRegenera
     </div>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Señal discreta de que el proyecto quedó guardado. Importa porque generar un
+ * prototipo cuesta dinero y tiempo: el usuario necesita saber que puede cerrar
+ * la pestaña sin perderlo.
+ */
+function IndicadorGuardado({ estado }: { estado: EstadoGuardado }) {
+  if (estado === 'inactivo') return null;
+
+  const textos = {
+    guardando: 'Guardando…',
+    guardado: '✓ Guardado',
+    fallo: 'No se pudo guardar',
+  } as const;
+
+  const colores = {
+    guardando: 'text-ink-subtle',
+    guardado: 'text-positive',
+    fallo: 'text-negative',
+  } as const;
+
+  return (
+    <span className={'text-[11px] ' + colores[estado]} role="status">
+      {textos[estado]}
+    </span>
+  );
+}

@@ -1,0 +1,17 @@
+{
+  "name": "aib-core",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AIB+ — motor de proyecto autónomo. Raíz del monorepo; Vercel instala aquí las dependencias de la función serverless.",
+  "scripts": {
+    "dev": "npm run dev --prefix server",
+    "dev:web": "npm run dev --prefix Proyecto_AIB",
+    "build": "npm run build --prefix Proyecto_AIB"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.99.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}

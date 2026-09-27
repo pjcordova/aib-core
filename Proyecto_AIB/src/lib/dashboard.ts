@@ -1,5 +1,6 @@
 import type { PaqueteProyecto } from '../Types/form';
 import { supabase } from './supabase';
+import { esPayloadDiscovery } from './proyectos';
 import * as XLSX from 'xlsx';
 
 // ---------------------------------------------------------------------------
@@ -49,7 +50,12 @@ export async function getPaquetes(): Promise<PaqueteProyecto[]> {
     return [];
   }
 
-  return (data || []).map((row: { payload: PaqueteProyecto }) => row.payload);
+  // La tabla `proyectos` guarda ahora dos formatos de payload: el de este
+  // formulario y el del flujo de discovery. Filtramos el que no nos toca para
+  // no mapear filas ajenas a PaqueteProyecto.
+  return (data || [])
+    .filter((row: { payload: unknown }) => !esPayloadDiscovery(row.payload))
+    .map((row: { payload: unknown }) => row.payload as PaqueteProyecto);
 }
 
 /**

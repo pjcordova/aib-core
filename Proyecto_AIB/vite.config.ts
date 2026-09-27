@@ -5,6 +5,17 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    // Los correos de Supabase (recuperación, magic link, confirmación) llevan
+    // al Site URL del proyecto, que es http://localhost:3000. Servimos ahí para
+    // que esos enlaces caigan en la app en vez de en un puerto vacío.
+    port: 3000,
+    strictPort: true,
+  },
+  preview: {
+    port: 3000,
+    strictPort: true,
+  },
   build: {
     rollupOptions: {
       output: {

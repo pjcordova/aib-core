@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build --prefix Proyecto_AIB",
+  "outputDirectory": "Proyecto_AIB/dist",
+  "installCommand": "npm install && npm install --prefix Proyecto_AIB",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/((?!api|health|assets|favicon).*)", "destination": "/index.html" }
+  ]
+}

@@ -9,13 +9,19 @@
 // ---------------------------------------------------------------------------
 
 import type { ProductOwnerResponse, QAHistory } from '../Types/productOwner';
+import { supabase } from './supabase';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+// En desarrollo el backend vive en otro puerto. En producción (Vercel) la API
+// se sirve desde el mismo origen que la web, así que una base vacía produce
+// rutas relativas del tipo `/api/…` y no hace falta configurar nada.
+const API_URL =
+  import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
 /** Cuánto esperamos antes de dar una llamada por perdida. */
 const TIMEOUT_MS = {
   discovery: 60_000,
   prototype: 180_000, // Generar un dashboard entero puede pasar del minuto.
+  documentation: 120_000,
 } as const;
 
 export class ApiError extends Error {
@@ -51,11 +57,26 @@ async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  // El backend exige sesión: estos endpoints gastan dinero real y no pueden
+  // quedar abiertos. Adjuntamos el token que Supabase ya emitió al iniciar
+  // sesión; el servidor lo valida contra Supabase en cada petición.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    clearTimeout(timer);
+    throw new ApiError('Tu sesión ha caducado. Vuelve a iniciar sesión.', 401, false);
+  }
+
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -104,6 +125,38 @@ export async function generarPreguntas(
     { servicio, historial },
     TIMEOUT_MS.discovery
   );
+}
+
+/** Documento técnico que recibe el ingeniero cuando el cliente acepta. */
+export interface Documentacion {
+  resumen: string;
+  objetivo: string;
+  usuarios: { rol: string; necesidad: string }[];
+  funcionalidades: { nombre: string; descripcion: string; prioridad: 'alta' | 'media' | 'baja' }[];
+  modelo_datos: { entidad: string; campos: string[]; relaciones: string }[];
+  flujos_criticos: { nombre: string; pasos: string[] }[];
+  criterios_aceptacion: string[];
+  stack_sugerido: { frontend: string; backend: string; datos: string; justificacion: string };
+  riesgos: { riesgo: string; mitigacion: string }[];
+  estimacion: { semanas: number; supuestos: string[] };
+}
+
+/** Genera la documentación técnica a partir del discovery ya cerrado. */
+export async function generarDocumentacion(
+  servicio: string,
+  historial: QAHistory[]
+): Promise<{ documentacion: Documentacion; usage?: TokenUsage }> {
+  const data = await post<{ success: boolean; documentacion?: Documentacion; error?: string; usage?: TokenUsage }>(
+    '/api/generar-documentacion',
+    { servicio, historial },
+    TIMEOUT_MS.documentation
+  );
+
+  if (!data.success || !data.documentacion) {
+    throw new ApiError(data.error ?? 'La IA no devolvió documentación.', 502, true);
+  }
+
+  return { documentacion: data.documentacion, usage: data.usage };
 }
 
 /** Pide el componente React del prototipo. Devuelve el código listo para Sandpack. */

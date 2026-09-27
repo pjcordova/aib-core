@@ -5,6 +5,7 @@ const { config } = require('../config');
 const { generateText, stripMarkdownFences } = require('../claude');
 const { prototypePrompt } = require('../prompts');
 const { crearLimitador } = require('../rateLimit');
+const { requireAuth } = require('../auth');
 
 const router = Router();
 
@@ -12,7 +13,9 @@ const router = Router();
 // mucho mas estrecho.
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'generar-prototipo' });
 
-router.post('/generar-prototipo', limitar, async (req, res, next) => {
+// El limitador va antes que la autenticación: así un aluvión de peticiones
+// sin sesión se corta aquí y no llega a golpear a Supabase.
+router.post('/generar-prototipo', limitar, requireAuth, async (req, res, next) => {
   try {
     const { servicio, historial } = req.body ?? {};
 

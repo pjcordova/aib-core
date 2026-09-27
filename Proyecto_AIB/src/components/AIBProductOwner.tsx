@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { QAHistory, AIBQuestion } from '../Types/productOwner';
-import { generarPreguntas, generarPrototipo, ApiError, type TokenUsage } from '../lib/api';
+import {
+  generarPreguntas,
+  generarPrototipo,
+  generarDocumentacion,
+  ApiError,
+  type TokenUsage,
+} from '../lib/api';
+import { guardarProyecto, aceptarProyecto } from '../lib/proyectos';
 import { PrototypePreview } from './PrototypePreview';
 import { ErrorState, ProgressTrail, QuestionSkeleton } from './ui/Primitives';
 
@@ -11,6 +18,12 @@ interface Props {
 
 /** Fases del flujo. Un estado explícito evita las banderas booleanas cruzadas. */
 type Fase = 'preguntando' | 'construyendo' | 'listo' | 'error';
+
+/** Estado del guardado en Supabase, independiente del flujo principal. */
+type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
+
+/** El cliente valida la maqueta y el encargo pasa a ingeniería. */
+type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 
 /** Techo de rondas de discovery. Cortafuegos de gasto, no una regla de producto. */
 const MAX_RONDAS = 15;
@@ -24,6 +37,9 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
   const [codigo, setCodigo] = useState('');
   const [consumo, setConsumo] = useState<TokenUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [guardado, setGuardado] = useState<EstadoGuardado>('inactivo');
+  const [proyectoId, setProyectoId] = useState<string | null>(null);
+  const [aceptacion, setAceptacion] = useState<EstadoAceptacion>('inactivo');
 
   // Guarda la última acción fallida para que "Reintentar" repita exactamente esa.
   const reintentar = useRef<(() => void) | null>(null);
@@ -52,6 +68,18 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
       setCodigo(code);
       setConsumo(usage ?? null);
       setFase('listo');
+
+      // Se guarda después de mostrar el prototipo, nunca antes: si Supabase
+      // falla, el usuario conserva lo que acaba de costar dos minutos generar.
+      setGuardado('guardando');
+      const { id, error: errorGuardado } = await guardarProyecto({
+        servicio,
+        historial: hist,
+        reactCode: code,
+        usage,
+      });
+      setProyectoId(id);
+      setGuardado(errorGuardado ? 'fallo' : 'guardado');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Error inesperado generando el prototipo.');
       setFase('error');
@@ -112,6 +140,24 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
     void pedirPreguntas(servicioInicial, []);
   }, [servicioInicial, pedirPreguntas]);
 
+  /**
+   * Aceptar la propuesta genera la documentación técnica y la adjunta al
+   * proyecto. A partir de aquí el ingeniero la ve en su dashboard.
+   */
+  const aceptar = async () => {
+    if (!proyectoId) return;
+    setAceptacion('procesando');
+    try {
+      const { documentacion } = await generarDocumentacion(servicioInicial, historial);
+      const { ok, error: errorGuardado } = await aceptarProyecto(proyectoId, documentacion);
+      if (!ok) throw new ApiError(errorGuardado ?? 'No se pudo guardar la aceptación.', 500, true);
+      setAceptacion('aceptado');
+    } catch (e) {
+      console.error('[AIB+] Error aceptando la propuesta:', e);
+      setAceptacion('fallo');
+    }
+  };
+
   const responder = (pregunta: AIBQuestion, respuesta: string) => {
     const siguiente: QAHistory[] = [
       ...historial,
@@ -159,6 +205,9 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
         servicio={servicioInicial}
         respuestas={historial.length}
         usage={consumo}
+        guardado={guardado}
+        aceptacion={aceptacion}
+        onAceptar={() => void aceptar()}
         onRegenerar={() => void construirPrototipo(servicioInicial, historial)}
       />
     );

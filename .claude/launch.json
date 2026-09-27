@@ -4,16 +4,22 @@
     {
       "name": "aib-api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "cwd": "server",
       "port": 3001
     },
     {
       "name": "aib-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "cwd": "Proyecto_AIB",
-      "port": 5173
+      "port": 3000
     }
   ]
 }

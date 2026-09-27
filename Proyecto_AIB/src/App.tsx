@@ -1,7 +1,10 @@
 import { useCallback, useState } from 'react';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
+import { PrototypePreview } from './components/PrototypePreview';
+import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { Wordmark, Shell } from './components/ui/Primitives';
+import { cargarProyecto, type ProyectoCompleto } from './lib/proyectos';
 import { useAuth } from './hooks/useAuth';
 import type { QAHistory } from './Types/productOwner';
 
@@ -17,12 +20,24 @@ export default function Home() {
   const { session, initializing, signOut } = useAuth();
   const [service, setService] = useState('');
   const [started, setStarted] = useState(false);
+  const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
+  const [cargandoProyecto, setCargandoProyecto] = useState(false);
+  // Se incrementa al terminar un discovery para que la lista se recargue.
+  const [versionLista, setVersionLista] = useState(0);
 
   // Estable a proposito: si esta funcion cambiara de identidad en cada render,
   // el hijo la veria como una prop nueva. Ese fue justo el origen del bucle de
   // peticiones, asi que aqui se queda fijada.
   const handleComplete = useCallback((history: QAHistory[]) => {
     console.info('[AIB+] Discovery completado con', history.length, 'respuestas');
+    setVersionLista((v) => v + 1);
+  }, []);
+
+  const abrirProyecto = useCallback(async (id: string) => {
+    setCargandoProyecto(true);
+    const proyecto = await cargarProyecto(id);
+    setCargandoProyecto(false);
+    if (proyecto) setAbierto(proyecto);
   }, []);
 
   // Mientras Supabase resuelve la sesión no decidimos nada: si pintáramos el
@@ -56,12 +71,13 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4 py-1">
             <Wordmark subtitle="Motor de Proyecto Autónomo" />
             <div className="flex items-center gap-3">
-              {started && (
+              {(started || abierto) && (
                 <button
                   type="button"
                   onClick={() => {
                     setStarted(false);
                     setService('');
+                    setAbierto(null);
                   }}
                   className="btn btn-ghost"
                 >
@@ -82,7 +98,15 @@ export default function Home() {
 
       <main>
         <Shell>
-          {!started ? (
+          {abierto ? (
+            <PrototypePreview
+              code={abierto.reactCode}
+              servicio={abierto.servicio}
+              respuestas={abierto.respuestas}
+              usage={abierto.usage}
+              guardado="guardado"
+            />
+          ) : !started ? (
             <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
               <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
                 Discovery guiado por IA
@@ -133,6 +157,12 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+
+              {cargandoProyecto ? (
+                <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>
+              ) : (
+                <ProyectosGuardados onAbrir={abrirProyecto} recargar={versionLista} />
+              )}
             </section>
           ) : (
             <AIBProductOwner servicioInicial={service} onComplete={handleComplete} />

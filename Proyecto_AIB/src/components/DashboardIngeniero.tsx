@@ -15,6 +15,7 @@ import {
   Legend
 } from "chart.js";
 import { generarInformeConGraficos } from "../lib/informe";
+import { EncargosIngenieria } from "./EncargosIngenieria";
 
 // Registrar módulos de Chart.js
 ChartJS.register(
@@ -109,6 +110,9 @@ export const DashboardIngeniero: React.FC = () => {
   return (
     <div className={styles.dashboard}>
       <h2>Dashboard del Ingeniero/Empresa</h2>
+
+      {/* Encargos que vienen del discovery con IA, ya validados por el cliente. */}
+      <EncargosIngenieria />
 
       <div className={styles.actions}>
         <label>Ordenar por: </label>
