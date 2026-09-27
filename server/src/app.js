@@ -22,13 +22,33 @@ const app = express();
 // la IP real de X-Forwarded-For.
 app.set('trust proxy', 1);
 
+// CORS. El navegador manda `Origin` también en las peticiones POST al mismo
+// dominio, así que una lista blanca que solo contenga localhost rechaza el
+// propio sitio en producción. Aceptamos siempre el mismo origen —donde la web y
+// la API se sirven juntas, como en Vercel— además de lo que se configure.
 app.use(
-  cors({
-    origin(origin, callback) {
-      // Sin cabecera Origin (curl, health checks) se deja pasar.
-      if (!origin || config.allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`Origen no permitido: ${origin}`));
-    },
+  cors((req, callback) => {
+    const origin = req.headers.origin;
+
+    // Sin cabecera Origin (curl, health checks) se deja pasar.
+    if (!origin) return callback(null, { origin: true });
+
+    let mismoOrigen = false;
+    try {
+      mismoOrigen = new URL(origin).host === req.headers.host;
+    } catch {
+      mismoOrigen = false;
+    }
+
+    const permitido = mismoOrigen || config.allowedOrigins.includes(origin);
+
+    if (!permitido) {
+      console.warn(`[AIB+] Origen rechazado: ${origin}`);
+    }
+
+    // Se responde sin cabeceras CORS en vez de lanzar: un origen no permitido
+    // es una petición rechazada, no un fallo del servidor.
+    return callback(null, { origin: permitido });
   })
 );
 
