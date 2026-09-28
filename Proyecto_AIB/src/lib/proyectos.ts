@@ -11,7 +11,7 @@
 
 import { supabase } from './supabase';
 import type { QAHistory } from '../Types/productOwner';
-import type { TokenUsage, Documentacion } from './api';
+import { generarDocumentacion, type TokenUsage, type Documentacion } from './api';
 import type { FichaWeb, TipoServicio } from './servicios';
 
 /** Plantilla del catálogo con la que se hizo la maqueta. */
@@ -77,6 +77,8 @@ export interface ProyectoCompleto extends ProyectoResumen {
   documento?: string;
   usage?: TokenUsage | null;
   documentacion?: Documentacion | null;
+  /** Cuándo aceptó el cliente; sirve para saber si la documentación sigue en camino. */
+  aceptadoEn?: string;
 }
 
 /** Campos comunes que se leen de cualquier fila del flujo de discovery. */
@@ -104,6 +106,7 @@ function completoDe(id: string, creadoEn: string, p: PayloadDiscovery): Proyecto
     documento: p.documento,
     usage: p.usage ?? null,
     documentacion: p.documentacion ?? null,
+    aceptadoEn: p.aceptado_en,
   };
 }
 
@@ -204,13 +207,13 @@ export async function cargarProyecto(id: string): Promise<ProyectoCompleto | nul
 }
 
 /**
- * Sustituye la maqueta de un proyecto web ya guardado. "Probar otra versión"
- * actualiza la misma fila en vez de crear otra: es el mismo proyecto.
+ * Mezcla `cambios` en el payload de un proyecto propio. El payload es un solo
+ * JSONB, así que hay que leerlo, combinarlo y escribirlo entero.
  */
-export async function actualizarMaqueta(
+async function modificarPayload(
   id: string,
-  cambios: { html?: string; documento?: string },
-  usage?: TokenUsage | null
+  cambios: Partial<PayloadDiscovery>,
+  accion: string
 ): Promise<{ ok: boolean; error: string | null }> {
   const { data, error: errorLectura } = await supabase
     .from('proyectos')
@@ -222,14 +225,26 @@ export async function actualizarMaqueta(
     return { ok: false, error: errorLectura?.message ?? 'No se encontró el proyecto.' };
   }
 
-  const payload: PayloadDiscovery = { ...(data.payload as PayloadDiscovery), ...cambios, usage: usage ?? null };
+  const payload: PayloadDiscovery = { ...(data.payload as PayloadDiscovery), ...cambios };
   const { error } = await supabase.from('proyectos').update({ payload }).eq('id', id);
 
   if (error) {
-    console.error('[AIB+] No se pudo actualizar la maqueta:', error.message);
+    console.error(`[AIB+] No se pudo ${accion}:`, error.message);
     return { ok: false, error: error.message };
   }
   return { ok: true, error: null };
+}
+
+/**
+ * Sustituye la maqueta de un proyecto web ya guardado. "Probar otra versión"
+ * actualiza la misma fila en vez de crear otra: es el mismo proyecto.
+ */
+export function actualizarMaqueta(
+  id: string,
+  cambios: { html?: string; documento?: string },
+  usage?: TokenUsage | null
+): Promise<{ ok: boolean; error: string | null }> {
+  return modificarPayload(id, { ...cambios, usage: usage ?? null }, 'actualizar la maqueta');
 }
 
 /** Borra un proyecto. RLS garantiza que solo se puedan borrar los propios. */
@@ -244,40 +259,46 @@ export async function eliminarProyecto(id: string): Promise<boolean> {
 }
 
 /**
- * Marca un proyecto como aceptado por el cliente y le adjunta la documentación.
- *
- * Se hace con un update sobre el payload existente en vez de insertar una fila
- * nueva: el proyecto es el mismo, lo que cambia es su estado.
+ * Marca un proyecto como aceptado por el cliente. Es inmediato a propósito: la
+ * documentación tarda cerca de un minuto y el cliente no tiene por qué
+ * esperarla. Se genera después con `documentarEnSegundoPlano`.
  */
-export async function aceptarProyecto(
+export function aceptarProyecto(id: string): Promise<{ ok: boolean; error: string | null }> {
+  return modificarPayload(id, { aceptado: true, aceptado_en: new Date().toISOString() }, 'aceptar el proyecto');
+}
+
+/**
+ * Genera la documentación técnica de un proyecto recién aceptado y se la
+ * adjunta, sin que nadie espere. Si el cliente cierra la pestaña antes de que
+ * termine, el encargo queda sin documentación y el ingeniero la puede generar
+ * desde su panel con `documentarComoIngeniero`.
+ */
+export function documentarEnSegundoPlano(id: string, servicio: string, historial: QAHistory[]): void {
+  void generarDocumentacion(servicio, historial)
+    .then(({ documentacion }) => modificarPayload(id, { documentacion }, 'adjuntar la documentación'))
+    .catch((e) => console.error('[AIB+] No se pudo generar la documentación:', e));
+}
+
+/**
+ * Adjunta la documentación a un encargo ajeno, desde el panel del ingeniero.
+ * El ingeniero no puede escribir en `proyectos`: pasa por una función de la
+ * base de datos que solo rellena la documentación de encargos aceptados que
+ * aún no la tienen. Devuelve false si otro ya la había adjuntado.
+ */
+export async function documentarComoIngeniero(
   id: string,
   documentacion: Documentacion
 ): Promise<{ ok: boolean; error: string | null }> {
-  const { data, error: errorLectura } = await supabase
-    .from('proyectos')
-    .select('payload')
-    .eq('id', id)
-    .single();
-
-  if (errorLectura || !data || !esPayloadDiscovery(data.payload)) {
-    return { ok: false, error: errorLectura?.message ?? 'No se encontró el proyecto.' };
-  }
-
-  const payload: PayloadDiscovery = {
-    ...(data.payload as PayloadDiscovery),
-    aceptado: true,
-    aceptado_en: new Date().toISOString(),
-    documentacion,
-  };
-
-  const { error } = await supabase.from('proyectos').update({ payload }).eq('id', id);
+  const { data, error } = await supabase.rpc('adjuntar_documentacion', {
+    p_proyecto: id,
+    p_documentacion: documentacion,
+  });
 
   if (error) {
-    console.error('[AIB+] No se pudo aceptar el proyecto:', error.message);
+    console.error('[AIB+] No se pudo adjuntar la documentación:', error.message);
     return { ok: false, error: error.message };
   }
-
-  return { ok: true, error: null };
+  return { ok: data === true, error: null };
 }
 
 /** Proyectos aceptados, que son los que ve el ingeniero en su dashboard. */

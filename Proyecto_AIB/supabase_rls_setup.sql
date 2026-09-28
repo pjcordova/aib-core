@@ -57,8 +57,12 @@ CREATE POLICY "Users can delete own projects"
   USING (auth.uid() = user_id);
 
 -- 9. Auto-update `updated_at` timestamp on row modification
+-- search_path vacío: now() vive en pg_catalog y se resuelve igual, y así la
+-- función no depende del search_path de quien la dispare.
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;

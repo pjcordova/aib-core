@@ -7,11 +7,19 @@ import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { FlujoWeb } from './components/web/FlujoWeb';
 import { WebPreview } from './components/web/WebPreview';
 import { Wordmark, Shell } from './components/ui/Primitives';
-import { cargarProyecto, type ProyectoCompleto } from './lib/proyectos';
+import {
+  aceptarProyecto,
+  cargarProyecto,
+  documentarEnSegundoPlano,
+  type ProyectoCompleto,
+} from './lib/proyectos';
+import { registrarEvento } from './lib/catalogo';
 import { SERVICIOS, obtenerServicio, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
 import type { QAHistory } from './Types/productOwner';
+
+type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 
 export default function Home() {
   const { session, initializing, signOut } = useAuth();
@@ -20,6 +28,7 @@ export default function Home() {
   const [descripcion, setDescripcion] = useState('');
   const [iniciado, setIniciado] = useState(false);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
+  const [aceptacionAbierto, setAceptacionAbierto] = useState<EstadoAceptacion>('inactivo');
   const [cargandoProyecto, setCargandoProyecto] = useState(false);
   // Se incrementa al guardar un proyecto para que la lista se recargue.
   const [versionLista, setVersionLista] = useState(0);
@@ -40,7 +49,10 @@ export default function Home() {
     setCargandoProyecto(true);
     const proyecto = await cargarProyecto(id);
     setCargandoProyecto(false);
-    if (proyecto) setAbierto(proyecto);
+    if (proyecto) {
+      setAceptacionAbierto(proyecto.aceptado ? 'aceptado' : 'inactivo');
+      setAbierto(proyecto);
+    }
   }, []);
 
   // Mientras Supabase resuelve la sesión no decidimos nada: si pintáramos el
@@ -65,6 +77,26 @@ export default function Home() {
     setDescripcion('');
     setIniciado(false);
     setAbierto(null);
+  };
+
+  /**
+   * Aceptar un proyecto reabierto desde la lista: el cliente pudo cerrar la
+   * página sin aceptar y volver otro día. Hace lo mismo que al aceptar en el
+   * flujo: pasa al ingeniero al instante y documenta en segundo plano.
+   */
+  const aceptarAbierto = async () => {
+    if (!abierto || abierto.aceptado) return;
+    setAceptacionAbierto('procesando');
+    const { ok } = await aceptarProyecto(abierto.id);
+    if (!ok) {
+      setAceptacionAbierto('fallo');
+      return;
+    }
+    documentarEnSegundoPlano(abierto.id, abierto.servicio, abierto.historial);
+    if (abierto.plantilla) void registrarEvento(abierto.plantilla.id, 'aceptada');
+    setAbierto({ ...abierto, aceptado: true });
+    setAceptacionAbierto('aceptado');
+    refrescarLista();
   };
 
   const servicio = tipo ? obtenerServicio(tipo) : null;
@@ -116,7 +148,8 @@ export default function Home() {
                 ficha={abierto.ficha}
                 usage={abierto.usage}
                 guardado="guardado"
-                aceptacion={abierto.aceptado ? 'aceptado' : 'inactivo'}
+                aceptacion={aceptacionAbierto}
+                onAceptar={() => void aceptarAbierto()}
               />
             ) : (
               <PrototypePreview
@@ -125,6 +158,8 @@ export default function Home() {
                 respuestas={abierto.respuestas}
                 usage={abierto.usage}
                 guardado="guardado"
+                aceptacion={aceptacionAbierto}
+                onAceptar={() => void aceptarAbierto()}
               />
             )
           ) : tipo === 'web' ? (

@@ -3,11 +3,10 @@ import type { QAHistory, AIBQuestion } from '../Types/productOwner';
 import {
   generarPreguntas,
   generarPrototipo,
-  generarDocumentacion,
   ApiError,
   type TokenUsage,
 } from '../lib/api';
-import { guardarProyecto, aceptarProyecto } from '../lib/proyectos';
+import { guardarProyecto, aceptarProyecto, documentarEnSegundoPlano } from '../lib/proyectos';
 import { PrototypePreview } from './PrototypePreview';
 import { ErrorState, ProgressTrail, QuestionSkeleton } from './ui/Primitives';
 
@@ -141,16 +140,16 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
   }, [servicioInicial, pedirPreguntas]);
 
   /**
-   * Aceptar la propuesta genera la documentación técnica y la adjunta al
-   * proyecto. A partir de aquí el ingeniero la ve en su dashboard.
+   * Aceptar la propuesta la pasa al ingeniero al instante; la documentación
+   * técnica se genera y se adjunta después, sin hacer esperar al cliente.
    */
   const aceptar = async () => {
     if (!proyectoId) return;
     setAceptacion('procesando');
     try {
-      const { documentacion } = await generarDocumentacion(servicioInicial, historial);
-      const { ok, error: errorGuardado } = await aceptarProyecto(proyectoId, documentacion);
+      const { ok, error: errorGuardado } = await aceptarProyecto(proyectoId);
       if (!ok) throw new ApiError(errorGuardado ?? 'No se pudo guardar la aceptación.', 500, true);
+      documentarEnSegundoPlano(proyectoId, servicioInicial, historial);
       setAceptacion('aceptado');
     } catch (e) {
       console.error('[AIB+] Error aceptando la propuesta:', e);

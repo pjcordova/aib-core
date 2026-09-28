@@ -57,7 +57,11 @@ function leerFicha(cuerpo) {
   };
 }
 
-/** Se queda con el contenido del <body> y quita cualquier script. */
+/**
+ * Se queda con el contenido del <body> y quita cualquier script. También fija
+ * el año del copyright: el modelo tiende a poner el de sus datos de
+ * entrenamiento aunque el prompt le diga el actual.
+ */
 function extraerCuerpo(html) {
   let limpio = stripMarkdownFences(html);
 
@@ -68,6 +72,7 @@ function extraerCuerpo(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<\/?(html|head|body)[^>]*>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/(©|&copy;)\s*(?:19|20)\d{2}(?:\s*[-–]\s*(?:19|20)\d{2})?\b/gi, `$1 ${new Date().getFullYear()}`)
     .trim();
 }
 

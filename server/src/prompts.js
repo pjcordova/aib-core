@@ -177,8 +177,14 @@ de Bootstrap Icons que encaje con el contenido.
 CONTENIDO
 - En español y del rubro real de este negocio. Nunca "Lorem ipsum".
 - Textos breves y creíbles: titulares cortos, párrafos de una o dos líneas.
-- Contacto de ejemplo con formato peruano: +51 999 999 999 y un correo con el
-  nombre del negocio.
+- No inventes nada que el cliente no haya dicho: ni dirección, ni teléfono, ni
+  correo, ni cuentas de redes, ni horarios, ni cifras (años, clientes, premios)
+  ni promociones. El cliente lo leería como un dato suyo. Donde vaya un dato
+  que no tienes, pon un hueco visible entre corchetes: [Tu dirección],
+  [Tu WhatsApp], [Tu correo], [@tu_instagram].
+- Los testimonios son de ejemplo: fírmalos con el tipo de cliente, como
+  "Cliente frecuente", nunca con nombres de personas.
+- El año del pie de página es ${new Date().getFullYear()}.
 
 Sé conciso: apunta a unas 150 líneas. Una página corta y completa vale más que
 una larga que se corte a medias.

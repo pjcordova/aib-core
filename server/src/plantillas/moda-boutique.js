@@ -67,7 +67,9 @@ const esquema = objeto({
     prenda: objeto({ nombre: texto('Prenda del conjunto, 2 a 4 palabras'), precio: numero('Precio en soles') }),
   }),
   tienda: objeto({
-    nombre: texto('Nombre o ubicación del local, máximo 6 palabras'),
+    nombre: texto(
+      'Zona o local solo si el cliente lo mencionó, como "Tienda de Los Olivos"; si no, "Nuestra tienda". Nunca una dirección inventada. Máximo 6 palabras'
+    ),
     ciudad: texto('Ciudad y país, por ejemplo "Lima, Perú"'),
   }),
   garantias: {
@@ -96,6 +98,7 @@ REGLAS
 - Colores de prenda coherentes con cada prenda, en hexadecimal.
 - No inventes promociones, envíos gratis, descuentos ni cuotas que la tienda no
   haya mencionado: cada frase es una promesa que un cliente real va a leer.
+- Tampoco inventes direcciones, teléfonos ni otros datos de contacto.
 - Si no se sabe la ciudad, usa "Lima, Perú".
 `.trim();
 }

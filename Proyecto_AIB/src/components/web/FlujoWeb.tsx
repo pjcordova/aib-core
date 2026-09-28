@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { QAHistory } from '../../Types/productOwner';
 import {
   generarPreviewWeb,
-  generarDocumentacion,
   rellenarPlantilla,
   ApiError,
   type TokenUsage,
@@ -11,6 +10,7 @@ import {
   guardarProyecto,
   actualizarMaqueta,
   aceptarProyecto,
+  documentarEnSegundoPlano,
   type PlantillaUsada,
 } from '../../lib/proyectos';
 import { prepararLogo, coloresDelLogo } from '../../lib/marca';
@@ -265,9 +265,9 @@ export function FlujoWeb({ onGuardado }: Props) {
     const f = ficha();
     setAceptacion('procesando');
     try {
-      const { documentacion } = await generarDocumentacion(servicioDe(f), historialDe(f, plantillaUsada));
-      const { ok, error: errorAceptar } = await aceptarProyecto(proyectoId.current, documentacion);
+      const { ok, error: errorAceptar } = await aceptarProyecto(proyectoId.current);
       if (!ok) throw new Error(errorAceptar ?? 'No se pudo registrar la aceptación.');
+      documentarEnSegundoPlano(proyectoId.current, servicioDe(f), historialDe(f, plantillaUsada));
       if (plantillaUsada) void registrarEvento(plantillaUsada.id, 'aceptada');
       setAceptacion('aceptado');
       onGuardado?.();
@@ -780,6 +780,7 @@ function PasoPaleta({ estado, acciones }: { estado: EstadoRespuestas; acciones: 
             key={p.id}
             type="button"
             onClick={() => acciones.setPaleta(p)}
+            aria-pressed={elegida}
             className={
               'flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all hover:border-accent/60 ' +
               (elegida ? 'border-accent bg-accent/10' : 'border-line bg-surface-overlay/50')
@@ -869,6 +870,7 @@ function PasoOpcion({
             key={o.valor}
             type="button"
             onClick={() => onElegir(o.valor)}
+            aria-pressed={elegida}
             className={
               'flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all hover:border-accent/60 ' +
               (elegida ? 'border-accent bg-accent/10' : 'border-line bg-surface-overlay/50')

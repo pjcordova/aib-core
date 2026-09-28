@@ -139,7 +139,7 @@ export function WebPreview({
               title={guardado !== 'guardado' ? 'Se habilita cuando la maqueta queda guardada' : undefined}
               className="btn btn-primary"
             >
-              {aceptacion === 'procesando' ? 'Preparando el encargo…' : '¡Me gusta, sigamos!'}
+              {aceptacion === 'procesando' ? 'Enviando…' : '¡Me gusta, sigamos!'}
             </button>
           )}
           {aceptado && (

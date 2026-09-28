@@ -131,7 +131,7 @@ export const PrototypePreview = ({
               }
               className="btn btn-primary"
             >
-              {aceptacion === 'procesando' ? 'Preparando documentación…' : 'Aceptar propuesta'}
+              {aceptacion === 'procesando' ? 'Enviando…' : 'Aceptar propuesta'}
             </button>
           )}
           {aceptacion === 'aceptado' && (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { listarAceptados } from '../lib/proyectos';
+import { cargarProyecto, documentarComoIngeniero, listarAceptados } from '../lib/proyectos';
 import type { ProyectoCompleto } from '../lib/proyectos';
+import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
 import { obtenerServicio, PRESUPUESTOS, etiquetaDe } from '../lib/servicios';
 import { construirDocumento } from '../lib/marca';
 
@@ -92,6 +93,7 @@ export function EncargosIngenieria() {
                       year: 'numeric',
                     })}
                     {doc?.estimacion?.semanas ? ` · ~${doc.estimacion.semanas} semanas` : ''}
+                    {!doc && <span className="text-caution"> · documentación pendiente</span>}
                   </p>
                 </div>
                 <span className="shrink-0 text-ink-subtle">{desplegado ? '−' : '+'}</span>
@@ -100,9 +102,14 @@ export function EncargosIngenieria() {
               {desplegado && (
                 <div className="animate-fade-up border-t border-line p-5 pt-6">
                   {!doc ? (
-                    <p className="text-sm text-caution">
-                      Este encargo se aceptó sin documentación adjunta.
-                    </p>
+                    <SinDocumentacion
+                      encargo={e}
+                      onLista={(documentacion) =>
+                        setEncargos((lista) =>
+                          lista.map((x) => (x.id === e.id ? { ...x, documentacion } : x))
+                        )
+                      }
+                    />
                   ) : (
                     <div className="space-y-6 text-sm">
                       <Bloque titulo="Resumen">
@@ -222,27 +229,23 @@ export function EncargosIngenieria() {
                           </ul>
                         </Bloque>
                       )}
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => descargarDoc(e)}
-                          className="btn btn-ghost"
-                        >
-                          Descargar documentación (JSON)
-                        </button>
-                        {(e.documento || e.html) && e.ficha && (
-                          <button
-                            type="button"
-                            onClick={() => descargarMaqueta(e)}
-                            className="btn btn-ghost"
-                          >
-                            Descargar maqueta (index.html)
-                          </button>
-                        )}
-                      </div>
                     </div>
                   )}
+
+                  {/* Fuera de la rama anterior: la maqueta se puede descargar
+                      aunque la documentación aún no esté. */}
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {doc && (
+                      <button type="button" onClick={() => descargarDoc(e)} className="btn btn-ghost">
+                        Descargar documentación (JSON)
+                      </button>
+                    )}
+                    {(e.documento || e.html) && e.ficha && (
+                      <button type="button" onClick={() => descargarMaqueta(e)} className="btn btn-ghost">
+                        Descargar maqueta (index.html)
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </article>
@@ -250,6 +253,81 @@ export function EncargosIngenieria() {
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * Tiempo que se le da a la documentación que se genera en segundo plano al
+ * aceptar (tarda cerca de un minuto) antes de ofrecer generarla desde aquí.
+ */
+const MARGEN_DOCUMENTACION_MS = 3 * 60_000;
+
+/**
+ * Encargo aceptado que aún no tiene documentación: o se está generando, o el
+ * cliente cerró la página antes de que terminara. En el segundo caso el
+ * ingeniero la genera aquí.
+ */
+function SinDocumentacion({
+  encargo,
+  onLista,
+}: {
+  encargo: ProyectoCompleto;
+  onLista: (documentacion: Documentacion) => void;
+}) {
+  const [estado, setEstado] = useState<'inactivo' | 'generando' | 'fallo'>('inactivo');
+  const [error, setError] = useState('');
+  // Se calcula una vez al montar: basta para decidir si esperar o no.
+  const [reciente] = useState(
+    () =>
+      encargo.aceptadoEn !== undefined &&
+      Date.now() - Date.parse(encargo.aceptadoEn) < MARGEN_DOCUMENTACION_MS
+  );
+
+  const generar = async () => {
+    setEstado('generando');
+    try {
+      const { documentacion } = await generarDocumentacion(encargo.servicio, encargo.historial);
+      const { ok, error: errorGuardado } = await documentarComoIngeniero(encargo.id, documentacion);
+      if (errorGuardado) throw new Error(errorGuardado);
+      // Si no se guardó es que llegó antes la del cliente: se muestra esa.
+      const guardada = ok ? documentacion : (await cargarProyecto(encargo.id))?.documentacion;
+      onLista(guardada ?? documentacion);
+    } catch (e) {
+      console.error('[AIB+] Error generando la documentación:', e);
+      setError(e instanceof ApiError ? e.message : 'No se pudo generar la documentación.');
+      setEstado('fallo');
+    }
+  };
+
+  if (estado === 'generando') {
+    return (
+      <p className="flex items-center gap-2 text-sm text-ink-muted" role="status">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
+        Generando la documentación… tarda cerca de un minuto.
+      </p>
+    );
+  }
+
+  if (reciente && estado === 'inactivo') {
+    return (
+      <p className="text-sm text-ink-muted">
+        El cliente acaba de aceptar y la documentación se está generando. Estará lista en
+        un minuto: recarga la página para verla.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-ink-muted">
+        {estado === 'fallo'
+          ? error
+          : 'Este encargo no tiene documentación: el cliente cerró la página antes de que se generara.'}
+      </p>
+      <button type="button" onClick={() => void generar()} className="btn btn-primary">
+        {estado === 'fallo' ? 'Reintentar' : 'Generar documentación'}
+      </button>
+    </div>
   );
 }
 
