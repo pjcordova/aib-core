@@ -14,6 +14,8 @@ const { TruncatedError } = require('./claude');
 const discoveryRoutes = require('./routes/discovery');
 const prototypeRoutes = require('./routes/prototype');
 const documentationRoutes = require('./routes/documentation');
+const webPreviewRoutes = require('./routes/webPreview');
+const plantillasRoutes = require('./routes/plantillas');
 
 const app = express();
 
@@ -70,6 +72,8 @@ app.get('/health', (_req, res) => {
 app.use('/api', discoveryRoutes);
 app.use('/api', prototypeRoutes);
 app.use('/api', documentationRoutes);
+app.use('/api', webPreviewRoutes);
+app.use('/api', plantillasRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });
@@ -98,14 +102,34 @@ app.use((error, _req, res, _next) => {
     });
   }
 
-  // Errores de cliente que traen su propio código (por ejemplo, un JSON mal
-  // formado que body-parser rechaza con 400). Devolverlos como 500 confundía
-  // el diagnóstico: parecía un fallo del servidor y era una petición inválida.
-  const codigoCliente = error?.status ?? error?.statusCode;
-  if (Number.isInteger(codigoCliente) && codigoCliente >= 400 && codigoCliente < 500) {
-    return res.status(codigoCliente).json({
+  // Sin saldo en Anthropic. Toda la IA queda caída hasta recargar, así que se
+  // registra bien visible para quien opera el servidor. Al usuario final no se
+  // le explica la causa interna: solo que el servicio no está disponible.
+  if (error?.status === 400 && /credit balance/i.test(error?.message ?? '')) {
+    console.error(
+      '[AIB+] ⚠ SIN SALDO EN ANTHROPIC: toda la IA está caída. ' +
+        'Recarga créditos en console.anthropic.com > Plans & Billing.'
+    );
+    return res.status(503).json({
       success: false,
-      error: 'La petición no es válida.',
+      error: 'El servicio de IA no está disponible en este momento. Inténtalo más tarde.',
+    });
+  }
+
+  // Errores del propio cliente: un JSON mal formado que body-parser rechaza,
+  // por ejemplo. Se reconocen por `expose` (convención de http-errors), NO solo
+  // por traer un código 4xx: los errores de la API de Anthropic también traen
+  // 4xx, y tratarlos como "petición no válida" escondía la causa real.
+  if (error?.expose === true && error.status >= 400 && error.status < 500) {
+    return res.status(error.status).json({ success: false, error: 'La petición no es válida.' });
+  }
+
+  // Cualquier otro 4xx viene de la API de Anthropic, no del usuario.
+  if (Number.isInteger(error?.status) && error.status >= 400 && error.status < 500) {
+    console.error(`[AIB+] Anthropic rechazó la petición (${error.status}):`, error.message);
+    return res.status(502).json({
+      success: false,
+      error: 'El servicio de IA rechazó la petición. Inténtalo de nuevo en unos minutos.',
     });
   }
 

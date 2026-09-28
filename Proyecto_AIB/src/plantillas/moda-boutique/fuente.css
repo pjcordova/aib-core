@@ -1,0 +1,89 @@
+/*
+  Hoja de origen de la plantilla "Boutique de moda".
+
+  Es la misma base de bithia-web (Tailwind 4): su paleta, su radio de tarjeta,
+  sus animaciones y sus utilidades propias. Se compila a estilos.css con:
+
+    npm run plantillas
+
+  `source(none)` + `@source` limitan el escaneo a esta plantilla, así el CSS
+  resultante solo trae las clases que la plantilla usa de verdad.
+*/
+@import 'tailwindcss' source(none);
+@source './plantilla.html';
+
+/* Clases que la plantilla recibe como dato ({{etiqueta_clase}}, {{clase}}) y
+   que por eso no aparecen escritas en el HTML: sin esto Tailwind no las
+   generaría y las etiquetas y tallas saldrían sin estilo. */
+@source inline('bg-white text-carbon bg-terracota text-white bg-carbon border-carbon border-linea text-linea');
+
+/* Paleta de bithia. Los cuatro colores de marca (terracota y rosa, con sus
+   variantes) se sustituyen por la paleta de cada cliente al renderizar; los
+   neutros se mantienen porque son los que dan el aire de boutique. */
+@theme {
+  --color-crema: #faf8f7;
+  --color-terracota: #c9a48d;
+  --color-terracota-oscuro: #b08a70;
+  --color-rosa: #d4a59a;
+  --color-rosa-suave: #f0dcd6;
+  --color-carbon: #5a5a5a;
+  --color-carbon-suave: #8a8a8a;
+  --color-linea: #ece5e1;
+  --color-whatsapp: #25d366;
+
+  --radius-tarjeta: 0.75rem;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-crema);
+    color: var(--color-carbon);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-terracota);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes desfilar {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes desvanecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .sombra-tarjeta {
+    box-shadow:
+      0 1px 2px rgb(90 90 90 / 0.04),
+      0 4px 16px rgb(90 90 90 / 0.06);
+  }
+
+  .ocultar-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .ocultar-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

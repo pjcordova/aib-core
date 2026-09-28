@@ -1,37 +1,40 @@
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreview';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
+import { FlujoWeb } from './components/web/FlujoWeb';
+import { WebPreview } from './components/web/WebPreview';
 import { Wordmark, Shell } from './components/ui/Primitives';
 import { cargarProyecto, type ProyectoCompleto } from './lib/proyectos';
+import { SERVICIOS, obtenerServicio, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
+import { usePerfil } from './hooks/usePerfil';
 import type { QAHistory } from './Types/productOwner';
-
-/** Ejemplos que arrancan el discovery con un clic en vez de una página en blanco. */
-const EJEMPLOS = [
-  'Un ERP para restaurantes con facturación e inventario',
-  'Una plataforma de reservas para clínicas dentales',
-  'Un CRM para agencias inmobiliarias pequeñas',
-  'Un panel de logística para una flota de reparto',
-];
 
 export default function Home() {
   const { session, initializing, signOut } = useAuth();
-  const [service, setService] = useState('');
-  const [started, setStarted] = useState(false);
+  const perfil = usePerfil(session?.user.id);
+  const [tipo, setTipo] = useState<TipoServicio | null>(null);
+  const [descripcion, setDescripcion] = useState('');
+  const [iniciado, setIniciado] = useState(false);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
   const [cargandoProyecto, setCargandoProyecto] = useState(false);
-  // Se incrementa al terminar un discovery para que la lista se recargue.
+  // Se incrementa al guardar un proyecto para que la lista se recargue.
   const [versionLista, setVersionLista] = useState(0);
 
-  // Estable a proposito: si esta funcion cambiara de identidad en cada render,
-  // el hijo la veria como una prop nueva. Ese fue justo el origen del bucle de
-  // peticiones, asi que aqui se queda fijada.
-  const handleComplete = useCallback((history: QAHistory[]) => {
-    console.info('[AIB+] Discovery completado con', history.length, 'respuestas');
-    setVersionLista((v) => v + 1);
-  }, []);
+  // Estables a propósito: si cambiaran de identidad en cada render, los hijos
+  // las verían como props nuevas. Ese fue el origen del bucle de peticiones.
+  const refrescarLista = useCallback(() => setVersionLista((v) => v + 1), []);
+
+  const handleComplete = useCallback(
+    (history: QAHistory[]) => {
+      console.info('[AIB+] Discovery completado con', history.length, 'respuestas');
+      refrescarLista();
+    },
+    [refrescarLista]
+  );
 
   const abrirProyecto = useCallback(async (id: string) => {
     setCargandoProyecto(true);
@@ -57,11 +60,21 @@ export default function Home() {
     return <LoginRegistro onAuthSuccess={() => {}} />;
   }
 
-  const empezar = (texto: string) => {
+  const reiniciar = () => {
+    setTipo(null);
+    setDescripcion('');
+    setIniciado(false);
+    setAbierto(null);
+  };
+
+  const servicio = tipo ? obtenerServicio(tipo) : null;
+
+  const empezarIA = (texto: string) => {
     const limpio = texto.trim();
-    if (!limpio) return;
-    setService(limpio);
-    setStarted(true);
+    if (!limpio || !servicio) return;
+    // El tipo de servicio va delante para que el discovery sepa por dónde tirar.
+    setDescripcion(`${servicio.nombre}: ${limpio}`);
+    setIniciado(true);
   };
 
   return (
@@ -71,23 +84,19 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4 py-1">
             <Wordmark subtitle="Motor de Proyecto Autónomo" />
             <div className="flex items-center gap-3">
-              {(started || abierto) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStarted(false);
-                    setService('');
-                    setAbierto(null);
-                  }}
-                  className="btn btn-ghost"
-                >
+              {(tipo || abierto) && (
+                <button type="button" onClick={reiniciar} className="btn btn-ghost">
                   <span className="sm:hidden">Nuevo</span>
                   <span className="hidden sm:inline">Nuevo proyecto</span>
                 </button>
               )}
-              <span className="hidden text-sm text-ink-subtle sm:inline">
-                {session.user.email}
-              </span>
+              {perfil.rol === 'ingeniero' && (
+                <Link to="/dashboard" className="btn btn-ghost">
+                  <span className="sm:hidden">Panel</span>
+                  <span className="hidden sm:inline">Panel del ingeniero</span>
+                </Link>
+              )}
+              <span className="hidden text-sm text-ink-subtle lg:inline">{session.user.email}</span>
               <button type="button" onClick={signOut} className="btn btn-ghost">
                 Salir
               </button>
@@ -99,63 +108,70 @@ export default function Home() {
       <main>
         <Shell>
           {abierto ? (
-            <PrototypePreview
-              code={abierto.reactCode}
-              servicio={abierto.servicio}
-              respuestas={abierto.respuestas}
-              usage={abierto.usage}
-              guardado="guardado"
+            (abierto.documento || abierto.html) && abierto.ficha ? (
+              <WebPreview
+                cuerpo={abierto.html}
+                documento={abierto.documento}
+                plantilla={abierto.plantilla?.nombre}
+                ficha={abierto.ficha}
+                usage={abierto.usage}
+                guardado="guardado"
+                aceptacion={abierto.aceptado ? 'aceptado' : 'inactivo'}
+              />
+            ) : (
+              <PrototypePreview
+                code={abierto.reactCode ?? ''}
+                servicio={abierto.servicio}
+                respuestas={abierto.respuestas}
+                usage={abierto.usage}
+                guardado="guardado"
+              />
+            )
+          ) : tipo === 'web' ? (
+            <FlujoWeb onGuardado={refrescarLista} />
+          ) : servicio && iniciado ? (
+            <AIBProductOwner servicioInicial={descripcion} onComplete={handleComplete} />
+          ) : servicio ? (
+            <DescribirIdea
+              nombre={servicio.nombre}
+              icono={servicio.icono}
+              ejemplos={servicio.ejemplos}
+              onEmpezar={empezarIA}
+              onVolver={reiniciar}
             />
-          ) : !started ? (
-            <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
+          ) : (
+            <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
               <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
-                Discovery guiado por IA
+                Empecemos
               </p>
               <h1 className="text-4xl font-bold text-balance sm:text-5xl">
-                ¿Qué software necesitas construir?
+                ¿Qué necesitas para tu negocio?
               </h1>
               <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-                Descríbelo en una frase. Un Product Owner con IA te hará las preguntas
-                justas y, al terminar, verás tu producto funcionando.
+                Elige una opción y te guiamos paso a paso, sin tecnicismos. Al final
+                verás una primera versión de tu proyecto.
               </p>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  empezar(service);
-                }}
-                className="mt-9 flex flex-col gap-3 sm:flex-row"
-              >
-                <input
-                  type="text"
-                  value={service}
-                  onChange={(e) => setService(e.target.value)}
-                  placeholder="Ej: Un ERP para restaurantes con facturación…"
-                  className="field flex-1 text-base"
-                  autoFocus
-                  aria-label="Describe el software que necesitas"
-                />
-                <button type="submit" disabled={!service.trim()} className="btn btn-primary px-7">
-                  Empezar
-                </button>
-              </form>
-
-              <div className="mt-10">
-                <p className="mb-3 text-xs tracking-wide text-ink-subtle uppercase">
-                  O parte de un ejemplo
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {EJEMPLOS.map((ejemplo) => (
-                    <button
-                      key={ejemplo}
-                      type="button"
-                      onClick={() => empezar(ejemplo)}
-                      className="rounded-full border border-line bg-surface-raised/60 px-4 py-2 text-sm text-ink-muted transition-colors hover:border-accent/50 hover:text-ink"
-                    >
-                      {ejemplo}
-                    </button>
-                  ))}
-                </div>
+              <div className="mt-10 grid gap-4 text-left sm:grid-cols-3">
+                {SERVICIOS.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setTipo(s.id)}
+                    className="card group flex flex-col gap-3 p-6 transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[var(--shadow-glow)]"
+                  >
+                    <span className="text-3xl" aria-hidden="true">
+                      {s.icono}
+                    </span>
+                    <span className="text-lg font-semibold text-ink">{s.nombre}</span>
+                    <span className="text-sm leading-relaxed text-ink-muted">{s.descripcion}</span>
+                    {s.flujo === 'modulo' && (
+                      <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
+                        Mira tu web en ~1 minuto
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
 
               {cargandoProyecto ? (
@@ -164,11 +180,82 @@ export default function Home() {
                 <ProyectosGuardados onAbrir={abrirProyecto} recargar={versionLista} />
               )}
             </section>
-          ) : (
-            <AIBProductOwner servicioInicial={service} onComplete={handleComplete} />
           )}
         </Shell>
       </main>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/** Paso de descripción libre para los servicios que aún usan el discovery con IA. */
+function DescribirIdea({
+  nombre,
+  icono,
+  ejemplos,
+  onEmpezar,
+  onVolver,
+}: {
+  nombre: string;
+  icono: string;
+  ejemplos: string[];
+  onEmpezar: (texto: string) => void;
+  onVolver: () => void;
+}) {
+  const [texto, setTexto] = useState('');
+
+  return (
+    <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
+      <button type="button" onClick={onVolver} className="mb-6 text-sm text-ink-subtle hover:text-ink">
+        ← Elegir otro servicio
+      </button>
+      <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
+        {icono} {nombre}
+      </p>
+      <h1 className="text-3xl font-bold text-balance sm:text-4xl">Cuéntanos qué te gustaría resolver</h1>
+      <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
+        Una frase basta. Luego te hacemos unas pocas preguntas para entenderlo bien.
+      </p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onEmpezar(texto);
+        }}
+        className="mt-9 flex flex-col gap-3 sm:flex-row"
+      >
+        <input
+          type="text"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder={ejemplos[0] ? `Ej: ${ejemplos[0]}` : 'Describe tu idea'}
+          className="field flex-1 text-base"
+          autoFocus
+          aria-label="Describe lo que necesitas"
+        />
+        <button type="submit" disabled={!texto.trim()} className="btn btn-primary px-7">
+          Empezar
+        </button>
+      </form>
+
+      {ejemplos.length > 0 && (
+        <div className="mt-10">
+          <p className="mb-3 text-xs tracking-wide text-ink-subtle uppercase">O parte de un ejemplo</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {ejemplos.map((ejemplo) => (
+              <button
+                key={ejemplo}
+                type="button"
+                onClick={() => onEmpezar(ejemplo)}
+                className="rounded-full border border-line bg-surface-raised/60 px-4 py-2 text-sm text-ink-muted transition-colors hover:border-accent/50 hover:text-ink"
+              >
+                {ejemplo}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

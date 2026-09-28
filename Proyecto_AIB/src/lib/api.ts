@@ -22,6 +22,8 @@ const TIMEOUT_MS = {
   discovery: 60_000,
   prototype: 180_000, // Generar un dashboard entero puede pasar del minuto.
   documentation: 120_000,
+  web: 120_000, // Una maqueta web ronda los 40 s; dejamos margen.
+  plantilla: 90_000, // Solo textos: ronda los 20-30 s.
 } as const;
 
 export class ApiError extends Error {
@@ -175,4 +177,49 @@ export async function generarPrototipo(
   }
 
   return { code: data.react_code, usage: data.usage };
+}
+
+/** Lo que el servidor necesita de la ficha. El logo no viaja: se pone en el cliente. */
+export interface FichaParaServidor {
+  empresa: string;
+  rubro: string;
+  estilo: string;
+  secciones: string[];
+  paleta: { nombre: string; primario: string; secundario: string };
+}
+
+/** Genera el cuerpo HTML de la maqueta web. */
+export async function generarPreviewWeb(
+  ficha: FichaParaServidor
+): Promise<{ html: string; usage?: TokenUsage }> {
+  const data = await post<{ success: boolean; html?: string; error?: string; usage?: TokenUsage }>(
+    '/api/generar-preview-web',
+    { ficha },
+    TIMEOUT_MS.web
+  );
+
+  if (!data.success || !data.html) {
+    throw new ApiError(data.error ?? 'La IA no devolvió la maqueta.', 502, true);
+  }
+
+  return { html: data.html, usage: data.usage };
+}
+
+/**
+ * Pide los textos de una plantilla para un cliente. Devuelve un objeto con la
+ * forma que espera esa plantilla; el HTML lo pone el frontend.
+ */
+export async function rellenarPlantilla<T>(
+  plantilla: string,
+  ficha: { empresa: string; rubro: string; estilo: string }
+): Promise<{ textos: T; usage?: TokenUsage }> {
+  const data = await post<{ success: boolean; textos?: T; error?: string; usage?: TokenUsage }>(
+    '/api/rellenar-plantilla',
+    { plantilla, ficha },
+    TIMEOUT_MS.plantilla
+  );
+  if (!data.success || !data.textos) {
+    throw new ApiError(data.error ?? 'No llegaron los textos de la plantilla.', 502, true);
+  }
+  return { textos: data.textos, usage: data.usage };
 }

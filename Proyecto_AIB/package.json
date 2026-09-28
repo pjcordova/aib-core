@@ -8,13 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix ../server\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix ../server\"",
+    "plantillas": "tailwindcss -i src/plantillas/moda-boutique/fuente.css -o src/plantillas/moda-boutique/estilos.css --minify"
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
     "@supabase/supabase-js": "^2.106.2",
     "chart.js": "^4.5.1",
     "jspdf": "^3.0.4",
+    "mustache": "^4.2.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
@@ -23,7 +25,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/mustache": "^4.2.6",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

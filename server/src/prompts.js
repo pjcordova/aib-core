@@ -135,7 +135,58 @@ REGLAS:
 `;
 }
 
+
+/**
+ * Maqueta web en HTML y Bootstrap. El modelo escribe solo el cuerpo: la
+ * cabecera, los colores de la marca, el logo y el script de Bootstrap se
+ * añaden en el cliente. Menos tokens y un resultado más predecible.
+ */
+function webPreviewPrompt({ empresa, rubro, paleta, secciones, estilo }) {
+  return `
+Eres un diseñador web senior. Maqueta la página de inicio de este negocio.
+
+NEGOCIO: ${empresa}
+A QUÉ SE DEDICA: ${rubro}
+ESTILO: ${estilo}
+TONO DE COLOR: ${paleta.nombre}
+SECCIONES, en este orden: portada, ${secciones.join(', ')}
+
+QUÉ DEVOLVER
+Solo el contenido del <body>: sin <html>, <head>, <body>, <style> ni <script>,
+y sin markdown ni explicaciones alrededor.
+
+ESTRUCTURA
+- Barra de navegación "navbar navbar-expand-lg" fija arriba, con botón
+  hamburguesa (data-bs-toggle="collapse") y enlaces a cada sección por su id.
+  Dentro de "navbar-brand" escribe exactamente {{MARCA}}; ahí irá el logo.
+- Si hay sección de servicios o productos, haz su enlace del menú un desplegable
+  (data-bs-toggle="dropdown") con 3 o 4 entradas.
+- Una <section id="..."> por cada sección, en el orden indicado.
+- Pie de página con {{MARCA}}, datos de contacto y año.
+
+COLORES Y ESTILOS: no escribas ningún atributo style ni ningún color. Los
+colores de la marca ya van en estas clases: btn-primary, btn-outline-primary,
+bg-primary, text-primary, bg-marca-secundario, text-marca-secundario, bg-light,
+bg-dark, text-white. Para colorear un icono usa text-primary o
+text-marca-secundario. Para su tamaño usa icono-xl (portada) o icono-lg (tarjetas).
+
+IMÁGENES: ninguna imagen externa. Donde iría una foto —también en la galería—
+usa <div class="marca-imagen"><i class="bi bi-NOMBRE"></i></div> con un icono
+de Bootstrap Icons que encaje con el contenido.
+
+CONTENIDO
+- En español y del rubro real de este negocio. Nunca "Lorem ipsum".
+- Textos breves y creíbles: titulares cortos, párrafos de una o dos líneas.
+- Contacto de ejemplo con formato peruano: +51 999 999 999 y un correo con el
+  nombre del negocio.
+
+Sé conciso: apunta a unas 150 líneas. Una página corta y completa vale más que
+una larga que se corte a medias.
+`;
+}
+
 module.exports = {
+  webPreviewPrompt,
   DISCOVERY_SYSTEM,
   discoveryUserMessage,
   prototypePrompt,

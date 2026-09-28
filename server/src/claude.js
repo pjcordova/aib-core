@@ -25,7 +25,13 @@ class TruncatedError extends Error {
  * Ejecuta una llamada a Claude y devuelve el texto plano de la respuesta.
  * Lanza TruncatedError si la salida quedó a medias.
  */
-async function generateText({ label, system, prompt, maxTokens, temperature = 0.7 }) {
+/**
+ * @param {object} opciones
+ * @param {object} [opciones.schema] JSON Schema de la respuesta. Si se pasa, la
+ *   API garantiza (structured outputs) que el texto devuelto sea JSON válido con
+ *   esa forma exacta, en vez de confiar en que el modelo cumpla el prompt.
+ */
+async function generateText({ label, system, prompt, maxTokens, temperature = 0.7, schema }) {
   const startedAt = Date.now();
 
   const stream = anthropic.messages.stream({
@@ -33,6 +39,7 @@ async function generateText({ label, system, prompt, maxTokens, temperature = 0.
     max_tokens: maxTokens,
     temperature,
     ...(system ? { system } : {}),
+    ...(schema ? { output_config: { format: { type: 'json_schema', schema } } } : {}),
     messages: [{ role: 'user', content: prompt }],
   });
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { listarAceptados } from '../lib/proyectos';
 import type { ProyectoCompleto } from '../lib/proyectos';
+import { obtenerServicio, PRESUPUESTOS, etiquetaDe } from '../lib/servicios';
+import { construirDocumento } from '../lib/marca';
 
 // ---------------------------------------------------------------------------
 // Encargos aceptados
@@ -68,7 +70,20 @@ export function EncargosIngenieria() {
                 aria-expanded={desplegado}
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-semibold text-ink">{e.servicio}</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate font-semibold text-ink">{e.servicio}</h3>
+                    <EtiquetaServicio proyecto={e} />
+                    {e.plantilla && (
+                      <span className="rounded-full border border-accent/30 px-2 py-0.5 text-[11px] text-accent">
+                        Plantilla: {e.plantilla.nombre}
+                      </span>
+                    )}
+                    {e.presupuesto && (
+                      <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-muted">
+                        {etiquetaDe(PRESUPUESTOS, e.presupuesto)}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-xs text-ink-subtle">
                     {e.respuestas} respuestas ·{' '}
                     {new Date(e.creadoEn).toLocaleDateString('es', {
@@ -208,13 +223,24 @@ export function EncargosIngenieria() {
                         </Bloque>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => descargarDoc(e)}
-                        className="btn btn-ghost"
-                      >
-                        Descargar documentación (JSON)
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => descargarDoc(e)}
+                          className="btn btn-ghost"
+                        >
+                          Descargar documentación (JSON)
+                        </button>
+                        {(e.documento || e.html) && e.ficha && (
+                          <button
+                            type="button"
+                            onClick={() => descargarMaqueta(e)}
+                            className="btn btn-ghost"
+                          >
+                            Descargar maqueta (index.html)
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -246,6 +272,33 @@ function descargarDoc(encargo: ProyectoCompleto) {
   const enlace = document.createElement('a');
   enlace.href = url;
   enlace.download = `encargo-${encargo.id.slice(0, 8)}.json`;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Etiqueta del tipo de servicio. Las filas antiguas no lo tienen: eran de software. */
+function EtiquetaServicio({ proyecto }: { proyecto: ProyectoCompleto }) {
+  const texto = proyecto.tipoServicio
+    ? `${obtenerServicio(proyecto.tipoServicio).icono} ${obtenerServicio(proyecto.tipoServicio).nombre}`
+    : '💻 Software';
+  return (
+    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+      {texto}
+    </span>
+  );
+}
+
+function descargarMaqueta(encargo: ProyectoCompleto) {
+  if (!encargo.ficha) return;
+  // Las maquetas de plantilla se guardan ya completas; las generadas por IA,
+  // solo el cuerpo, y se montan aquí.
+  const documento =
+    encargo.documento ?? (encargo.html ? construirDocumento(encargo.html, encargo.ficha) : null);
+  if (!documento) return;
+  const url = URL.createObjectURL(new Blob([documento], { type: 'text/html;charset=utf-8' }));
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = `maqueta-${encargo.id.slice(0, 8)}.html`;
   enlace.click();
   URL.revokeObjectURL(url);
 }

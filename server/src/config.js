@@ -55,6 +55,9 @@ const config = {
     // acota el coste y el tiempo de espera si el modelo se alarga.
     prototype: 12000,
     documentation: 8000,
+    web: 7000,
+    // Solo textos en JSON: ronda los 1.000 tokens. El techo deja margen.
+    plantilla: 4000,
   },
 
   // En desarrollo permitimos los puertos habituales de Vite. En producción se

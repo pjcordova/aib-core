@@ -12,6 +12,15 @@
 import { supabase } from './supabase';
 import type { QAHistory } from '../Types/productOwner';
 import type { TokenUsage, Documentacion } from './api';
+import type { FichaWeb, TipoServicio } from './servicios';
+
+/** Plantilla del catálogo con la que se hizo la maqueta. */
+export interface PlantillaUsada {
+  /** Id de la fila en `plantillas` (para los contadores). */
+  id: string;
+  base: string;
+  nombre: string;
+}
 
 /** Marca que distingue estas filas de las del formulario antiguo. */
 export const TIPO_DISCOVERY = 'aib-discovery';
@@ -21,7 +30,25 @@ export interface PayloadDiscovery {
   version: 1;
   servicio: string;
   historial: QAHistory[];
-  react_code: string;
+  /**
+   * Tipo de servicio que eligió el cliente. Las filas anteriores a los módulos
+   * no lo tienen: eran todas del discovery de software.
+   */
+  tipo_servicio?: TipoServicio;
+  /** Prototipo en React (discovery con IA). */
+  react_code?: string;
+  /** Cuerpo de la maqueta web en HTML (módulo web). */
+  html?: string;
+  /** Respuestas del módulo web, logo incluido. */
+  ficha?: FichaWeb;
+  /** Si la maqueta sale de una plantilla del ingeniero: cuál. */
+  plantilla?: PlantillaUsada;
+  /**
+   * Página completa ya renderizada (plantillas). Se guarda entera y no solo los
+   * textos para que el cliente vea siempre la versión que aprobó, aunque la
+   * plantilla cambie después.
+   */
+  documento?: string;
   usage?: TokenUsage | null;
   /** El cliente validó la previsualización: el encargo pasa a ingeniería. */
   aceptado?: boolean;
@@ -36,13 +63,48 @@ export interface ProyectoResumen {
   respuestas: number;
   creadoEn: string;
   aceptado: boolean;
+  tipoServicio?: TipoServicio;
+  empresa?: string;
+  presupuesto?: string;
 }
 
 export interface ProyectoCompleto extends ProyectoResumen {
   historial: QAHistory[];
-  reactCode: string;
+  reactCode?: string;
+  html?: string;
+  ficha?: FichaWeb;
+  plantilla?: PlantillaUsada;
+  documento?: string;
   usage?: TokenUsage | null;
   documentacion?: Documentacion | null;
+}
+
+/** Campos comunes que se leen de cualquier fila del flujo de discovery. */
+function resumenDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoResumen {
+  return {
+    id,
+    servicio: p.servicio,
+    respuestas: p.historial?.length ?? 0,
+    creadoEn,
+    aceptado: p.aceptado === true,
+    tipoServicio: p.tipo_servicio,
+    empresa: p.ficha?.empresa,
+    presupuesto: p.ficha?.presupuesto,
+  };
+}
+
+function completoDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoCompleto {
+  return {
+    ...resumenDe(id, creadoEn, p),
+    historial: p.historial ?? [],
+    reactCode: p.react_code,
+    html: p.html,
+    ficha: p.ficha,
+    plantilla: p.plantilla,
+    documento: p.documento,
+    usage: p.usage ?? null,
+    documentacion: p.documentacion ?? null,
+  };
 }
 
 /** true si el payload pertenece al flujo de discovery. */
@@ -64,7 +126,12 @@ export function esPayloadDiscovery(payload: unknown): payload is PayloadDiscover
 export async function guardarProyecto(entrada: {
   servicio: string;
   historial: QAHistory[];
-  reactCode: string;
+  tipoServicio?: TipoServicio;
+  reactCode?: string;
+  html?: string;
+  ficha?: FichaWeb;
+  plantilla?: PlantillaUsada;
+  documento?: string;
   usage?: TokenUsage | null;
 }): Promise<{ id: string | null; error: string | null }> {
   const {
@@ -78,7 +145,12 @@ export async function guardarProyecto(entrada: {
     version: 1,
     servicio: entrada.servicio,
     historial: entrada.historial,
+    tipo_servicio: entrada.tipoServicio,
     react_code: entrada.reactCode,
+    html: entrada.html,
+    ficha: entrada.ficha,
+    plantilla: entrada.plantilla,
+    documento: entrada.documento,
     usage: entrada.usage ?? null,
   };
 
@@ -110,16 +182,9 @@ export async function listarProyectos(): Promise<ProyectoResumen[]> {
 
   return (data ?? [])
     .filter((fila) => esPayloadDiscovery(fila.payload))
-    .map((fila) => {
-      const payload = fila.payload as PayloadDiscovery;
-      return {
-        id: fila.id as string,
-        servicio: payload.servicio,
-        respuestas: payload.historial?.length ?? 0,
-        creadoEn: fila.created_at as string,
-        aceptado: payload.aceptado === true,
-      };
-    });
+    .map((fila) =>
+      resumenDe(fila.id as string, fila.created_at as string, fila.payload as PayloadDiscovery)
+    );
 }
 
 /** Recupera un proyecto completo, con su código, sin volver a generarlo. */
@@ -135,19 +200,36 @@ export async function cargarProyecto(id: string): Promise<ProyectoCompleto | nul
     return null;
   }
 
-  const payload = data.payload as PayloadDiscovery;
+  return completoDe(data.id as string, data.created_at as string, data.payload as PayloadDiscovery);
+}
 
-  return {
-    id: data.id as string,
-    servicio: payload.servicio,
-    respuestas: payload.historial?.length ?? 0,
-    creadoEn: data.created_at as string,
-    aceptado: payload.aceptado === true,
-    historial: payload.historial ?? [],
-    reactCode: payload.react_code,
-    usage: payload.usage ?? null,
-    documentacion: payload.documentacion ?? null,
-  };
+/**
+ * Sustituye la maqueta de un proyecto web ya guardado. "Probar otra versión"
+ * actualiza la misma fila en vez de crear otra: es el mismo proyecto.
+ */
+export async function actualizarMaqueta(
+  id: string,
+  cambios: { html?: string; documento?: string },
+  usage?: TokenUsage | null
+): Promise<{ ok: boolean; error: string | null }> {
+  const { data, error: errorLectura } = await supabase
+    .from('proyectos')
+    .select('payload')
+    .eq('id', id)
+    .single();
+
+  if (errorLectura || !data || !esPayloadDiscovery(data.payload)) {
+    return { ok: false, error: errorLectura?.message ?? 'No se encontró el proyecto.' };
+  }
+
+  const payload: PayloadDiscovery = { ...(data.payload as PayloadDiscovery), ...cambios, usage: usage ?? null };
+  const { error } = await supabase.from('proyectos').update({ payload }).eq('id', id);
+
+  if (error) {
+    console.error('[AIB+] No se pudo actualizar la maqueta:', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, error: null };
 }
 
 /** Borra un proyecto. RLS garantiza que solo se puedan borrar los propios. */
@@ -212,18 +294,7 @@ export async function listarAceptados(): Promise<ProyectoCompleto[]> {
 
   return (data ?? [])
     .filter((fila) => esPayloadDiscovery(fila.payload) && (fila.payload as PayloadDiscovery).aceptado)
-    .map((fila) => {
-      const payload = fila.payload as PayloadDiscovery;
-      return {
-        id: fila.id as string,
-        servicio: payload.servicio,
-        respuestas: payload.historial?.length ?? 0,
-        creadoEn: fila.created_at as string,
-        aceptado: true,
-        historial: payload.historial ?? [],
-        reactCode: payload.react_code,
-        usage: payload.usage ?? null,
-        documentacion: payload.documentacion ?? null,
-      };
-    });
+    .map((fila) =>
+      completoDe(fila.id as string, fila.created_at as string, fila.payload as PayloadDiscovery)
+    );
 }
