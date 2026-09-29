@@ -95,6 +95,8 @@ export function FlujoWeb({ onGuardado }: Props) {
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const proyectoId = useRef<string | null>(null);
+  /** El mismo id, como estado: la maqueta lo necesita para ofrecer el enlace de compartir. */
+  const [idGuardado, setIdGuardado] = useState<string | null>(null);
   const reintentar = useRef<(() => void) | null>(null);
 
   const pregunta = PREGUNTAS_WEB[paso];
@@ -210,6 +212,7 @@ export function FlujoWeb({ onGuardado }: Props) {
       usage,
     });
     proyectoId.current = id;
+    setIdGuardado(id);
     setGuardado(errorGuardado ? 'fallo' : 'guardado');
     if (!errorGuardado) onGuardado?.();
   };
@@ -393,6 +396,7 @@ export function FlujoWeb({ onGuardado }: Props) {
           }
           onAceptar={() => setPidiendoContacto(true)}
           onGuardarEdicion={guardarCambios}
+          proyectoId={idGuardado}
         />
         {pidiendoContacto && (
           <ContactoEncargo

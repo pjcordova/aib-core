@@ -43,6 +43,7 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 2. `Proyecto_AIB/supabase_roles_plantillas.sql` — los roles (cliente o ingeniero), el catálogo de plantillas y sus contadores.
 3. `Proyecto_AIB/supabase_cuota_ia.sql` — el tope diario de gasto en IA por usuario y en total. Sin él, el servidor rechaza todas las llamadas a la IA. Los límites se cambian en la tabla `limites_ia` (en céntimos de dólar).
 4. `Proyecto_AIB/supabase_fotos.sql` — el bucket `fotos` de Storage, donde el cliente sube las fotos de su maqueta: cada usuario solo escribe en su carpeta, solo imágenes y de hasta 2 MB.
+5. `Proyecto_AIB/supabase_compartir.sql` — los enlaces para compartir la maqueta (`/ver/<código>`). Sin sesión solo se puede leer la maqueta de un código válido, nada más del proyecto.
 
 Después convierte tu cuenta en ingeniero con la consulta que figura al final del segundo script. Sin eso, `/dashboard` no deja entrar.
 
@@ -67,8 +68,9 @@ La app queda en http://localhost:3000 y el backend en http://localhost:3001. El 
 1. El cliente elige servicio: **Página web**, **ERP** o **Automatización**.
 2. **Web** usa un cuestionario fijo de 6 pasos, sin IA mientras se contesta. ERP y Automatización usan el discovery guiado por IA.
 3. Al terminar el cuestionario web, AIB+ busca en el catálogo del ingeniero las plantillas que encajan con el negocio y le enseña las mejores ya con su nombre, logo y colores. El cliente elige una y la IA escribe solo sus textos. Si ninguna encaja, o prefiere algo a medida, la IA genera una maqueta completa.
-4. El cliente acepta la propuesta y se genera la documentación técnica.
-5. El ingeniero la ve en `/dashboard`, junto con su catálogo y lo que rinde cada plantilla.
+4. Con «Compartir», el cliente puede mandar su maqueta a otra persona con un enlace público de solo lectura, que desactiva cuando quiera. La página pública la muestra sin scripts, sin enlaces hacia fuera y con una política de contenido que solo deja cargar estilos, fuentes y fotos propias.
+5. El cliente acepta la propuesta y se genera la documentación técnica.
+6. El ingeniero la ve en `/dashboard`, junto con su catálogo y lo que rinde cada plantilla.
 
 ## Arquitectura
 
@@ -87,6 +89,7 @@ Proyecto_AIB/src/
     catalogo.ts   Catálogo del ingeniero y emparejamiento
     marca.ts      Logo, colores y montaje de las maquetas generadas por IA
     proyectos.ts  Persistencia de proyectos
+    compartir.ts  Enlaces públicos de la maqueta y su limpieza
   index.css       Sistema de diseño de AIB+
 
 server/src/

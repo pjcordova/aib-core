@@ -180,6 +180,7 @@ export default function Home() {
                 aceptacion={aceptacionAbierto}
                 onAceptar={() => setPidiendoContacto(true)}
                 onGuardarEdicion={guardarCambiosAbierto}
+                proyectoId={abierto.id}
               />
             ) : (
               <PrototypePreview

@@ -8,6 +8,12 @@
       "maxDuration": 300
     }
   },
+  "headers": [
+    {
+      "source": "/ver/(.*)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },

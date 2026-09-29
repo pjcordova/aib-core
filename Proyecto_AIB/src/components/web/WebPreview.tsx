@@ -13,6 +13,7 @@ import {
 import { subirFoto } from '../../lib/fotos';
 import { construirDocumento } from '../../lib/marca';
 import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
+import { CompartirMaqueta } from './CompartirMaqueta';
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
@@ -40,6 +41,8 @@ interface Props {
    * Devuelve si se guardó.
    */
   onGuardarEdicion?: (cambios: { documento: string; paleta: Paleta }) => Promise<boolean>;
+  /** Proyecto guardado: con él se puede crear un enlace para compartir. */
+  proyectoId?: string | null;
 }
 
 /**
@@ -59,9 +62,11 @@ export function WebPreview({
   onRegenerar,
   onAceptar,
   onGuardarEdicion,
+  proyectoId,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
+  const [compartiendo, setCompartiendo] = useState(false);
 
   // Edición en vivo
   const [editando, setEditando] = useState(false);
@@ -103,6 +108,7 @@ export function WebPreview({
 
   const aceptado = aceptacion === 'aceptado';
   const puedeEditar = !!onGuardarEdicion && !aceptado;
+  const puedeCompartir = !!proyectoId && guardado === 'guardado';
 
   // Mientras se edita, el iframe muestra una copia con el editor dentro. Se
   // calcula una sola vez al entrar: si cambiara con cada tecla, se recargaría.
@@ -140,6 +146,7 @@ export function WebPreview({
     setPaletaEdicion(ficha.paleta);
     setEstadoEdicion('inactivo');
     if (vista === 'codigo') setVista('escritorio');
+    setCompartiendo(false);
     setEditando(true);
   };
 
@@ -264,6 +271,16 @@ export function WebPreview({
               <button type="button" onClick={descargar} className="btn btn-ghost">
                 Descargar
               </button>
+              {puedeCompartir && (
+                <button
+                  type="button"
+                  onClick={() => setCompartiendo((abierto) => !abierto)}
+                  aria-expanded={compartiendo}
+                  className="btn btn-ghost"
+                >
+                  🔗 Compartir
+                </button>
+              )}
               {puedeEditar && (
                 <button type="button" onClick={empezarEdicion} disabled={aceptacion === 'procesando'} className="btn btn-ghost">
                   ✏️ Editar
@@ -311,6 +328,10 @@ export function WebPreview({
           ¡Listo! Tu proyecto ya está con el equipo de ingeniería junto a toda la
           información que nos diste. Te contactarán con una propuesta.
         </p>
+      )}
+
+      {compartiendo && puedeCompartir && !editando && proyectoId && (
+        <CompartirMaqueta proyectoId={proyectoId} empresa={ficha.empresa} />
       )}
 
       {editando && (
