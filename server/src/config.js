@@ -73,6 +73,25 @@ const config = {
   ).map((o) => o.trim()),
 
   isProduction: process.env.NODE_ENV === 'production',
+
+  // Aviso por correo al ingeniero cuando entra un encargo (Resend). Opcional:
+  // sin estas dos variables no se envía nada y el resto funciona igual.
+  // Sin dominio propio verificado en Resend, AVISOS_CORREO tiene que ser el
+  // correo de la cuenta de Resend.
+  avisos: {
+    resendApiKey: process.env.RESEND_API_KEY?.trim() || null,
+    para: process.env.AVISOS_CORREO?.trim() || null,
+    remitente: process.env.AVISOS_REMITENTE?.trim() || 'AIB+ <onboarding@resend.dev>',
+
+    // WhatsApp al ingeniero con CallMeBot (gratis, solo para avisarse a uno
+    // mismo). Número con código de país y sin símbolos: 51987654321.
+    whatsapp: (process.env.AVISOS_WHATSAPP ?? '').replace(/\D/g, '') || null,
+    callmebotApiKey: process.env.CALLMEBOT_APIKEY?.trim() || null,
+  },
+
+  // Dirección pública de la app, para el enlace del correo cuando la petición
+  // no trae un origen reconocible.
+  appUrl: sinBarraFinal(process.env.APP_URL?.trim() || 'https://aib-core.vercel.app'),
 };
 
 module.exports = { config };

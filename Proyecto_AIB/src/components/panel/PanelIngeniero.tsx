@@ -16,6 +16,8 @@ export function PanelIngeniero() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
   const [pestana, setPestana] = useState<Pestana>('encargos');
+  // Encargos aceptados que aún nadie ha revisado. Lo informa la pestaña de encargos.
+  const [nuevos, setNuevos] = useState(0);
 
   if (initializing || (session && perfil.cargando)) {
     return (
@@ -82,13 +84,21 @@ export function PanelIngeniero() {
                 }
               >
                 {texto}
+                {id === 'encargos' && nuevos > 0 && (
+                  <span
+                    className="ml-2 rounded-full bg-caution/15 px-1.5 py-0.5 text-[11px] font-semibold text-caution"
+                    aria-label={`${nuevos} ${nuevos === 1 ? 'nuevo' : 'nuevos'}`}
+                  >
+                    {nuevos}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
         </Shell>
       </header>
 
-      <main>{pestana === 'encargos' ? <EncargosIngenieria /> : <CatalogoPlantillas />}</main>
+      <main>{pestana === 'encargos' ? <EncargosIngenieria onNuevos={setNuevos} /> : <CatalogoPlantillas />}</main>
     </div>
   );
 }

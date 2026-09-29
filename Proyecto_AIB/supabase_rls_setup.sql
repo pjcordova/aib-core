@@ -51,6 +51,7 @@ CREATE POLICY "Users can update own projects"
   WITH CHECK (auth.uid() = user_id);
 
 -- 8. RLS Policy: Users can only DELETE their own rows
+-- supabase_encargos.sql la sustituye: los encargos ya aceptados no se borran.
 CREATE POLICY "Users can delete own projects"
   ON proyectos
   FOR DELETE

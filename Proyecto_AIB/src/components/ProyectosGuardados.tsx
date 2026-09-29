@@ -86,15 +86,19 @@ export function ProyectosGuardados({ onAbrir, recargar = 0 }: Props) {
               </p>
             </button>
 
-            <button
-              type="button"
-              onClick={() => void borrar(p.id)}
-              disabled={borrando === p.id}
-              aria-label={`Eliminar ${p.servicio}`}
-              className="shrink-0 rounded-lg px-2 py-1 text-xs text-ink-subtle opacity-0 transition-all group-hover:opacity-100 hover:bg-negative/10 hover:text-negative focus-visible:opacity-100 disabled:opacity-50"
-            >
-              {borrando === p.id ? '…' : 'Eliminar'}
-            </button>
+            {/* Un encargo enviado ya es trabajo del ingeniero: no se borra
+                (la base de datos tampoco lo permitiría). */}
+            {!p.aceptado && (
+              <button
+                type="button"
+                onClick={() => void borrar(p.id)}
+                disabled={borrando === p.id}
+                aria-label={`Eliminar ${p.servicio}`}
+                className="shrink-0 rounded-lg px-2 py-1 text-xs text-ink-subtle opacity-0 transition-all group-hover:opacity-100 hover:bg-negative/10 hover:text-negative focus-visible:opacity-100 disabled:opacity-50"
+              >
+                {borrando === p.id ? '…' : 'Eliminar'}
+              </button>
+            )}
           </li>
         ))}
       </ul>

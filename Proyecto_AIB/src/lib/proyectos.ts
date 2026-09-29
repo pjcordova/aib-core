@@ -11,7 +11,7 @@
 
 import { supabase } from './supabase';
 import type { QAHistory } from '../Types/productOwner';
-import { generarDocumentacion, type TokenUsage, type Documentacion } from './api';
+import { avisarIngeniero, generarDocumentacion, type TokenUsage, type Documentacion } from './api';
 import type { FichaWeb, Paleta, TipoServicio } from './servicios';
 
 /** Plantilla del catálogo con la que se hizo la maqueta. */
@@ -268,15 +268,19 @@ export function actualizarMaqueta(
   return modificarPayload(id, { ...cambios, usage: usage ?? null }, 'actualizar la maqueta');
 }
 
-/** Borra un proyecto. RLS garantiza que solo se puedan borrar los propios. */
+/**
+ * Borra un proyecto. RLS garantiza que solo se puedan borrar los propios y
+ * nunca un encargo ya aceptado, que es trabajo del ingeniero (supabase_encargos.sql):
+ * en ese caso no se borra ninguna fila y se devuelve false.
+ */
 export async function eliminarProyecto(id: string): Promise<boolean> {
-  const { error } = await supabase.from('proyectos').delete().eq('id', id);
+  const { data, error } = await supabase.from('proyectos').delete().eq('id', id).select('id');
 
   if (error) {
     console.error('[AIB+] No se pudo eliminar el proyecto:', error.message);
     return false;
   }
-  return true;
+  return (data?.length ?? 0) > 0;
 }
 
 /**
@@ -345,7 +349,10 @@ export async function enviarEncargo(
     'enviar el encargo'
   );
 
-  if (resultado.ok) documentarEnSegundoPlano(id, datos.servicio, historial);
+  if (resultado.ok) {
+    avisarIngeniero(id);
+    documentarEnSegundoPlano(id, datos.servicio, historial);
+  }
   return resultado;
 }
 

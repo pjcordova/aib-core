@@ -161,6 +161,17 @@ export async function generarDocumentacion(
   return { documentacion: data.documentacion, usage: data.usage };
 }
 
+/**
+ * Avisa al ingeniero de que entró un encargo. El servidor comprueba en la base
+ * de datos que el proyecto está aceptado y solo avisa una vez. Nunca falla
+ * hacia fuera: el encargo ya está guardado y el ingeniero lo verá en su panel.
+ */
+export function avisarIngeniero(proyectoId: string): void {
+  void post('/api/avisar-encargo', { proyectoId }, 20_000).catch((e) =>
+    console.warn('[AIB+] No se pudo avisar al ingeniero:', e instanceof Error ? e.message : e)
+  );
+}
+
 /** Pide el componente React del prototipo. Devuelve el código listo para Sandpack. */
 export async function generarPrototipo(
   servicio: string,

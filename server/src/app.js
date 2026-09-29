@@ -16,6 +16,7 @@ const prototypeRoutes = require('./routes/prototype');
 const documentationRoutes = require('./routes/documentation');
 const webPreviewRoutes = require('./routes/webPreview');
 const plantillasRoutes = require('./routes/plantillas');
+const avisosRoutes = require('./routes/avisos');
 
 const app = express();
 
@@ -74,6 +75,7 @@ app.use('/api', prototypeRoutes);
 app.use('/api', documentationRoutes);
 app.use('/api', webPreviewRoutes);
 app.use('/api', plantillasRoutes);
+app.use('/api', avisosRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });

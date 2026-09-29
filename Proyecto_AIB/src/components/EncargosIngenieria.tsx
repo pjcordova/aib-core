@@ -5,7 +5,7 @@ import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
 import { enlaceWhatsapp, formatearWhatsapp } from '../lib/contacto';
 import { obtenerServicio, PRESUPUESTOS, etiquetaDe, solesEnteros } from '../lib/servicios';
 import { construirDocumento } from '../lib/marca';
-import { listarSeguimiento, type CambioEstado } from '../lib/seguimiento';
+import { estadoActual, listarSeguimiento, type CambioEstado } from '../lib/seguimiento';
 import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 // antiguo, y mezclarlos habría forzado uno de los dos formatos.
 // ---------------------------------------------------------------------------
 
-export function EncargosIngenieria() {
+export function EncargosIngenieria({ onNuevos }: { onNuevos?: (cantidad: number) => void } = {}) {
   const [encargos, setEncargos] = useState<ProyectoCompleto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -36,6 +36,12 @@ export function EncargosIngenieria() {
       activo = false;
     };
   }, []);
+
+  // Nuevo = aceptado y todavía en "Recibido": nadie lo ha revisado.
+  const nuevos = encargos.filter((e) => estadoActual(seguimiento.get(e.id)) === 'recibido').length;
+  useEffect(() => {
+    if (!cargando) onNuevos?.(nuevos);
+  }, [cargando, nuevos, onNuevos]);
 
   if (cargando) {
     return <p className="p-6 text-sm text-ink-subtle">Cargando encargos…</p>;
@@ -60,6 +66,12 @@ export function EncargosIngenieria() {
         <p className="mt-1 text-sm text-ink-muted">
           {encargos.length} {encargos.length === 1 ? 'proyecto validado' : 'proyectos validados'} por
           el cliente
+          {nuevos > 0 && (
+            <span className="font-medium text-caution">
+              {' '}
+              · {nuevos} {nuevos === 1 ? 'nuevo por revisar' : 'nuevos por revisar'}
+            </span>
+          )}
         </p>
       </header>
 

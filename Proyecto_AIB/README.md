@@ -45,6 +45,7 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 4. `Proyecto_AIB/supabase_fotos.sql` — el bucket `fotos` de Storage, donde el cliente sube las fotos de su maqueta: cada usuario solo escribe en su carpeta, solo imágenes y de hasta 2 MB.
 5. `Proyecto_AIB/supabase_compartir.sql` — los enlaces para compartir la maqueta (`/ver/<código>`). Sin sesión solo se puede leer la maqueta de un código válido, nada más del proyecto.
 6. `Proyecto_AIB/supabase_seguimiento.sql` — el seguimiento de los encargos (Recibido → En revisión → Propuesta enviada → En desarrollo → Publicada). Solo el ingeniero añade etapas; el cliente ve las de sus proyectos y no puede cambiarlas.
+7. `Proyecto_AIB/supabase_encargos.sql` — protege los encargos aceptados (su dueño no puede borrarlos ni deshacer la aceptación) y lleva la cuenta de los avisos al ingeniero, uno por encargo.
 
 Después convierte tu cuenta en ingeniero con la consulta que figura al final del segundo script. Sin eso, `/dashboard` no deja entrar.
 
@@ -162,6 +163,7 @@ Todos, salvo `/health`, exigen una sesión de Supabase: el cliente envía su `ac
 | `POST` | `/api/generar-preview-web` | Maqueta web completa en HTML con Bootstrap |
 | `POST` | `/api/rellenar-plantilla` | Solo los textos de una plantilla del catálogo |
 | `POST` | `/api/generar-documentacion` | Documento técnico al aceptar una propuesta |
+| `POST` | `/api/avisar-encargo` | Correo y WhatsApp al ingeniero cuando un cliente acepta (una vez por encargo) |
 | `GET` | `/health` | Estado del servidor y modelo activo |
 
 Cada llamada a la IA registra su consumo real:
@@ -174,5 +176,8 @@ Cada llamada a la IA registra su consumo real:
 
 - Se despliega en **Vercel**: el frontend como estático y el backend como función serverless (`api/index.js`). `vercel.json` fija el build y un techo de 300 s por función.
 - Variables en Vercel: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+- **Aviso de encargos nuevos (opcional)**, por uno o por los dos canales. Sin estas variables no se envía nada y todo lo demás funciona igual.
+  - Correo: `RESEND_API_KEY` y `AVISOS_CORREO`. La clave se consigue creando una cuenta gratis en resend.com. Sin dominio propio verificado en Resend, `AVISOS_CORREO` debe ser el correo con el que se creó la cuenta.
+  - WhatsApp: `AVISOS_WHATSAPP` (con código de país, sin símbolos: `51987654321`) y `CALLMEBOT_APIKEY`. La clave se consigue gratis en callmebot.com: se guarda su número en los contactos y se le manda por WhatsApp la frase que indica. Es un servicio de terceros para avisarse a uno mismo, así que el mensaje solo lleva el nombre del negocio y el enlace al panel; los datos del cliente van por correo.
 - La web y la API se sirven desde el mismo dominio, así que no hace falta `VITE_API_URL` ni configurar CORS para el propio sitio.
 - **Saldo de Anthropic.** Si se agota, toda la IA cae. El usuario ve un mensaje genérico y el log del servidor muestra `⚠ SIN SALDO EN ANTHROPIC`.
