@@ -101,6 +101,25 @@ export const PRESUPUESTOS: Opcion[] = [
   { valor: 'no-se', etiqueta: 'Aún no lo sé', detalle: 'Lo conversamos con el ingeniero' },
 ];
 
+/**
+ * Hasta cuánto llega cada rango de presupuesto. Sirve para avisar al cliente
+ * si un diseño parte de un precio mayor. null: no lo sabe.
+ */
+export function techoPresupuesto(valor: string): number | null {
+  const techos: Record<string, number> = {
+    'hasta-1500': 1500,
+    '1500-4000': 4000,
+    '4000-10000': 10000,
+    'mas-10000': Number.POSITIVE_INFINITY,
+  };
+  return techos[valor] ?? null;
+}
+
+/** "S/ 1,200": soles sin decimales, como en los rangos de presupuesto. */
+export function solesEnteros(monto: number): string {
+  return `S/ ${Math.round(monto).toLocaleString('en-US')}`;
+}
+
 export interface Paleta {
   id: string;
   nombre: string;

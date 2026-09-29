@@ -8,9 +8,10 @@
 // ---------------------------------------------------------------------------
 
 import type { PlantillaBase } from '../lib/plantillas';
+import { consultora } from './consultora';
 import { modaBoutique } from './moda-boutique';
 
-export const PLANTILLAS_BASE: PlantillaBase[] = [modaBoutique as PlantillaBase];
+export const PLANTILLAS_BASE: PlantillaBase[] = [modaBoutique as PlantillaBase, consultora as PlantillaBase];
 
 export function obtenerPlantillaBase(id: string): PlantillaBase | null {
   return PLANTILLAS_BASE.find((p) => p.id === id) ?? null;

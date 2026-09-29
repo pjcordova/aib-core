@@ -35,7 +35,7 @@ export const CATEGORIAS_NEGOCIO: { valor: CategoriaNegocio; etiqueta: string }[]
  * Qué papel cumple cada variable de color de la plantilla. Al renderizar, la
  * paleta del cliente se traduce a estos papeles y sustituye la del ingeniero.
  */
-export type RolColor = 'primario' | 'primario-oscuro' | 'secundario' | 'secundario-suave';
+export type RolColor = 'primario' | 'primario-oscuro' | 'secundario' | 'secundario-oscuro' | 'secundario-suave';
 
 export interface ContextoVista {
   empresa: string;
@@ -101,6 +101,9 @@ export function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, '
     primario: paleta.primario,
     'primario-oscuro': ajustar(paleta.primario, -0.15),
     secundario: paleta.secundario,
+    // Para usar el secundario como texto sobre blanco: un ámbar o un amarillo
+    // tal cual no se leerían.
+    'secundario-oscuro': ajustar(paleta.secundario, -0.35),
     'secundario-suave': ajustar(paleta.secundario, 0.6),
   };
 

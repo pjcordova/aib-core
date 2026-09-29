@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev --prefix ../server\"",
-    "plantillas": "tailwindcss -i src/plantillas/moda-boutique/fuente.css -o src/plantillas/moda-boutique/estilos.css --minify"
+    "plantillas": "node scripts/compilar-plantillas.mjs"
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",

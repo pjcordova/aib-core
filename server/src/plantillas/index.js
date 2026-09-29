@@ -7,8 +7,9 @@
 // ---------------------------------------------------------------------------
 
 const modaBoutique = require('./moda-boutique');
+const consultora = require('./consultora');
 
-const PLANTILLAS = { [modaBoutique.id]: modaBoutique };
+const PLANTILLAS = { [modaBoutique.id]: modaBoutique, [consultora.id]: consultora };
 
 function obtenerPlantilla(id) {
   return Object.prototype.hasOwnProperty.call(PLANTILLAS, id) ? PLANTILLAS[id] : null;

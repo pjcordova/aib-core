@@ -7,7 +7,7 @@ import {
   type PlantillaDelCatalogo,
 } from '../../lib/catalogo';
 import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type PlantillaBase } from '../../lib/plantillas';
-import { PREGUNTAS_WEB, etiquetaDe } from '../../lib/servicios';
+import { PREGUNTAS_WEB, etiquetaDe, solesEnteros } from '../../lib/servicios';
 import { PLANTILLAS_BASE } from '../../plantillas';
 import { MiniVista } from './MiniVista';
 
@@ -170,6 +170,7 @@ export function CatalogoPlantillas() {
               onVer={() => setAmpliada(p.base)}
               onActivar={(activa) => void accion(actualizarPlantilla(p.fila.id, { activa }))}
               onEtiquetas={(etiquetas) => void accion(actualizarPlantilla(p.fila.id, { etiquetas }))}
+              onPrecio={(precio_desde) => void accion(actualizarPlantilla(p.fila.id, { precio_desde }))}
               onQuitar={() => void accion(quitarPlantilla(p.fila.id))}
             />
           ))}
@@ -254,12 +255,14 @@ function TarjetaPlantilla({
   onVer,
   onActivar,
   onEtiquetas,
+  onPrecio,
   onQuitar,
 }: {
   plantilla: PlantillaDelCatalogo;
   onVer: () => void;
   onActivar: (activa: boolean) => void;
   onEtiquetas: (etiquetas: string[]) => void;
+  onPrecio: (precio: number | null) => void;
   onQuitar: () => void;
 }) {
   const { fila, base } = plantilla;
@@ -340,6 +343,8 @@ function TarjetaPlantilla({
           </div>
         )}
 
+        <PrecioDesde precio={fila.precio_desde} onGuardar={onPrecio} />
+
         {/* Contadores */}
         <dl className="mt-4 grid grid-cols-4 gap-2 border-t border-line pt-3 text-center">
           {(
@@ -377,6 +382,66 @@ function TarjetaPlantilla({
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * Precio orientativo que ve el cliente al elegir el diseño ("desde S/ X").
+ * Vacío: no se le muestra ninguno.
+ */
+function PrecioDesde({ precio, onGuardar }: { precio: number | null; onGuardar: (p: number | null) => void }) {
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(precio ? String(precio) : '');
+  const valor = texto.trim() === '' ? null : Number(texto.replace(/[^\d]/g, ''));
+  const valido = valor === null || (Number.isInteger(valor) && valor > 0 && valor < 1_000_000);
+
+  if (editando) {
+    return (
+      <form
+        className="mt-3 flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!valido) return;
+          onGuardar(valor);
+          setEditando(false);
+        }}
+      >
+        <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+          Desde S/
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            inputMode="numeric"
+            className="field !w-24 !py-1 text-xs"
+            placeholder="1200"
+            aria-label="Precio desde, en soles"
+            aria-invalid={!valido}
+            autoFocus
+          />
+        </label>
+        <button type="submit" disabled={!valido} className="btn btn-primary !px-3 !py-1 text-xs">
+          Guardar
+        </button>
+        <button type="button" onClick={() => setEditando(false)} className="btn btn-ghost !px-3 !py-1 text-xs">
+          Cancelar
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <p className="mt-3 text-xs text-ink-muted">
+      {precio ? (
+        <>
+          Precio para el cliente: <strong className="text-ink">desde {solesEnteros(precio)}</strong>
+        </>
+      ) : (
+        'Sin precio orientativo: el cliente no verá ninguno.'
+      )}{' '}
+      <button type="button" onClick={() => setEditando(true)} className="text-accent hover:underline">
+        {precio ? 'Cambiar' : 'Poner precio'}
+      </button>
+    </p>
   );
 }
 

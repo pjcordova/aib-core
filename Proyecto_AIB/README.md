@@ -108,16 +108,20 @@ Una plantilla es una web que el ingeniero ya sabe construir, con huecos donde va
 - **HTML** con sintaxis Mustache: `{{nombre}}` inserta texto escapado y `{{#lista}}…{{/lista}}` repite un bloque. Nada de lo que escribe la IA puede colar HTML en la página.
 - **Colores**: la plantilla declara qué variables CSS son de marca. Al renderizar se sustituyen por la paleta del cliente y los neutros se mantienen.
 - **Textos**: el servidor pide a la IA exactamente la forma que espera la plantilla, con *structured outputs*, y la normaliza (longitudes, precios, colores).
+- **Secciones**: los bloques opcionales (quiénes somos, testimonios, preguntas…) solo aparecen, y solo se le piden a la IA, si el cliente eligió esa sección. La plantilla declara en `secciones` cuáles sabe mostrar; las demás se avisan al elegir y le llegan al ingeniero como pendientes.
+- **Fotos**: los elementos con `data-aib-foto` son huecos donde el cliente puede poner una foto suya desde «Editar».
+
+Plantillas incluidas: `moda-boutique` (tiendas de ropa, derivada de bithia-web) y `consultora` (servicios profesionales, derivada de la web de BuenVivir).
 
 ### Añadir una plantilla
 
 1. Crea `Proyecto_AIB/src/plantillas/<id>/` con:
    - `plantilla.html`: el cuerpo de la página con sus huecos.
-   - `fuente.css`: su Tailwind de origen. Toma `moda-boutique/fuente.css` como referencia.
+   - `fuente.css`: su Tailwind de origen. Toma `consultora/fuente.css` como referencia.
    - `index.ts`: metadatos, el tipo de sus textos, unos textos de ejemplo y la función `vista`.
-2. Añade su compilación al script `plantillas` de `package.json` y ejecuta `npm run plantillas`.
+2. Ejecuta `npm run plantillas`: compila el CSS de todas las carpetas que tengan `fuente.css`.
 3. Regístrala en `Proyecto_AIB/src/plantillas/index.ts`.
-4. En el servidor, crea `server/src/plantillas/<id>.js` con su esquema, su prompt y su `normalizar`, y regístrala en `server/src/plantillas/index.js`.
+4. En el servidor, crea `server/src/plantillas/<id>.js` con su esquema, su prompt y su `normalizar` (las utilidades comunes están en `comun.js`), y regístrala en `server/src/plantillas/index.js`.
 
 El tipo de los textos del frontend y el esquema del servidor deben coincidir.
 

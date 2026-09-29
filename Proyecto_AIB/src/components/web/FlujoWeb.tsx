@@ -18,6 +18,8 @@ import {
   PREGUNTAS_WEB,
   PALETAS,
   etiquetaDe,
+  solesEnteros,
+  techoPresupuesto,
   type FichaWeb,
   type Paleta,
   type Pregunta,
@@ -162,6 +164,15 @@ export function FlujoWeb({ onGuardado }: Props) {
       ...(plantilla
         ? [{ question_id: 'plantilla', question: 'Plantilla elegida', answer: plantilla.nombre }]
         : []),
+      ...(plantilla?.precio_desde
+        ? [
+            {
+              question_id: 'precio-orientativo',
+              question: 'Precio orientativo que vio el cliente al elegir el diseño',
+              answer: `Desde ${solesEnteros(plantilla.precio_desde)}`,
+            },
+          ]
+        : []),
       ...(faltan.length
         ? [
             {
@@ -231,7 +242,12 @@ export function FlujoWeb({ onGuardado }: Props) {
   /** El cliente eligió una plantilla: la IA escribe solo sus textos. */
   const elegirPlantilla = async (c: PlantillaDelCatalogo) => {
     const f = ficha();
-    const usada: PlantillaUsada = { id: c.fila.id, base: c.base.id, nombre: c.fila.nombre };
+    const usada: PlantillaUsada = {
+      id: c.fila.id,
+      base: c.base.id,
+      nombre: c.fila.nombre,
+      precio_desde: c.fila.precio_desde,
+    };
     const esNueva = ultimaElegida.current?.fila.id !== c.fila.id;
     ultimaElegida.current = c;
 
@@ -493,6 +509,9 @@ function EleccionPlantilla({
               <p className="font-semibold text-ink">{c.fila.nombre}</p>
               <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>
               <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />
+              {c.fila.precio_desde !== null && (
+                <PrecioOrientativo precio={c.fila.precio_desde} presupuesto={ficha.presupuesto} />
+              )}
               <button type="button" onClick={() => onElegir(c)} className="btn btn-primary mt-4 w-full">
                 Me gusta este
               </button>
@@ -533,6 +552,26 @@ function Cobertura({ faltan }: { faltan: string[] }) {
     <p className="mt-2 text-xs text-ink-subtle">
       No incluye {faltan.map((s) => etiquetaDe(opciones, s)).join(', ')}: el ingeniero lo añade
       después.
+    </p>
+  );
+}
+
+/**
+ * "Desde S/ X" que fijó el ingeniero. Si pasa del presupuesto que marcó el
+ * cliente se le dice aquí, antes de que se ilusione con un diseño.
+ */
+function PrecioOrientativo({ precio, presupuesto }: { precio: number; presupuesto: string }) {
+  const techo = techoPresupuesto(presupuesto);
+  const excede = techo !== null && precio > techo;
+  return (
+    <p className="mt-2 text-sm">
+      <span className="font-semibold text-ink">Desde {solesEnteros(precio)}</span>
+      {excede && (
+        <span className="mt-0.5 block text-xs text-caution">
+          Está por encima del presupuesto que marcaste. Puedes elegirlo igual y conversarlo con el
+          ingeniero.
+        </span>
+      )}
     </p>
   );
 }

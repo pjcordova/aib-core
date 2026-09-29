@@ -8,17 +8,15 @@
 // La forma debe coincidir con TextosModaBoutique del frontend.
 // ---------------------------------------------------------------------------
 
-const texto = (description) => ({ type: 'string', description });
-const numero = (description) => ({ type: 'number', description });
-
-function objeto(properties) {
-  return {
-    type: 'object',
-    additionalProperties: false,
-    required: Object.keys(properties),
-    properties,
-  };
-}
+const {
+  texto,
+  numero,
+  objeto,
+  limitar,
+  exactamente,
+  testimoniosNormalizados,
+  preguntasNormalizadas,
+} = require('./comun');
 
 const producto = objeto({
   nombre: texto('Nombre corto de la prenda, 2 a 4 palabras'),
@@ -151,22 +149,10 @@ REGLAS
 
 /* -------------------------------------------------------------------------- */
 
-const limitar = (valor, max, respaldo) => {
-  const t = typeof valor === 'string' ? valor.trim() : '';
-  return (t || respaldo).slice(0, max);
-};
-
 const precio = (valor, respaldo) =>
   Number.isFinite(valor) && valor > 0 && valor < 100000 ? Math.round(valor * 10) / 10 : respaldo;
 
 const hex = (valor, respaldo = '#d4a59a') => (/^#[0-9a-f]{6}$/i.test(valor ?? '') ? valor : respaldo);
-
-/** Deja una lista con exactamente `n` elementos: recorta o repite los que hay. */
-function exactamente(lista, n, normalizarUno) {
-  const base = Array.isArray(lista) ? lista.map(normalizarUno).filter(Boolean) : [];
-  if (base.length === 0) return null;
-  return Array.from({ length: n }, (_, i) => base[i % base.length]);
-}
 
 function productoNormalizado(p) {
   if (!p || typeof p !== 'object') return null;
@@ -191,19 +177,12 @@ function bloquesOpcionales(t, secciones) {
   }
 
   if (secciones.includes('testimonios')) {
-    const testimonios = exactamente(t.testimonios, 3, (x) => {
-      const opinion = limitar(x?.texto, 200, '');
-      return opinion ? { texto: opinion, autor: limitar(x?.autor, 40, 'Cliente') } : null;
-    });
+    const testimonios = testimoniosNormalizados(t.testimonios);
     if (testimonios) extra.testimonios = testimonios;
   }
 
   if (secciones.includes('preguntas')) {
-    const preguntas = exactamente(t.preguntas, 4, (x) => {
-      const pregunta = limitar(x?.pregunta, 100, '');
-      const respuesta = limitar(x?.respuesta, 240, '');
-      return pregunta && respuesta ? { pregunta, respuesta } : null;
-    });
+    const preguntas = preguntasNormalizadas(t.preguntas);
     if (preguntas) extra.preguntas = preguntas;
   }
 

@@ -20,6 +20,8 @@ export interface PlantillaUsada {
   id: string;
   base: string;
   nombre: string;
+  /** Precio orientativo que vio el cliente al elegirla, si el ingeniero lo había fijado. */
+  precio_desde?: number | null;
 }
 
 /**

@@ -126,6 +126,12 @@ CREATE TABLE IF NOT EXISTS public.plantillas (
 
 CREATE INDEX IF NOT EXISTS idx_plantillas_activas ON public.plantillas (activa, categoria);
 
+-- Precio orientativo en soles ("desde S/ X") que el cliente ve al elegir el
+-- diseño. Vacío mientras el ingeniero no lo fije.
+ALTER TABLE public.plantillas
+  ADD COLUMN IF NOT EXISTS precio_desde INTEGER
+  CHECK (precio_desde IS NULL OR (precio_desde > 0 AND precio_desde < 1000000));
+
 ALTER TABLE public.plantillas ENABLE ROW LEVEL SECURITY;
 
 -- El ingeniero hace de todo con las suyas.

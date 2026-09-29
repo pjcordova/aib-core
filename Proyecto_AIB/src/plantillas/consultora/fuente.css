@@ -1,0 +1,64 @@
+/*
+  Hoja de origen de la plantilla "Consultora profesional".
+
+  Lenguaje visual de la web de BuenVivir (Tailwind): Fraunces para títulos,
+  Work Sans para el texto, fondos crema y píldoras. Se compila a estilos.css
+  con:
+
+    npm run plantillas
+
+  `source(none)` + `@source` limitan el escaneo a esta plantilla, así el CSS
+  resultante solo trae las clases que la plantilla usa de verdad.
+*/
+@import 'tailwindcss' source(none);
+@source './plantilla.html';
+
+/* Clases que la plantilla recibe como dato ({{orden_imagen}}) y que por eso
+   no aparecen escritas en el HTML. */
+@source inline('md:order-2');
+
+/* Los cuatro colores de marca (marca y acento, con sus variantes) se
+   sustituyen por la paleta de cada cliente al renderizar; los neutros se
+   mantienen porque son los que dan el aire sereno de consultora. */
+@theme {
+  --color-marca: #27a47e;
+  --color-marca-oscuro: #1f8a69;
+  --color-acento: #cf9f3d;
+  --color-acento-oscuro: #a8792b;
+  --color-acento-suave: #fdf8d4;
+
+  --color-crema: #f6f3eb;
+  --color-tinta: #12170f;
+  --color-tinta-suave: #26331f;
+  --color-pie: #182216;
+  --color-linea: #e7e2d6;
+  --color-whatsapp: #25d366;
+
+  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      scroll-padding-top: 6rem;
+    }
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--color-tinta-suave);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+  }
+}

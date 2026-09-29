@@ -20,6 +20,8 @@ export interface FilaPlantilla {
   estilo: string;
   etiquetas: string[];
   activa: boolean;
+  /** Precio orientativo en soles que ve el cliente ("desde S/ X"). null: sin fijar. */
+  precio_desde: number | null;
   veces_mostrada: number;
   veces_elegida: number;
   veces_aceptada: number;
@@ -98,7 +100,7 @@ export async function anadirPlantilla(base: PlantillaBase): Promise<{ error: str
 
 export async function actualizarPlantilla(
   id: string,
-  cambios: Partial<Pick<FilaPlantilla, 'activa' | 'etiquetas' | 'nombre' | 'estilo'>>
+  cambios: Partial<Pick<FilaPlantilla, 'activa' | 'etiquetas' | 'nombre' | 'estilo' | 'precio_desde'>>
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from('plantillas').update(cambios).eq('id', id);
   if (error) {

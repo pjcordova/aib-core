@@ -3,7 +3,7 @@ import { cargarProyecto, documentarComoIngeniero, listarAceptados } from '../lib
 import type { ProyectoCompleto } from '../lib/proyectos';
 import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
 import { enlaceWhatsapp, formatearWhatsapp } from '../lib/contacto';
-import { obtenerServicio, PRESUPUESTOS, etiquetaDe } from '../lib/servicios';
+import { obtenerServicio, PRESUPUESTOS, etiquetaDe, solesEnteros } from '../lib/servicios';
 import { construirDocumento } from '../lib/marca';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +78,7 @@ export function EncargosIngenieria() {
                     {e.plantilla && (
                       <span className="rounded-full border border-accent/30 px-2 py-0.5 text-[11px] text-accent">
                         Plantilla: {e.plantilla.nombre}
+                        {e.plantilla.precio_desde ? ` · desde ${solesEnteros(e.plantilla.precio_desde)}` : ''}
                       </span>
                     )}
                     {e.presupuesto && (
