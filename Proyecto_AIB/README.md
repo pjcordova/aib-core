@@ -42,6 +42,7 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 1. `Proyecto_AIB/supabase_rls_setup.sql` — la tabla `proyectos` y sus políticas de Row Level Security, que garantizan que cada cliente solo vea sus filas.
 2. `Proyecto_AIB/supabase_roles_plantillas.sql` — los roles (cliente o ingeniero), el catálogo de plantillas y sus contadores.
 3. `Proyecto_AIB/supabase_cuota_ia.sql` — el tope diario de gasto en IA por usuario y en total. Sin él, el servidor rechaza todas las llamadas a la IA. Los límites se cambian en la tabla `limites_ia` (en céntimos de dólar).
+4. `Proyecto_AIB/supabase_fotos.sql` — el bucket `fotos` de Storage, donde el cliente sube las fotos de su maqueta: cada usuario solo escribe en su carpeta, solo imágenes y de hasta 2 MB.
 
 Después convierte tu cuenta en ingeniero con la consulta que figura al final del segundo script. Sin eso, `/dashboard` no deja entrar.
 

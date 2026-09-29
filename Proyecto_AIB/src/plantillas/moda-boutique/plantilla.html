@@ -7,6 +7,10 @@
 
   Sin JavaScript: el menú móvil es un <details> y el desplegable de escritorio
   se abre con :hover / :focus-within. La marquesina es una animación CSS.
+
+  data-aib-foto marca los huecos donde el cliente puede poner una foto suya
+  (lib/edicion.ts). La foto entra como primer hijo del hueco, así que el hueco
+  debe estar posicionado y el texto que va encima, fuera de él.
 -->
 
 <!-- ============================================================ anuncio -->
@@ -90,7 +94,7 @@
   <!-- ============================================================ hero -->
   <div class="relative">
     <section class="relative h-[78vh] min-h-[460px] overflow-hidden md:h-[85vh]" aria-label="Portada">
-      <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave via-rosa-suave/60 to-terracota/30"></div>
+      <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave via-rosa-suave/60 to-terracota/30" data-aib-foto="portada" data-aib-velo="claro"></div>
       <div class="relative flex h-full items-center">
         <div class="mx-auto w-full max-w-6xl px-6 md:px-10">
           <div class="max-w-lg">
@@ -116,7 +120,7 @@
           {{#destacados}}
           <div class="w-[46%] shrink-0 snap-start sm:w-[31%]">
             <a href="#top-semana" class="group block overflow-hidden rounded-tarjeta bg-white sombra-tarjeta transition hover:-translate-y-0.5 hover:shadow-lg">
-              <div class="relative flex aspect-[3/4] items-center justify-center bg-rosa-suave/30">
+              <div class="relative flex aspect-[3/4] items-center justify-center bg-rosa-suave/30" data-aib-foto="producto">
                 <svg class="text-rosa/60 transition duration-300 group-hover:scale-110" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
                 {{#etiqueta}}<div class="absolute left-2 top-2"><span class="px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] {{etiqueta_clase}}">{{etiqueta}}</span></div>{{/etiqueta}}
               </div>
@@ -144,7 +148,7 @@
     <div class="grid grid-cols-2 gap-3 px-3 md:grid-cols-4 md:gap-5 md:px-5">
       {{#categorias}}
       <a href="#novedades" class="group relative block aspect-[3/4] overflow-hidden bg-rosa-suave/30">
-        <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave to-terracota/25 transition duration-500 group-hover:scale-105"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave to-terracota/25 transition duration-500 group-hover:scale-105" data-aib-foto="categoria"></div>
         <div class="absolute inset-0 bg-carbon/10 transition group-hover:bg-carbon/20"></div>
         <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-carbon px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white md:text-sm">{{nombre}}</span>
       </a>
@@ -177,7 +181,7 @@
       <div class="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         {{#novedades}}
         <a href="#top-semana" class="group block overflow-hidden rounded-tarjeta bg-white sombra-tarjeta transition hover:-translate-y-0.5 hover:shadow-lg">
-          <div class="relative flex aspect-[3/4] items-center justify-center bg-rosa-suave/30">
+          <div class="relative flex aspect-[3/4] items-center justify-center bg-rosa-suave/30" data-aib-foto="producto">
             <svg class="text-rosa/60 transition duration-300 group-hover:scale-110" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
             {{#etiqueta}}<div class="absolute left-2 top-2"><span class="px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] {{etiqueta_clase}}">{{etiqueta}}</span></div>{{/etiqueta}}
           </div>
@@ -202,7 +206,7 @@
   {{#hay_nosotros}}
   <section id="nosotros" class="mx-auto mt-20 grid max-w-6xl scroll-mt-24 items-center gap-10 px-4 md:grid-cols-2 md:gap-14" aria-labelledby="titulo-nosotros">
     <div class="relative aspect-[4/3] overflow-hidden rounded-tarjeta">
-      <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave to-terracota/25"></div>
+      <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave to-terracota/25" data-aib-foto="nosotros"></div>
     </div>
     <div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-carbon-suave">Quiénes somos</p>
@@ -215,14 +219,14 @@
   <!-- ============================================================ edición limitada -->
   <section class="mt-16 bg-rosa-suave/40" aria-label="{{edicion.etiqueta}}">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr]">
-      <div class="relative h-72 bg-gradient-to-br from-rosa-suave to-terracota/25 md:h-[38rem]"></div>
+      <div class="relative h-72 bg-gradient-to-br from-rosa-suave to-terracota/25 md:h-[38rem]" data-aib-foto="edicion"></div>
       <div class="flex flex-col items-center justify-center px-6 py-14 text-center md:px-12 md:py-28">
         <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-carbon-suave">{{edicion.etiqueta}}</p>
         <h2 class="mt-4 max-w-md text-2xl font-bold uppercase leading-tight tracking-[0.04em] text-carbon md:text-4xl">{{edicion.nombre}}</h2>
         <p class="mt-5 text-carbon"><span class="align-top text-sm font-semibold">S/ </span><span class="text-3xl font-bold md:text-4xl">{{edicion.precio_numero}}</span></p>
         <a href="#top-semana" class="mt-8 inline-block bg-carbon px-10 py-3.5 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition hover:bg-carbon/85">Ver prenda</a>
       </div>
-      <div class="relative hidden h-72 bg-gradient-to-bl from-rosa-suave to-terracota/25 md:block md:h-[38rem]"></div>
+      <div class="relative hidden h-72 bg-gradient-to-bl from-rosa-suave to-terracota/25 md:block md:h-[38rem]" data-aib-foto="edicion"></div>
     </div>
   </section>
 
@@ -251,7 +255,7 @@
 
     <div class="mx-auto mt-10 grid max-w-6xl gap-10 px-4 md:grid-cols-2 md:gap-14">
       <div class="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-tarjeta bg-rosa-suave/25 md:aspect-auto md:min-h-[520px]">
-        <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave/80 to-terracota/20"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave/80 to-terracota/20" data-aib-foto="destacada"></div>
         <svg class="relative text-rosa/70" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
       </div>
 
@@ -317,7 +321,7 @@
       <div class="relative flex md:h-full">
         <p class="hidden shrink-0 select-none overflow-hidden text-3xl font-extrabold uppercase leading-none tracking-tight text-carbon md:block lg:text-4xl xl:text-5xl" style="writing-mode: vertical-rl; transform: rotate(180deg)" aria-hidden="true">{{look.etiqueta}}</p>
         <div class="relative aspect-[3/4] flex-1 overflow-hidden bg-rosa-suave/20 md:aspect-auto md:h-full">
-          <div class="absolute inset-0 bg-gradient-to-tr from-terracota/25 via-rosa-suave to-rosa-suave/60"></div>
+          <div class="absolute inset-0 bg-gradient-to-tr from-terracota/25 via-rosa-suave to-rosa-suave/60" data-aib-foto="look"></div>
           <span class="absolute left-[38%] top-[34%] h-7 w-7 -translate-x-1/2 -translate-y-1/2 scale-110 rounded-full border-2 border-white/70 bg-white shadow-md"></span>
           <span class="absolute left-[58%] top-[64%] h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/70 bg-white/60 shadow-md"></span>
         </div>
@@ -325,7 +329,7 @@
 
       <div class="md:flex md:flex-col md:justify-center md:py-12">
         {{#look.prenda}}
-        <div class="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-rosa-suave/20 md:aspect-auto md:h-[42vh] md:min-h-[300px]">
+        <div class="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-rosa-suave/20 md:aspect-auto md:h-[42vh] md:min-h-[300px]" data-aib-foto="look-prenda">
           <svg class="text-rosa/60" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
           <span class="absolute left-3 top-3 bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-carbon">Nuevo ingreso</span>
         </div>
@@ -364,7 +368,7 @@
   {{#hay_tienda}}
   <section class="relative mt-20" aria-label="Nuestra tienda">
     <div class="relative h-[26rem] w-full overflow-hidden md:h-[38rem]">
-      <div class="absolute inset-0 bg-gradient-to-br from-terracota/40 via-rosa to-rosa-suave"></div>
+      <div class="absolute inset-0 bg-gradient-to-br from-terracota/40 via-rosa to-rosa-suave" data-aib-foto="tienda" data-aib-velo="oscuro"></div>
       <div class="absolute inset-0 bg-carbon/15"></div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center">
         <span class="bg-carbon px-10 py-3.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white">Visítanos</span>

@@ -227,7 +227,7 @@ export function estilosDeMarca(p: Paleta): string {
 .icono-lg{font-size:2.75rem;line-height:1}
 .marca-logo{max-height:44px;width:auto}
 .marca-nombre{font-weight:700;font-size:1.25rem;letter-spacing:-.01em}
-.marca-imagen{display:flex;align-items:center;justify-content:center;min-height:200px;
+.marca-imagen{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:200px;
   border-radius:.75rem;background:linear-gradient(135deg,${p.primario}22,${p.secundario}33);
   color:${p.primario};font-size:3rem}
 html{scroll-behavior:smooth}

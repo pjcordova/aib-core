@@ -6,8 +6,11 @@ import {
   documentoEditable,
   MENSAJE_EDICION,
   MENSAJE_PALETA,
+  MENSAJE_PEDIR_FOTO,
+  MENSAJE_PONER_FOTO,
   sanearDocumento,
 } from '../../lib/edicion';
+import { subirFoto } from '../../lib/fotos';
 import { construirDocumento } from '../../lib/marca';
 import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
 
@@ -15,6 +18,7 @@ type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 type Vista = 'escritorio' | 'movil' | 'codigo';
 type EstadoEdicion = 'inactivo' | 'guardando' | 'fallo';
+type EstadoFoto = 'inactivo' | 'subiendo' | 'fallo';
 
 interface Props {
   /** Cuerpo generado por IA; se monta con construirDocumento. */
@@ -66,7 +70,12 @@ export function WebPreview({
   const [paletaEdicion, setPaletaEdicion] = useState<Paleta>(ficha.paleta);
   const [estadoEdicion, setEstadoEdicion] = useState<EstadoEdicion>('inactivo');
   const [seEdito, setSeEdito] = useState(false);
+  const [estadoFoto, setEstadoFoto] = useState<EstadoFoto>('inactivo');
+  const [errorFoto, setErrorFoto] = useState('');
   const marco = useRef<HTMLIFrameElement>(null);
+  const selectorFoto = useRef<HTMLInputElement>(null);
+  /** Hueco de la maqueta que espera la foto que se está eligiendo. */
+  const huecoPendiente = useRef<number | null>(null);
 
   const documento = useMemo(
     () => documentoListo ?? construirDocumento(cuerpo, ficha),
@@ -107,9 +116,13 @@ export function WebPreview({
     if (!editando) return;
     const alRecibir = (e: MessageEvent) => {
       if (e.source !== marco.current?.contentWindow) return;
-      const datos = e.data as { tipo?: unknown; html?: unknown } | null;
+      const datos = e.data as { tipo?: unknown; html?: unknown; hueco?: unknown } | null;
       if (datos?.tipo === MENSAJE_EDICION && typeof datos.html === 'string' && datos.html.length < 5_000_000) {
         setBorrador(datos.html);
+      }
+      if (datos?.tipo === MENSAJE_PEDIR_FOTO && Number.isInteger(datos.hueco)) {
+        huecoPendiente.current = datos.hueco as number;
+        selectorFoto.current?.click();
       }
     };
     window.addEventListener('message', alRecibir);
@@ -134,6 +147,23 @@ export function WebPreview({
     setPaletaEdicion(p);
     // Se aplica dentro de la maqueta sin recargarla: no se pierde lo escrito.
     marco.current?.contentWindow?.postMessage({ tipo: MENSAJE_PALETA, css: cssDePaleta(p, plantillaBase) }, '*');
+  };
+
+  /** Sube la foto elegida y se la manda a la maqueta para que la coloque. */
+  const alElegirFoto = async (archivo: File | undefined) => {
+    const hueco = huecoPendiente.current;
+    huecoPendiente.current = null;
+    if (!archivo || hueco === null) return;
+    setEstadoFoto('subiendo');
+    setErrorFoto('');
+    try {
+      const url = await subirFoto(archivo);
+      marco.current?.contentWindow?.postMessage({ tipo: MENSAJE_PONER_FOTO, hueco, url }, '*');
+      setEstadoFoto('inactivo');
+    } catch (e) {
+      setErrorFoto(e instanceof Error ? e.message : 'No pudimos subir la foto.');
+      setEstadoFoto('fallo');
+    }
   };
 
   const cancelarEdicion = () => {
@@ -181,7 +211,7 @@ export function WebPreview({
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
             {puedeEditar
-              ? 'Es una primera idea: con «Editar» cambias los textos y los colores. Las fotos las afinas con el ingeniero.'
+              ? 'Es una primera idea: con «Editar» cambias los textos, los colores y pones tus propias fotos.'
               : 'Es una primera idea para validar el estilo. Los textos y fotos finales los afinas con el ingeniero.'}
           </p>
         </div>
@@ -223,7 +253,7 @@ export function WebPreview({
               <button
                 type="button"
                 onClick={() => void guardarEdicion()}
-                disabled={!hayCambios || estadoEdicion === 'guardando'}
+                disabled={!hayCambios || estadoEdicion === 'guardando' || estadoFoto === 'subiendo'}
                 className="btn btn-primary"
               >
                 {estadoEdicion === 'guardando' ? 'Guardando…' : 'Guardar cambios'}
@@ -286,8 +316,31 @@ export function WebPreview({
       {editando && (
         <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
           <p className="text-sm text-ink">
-            <strong>Modo edición.</strong> Toca cualquier texto de tu web para cambiarlo.
+            <strong>Modo edición.</strong> Toca un texto para cambiarlo, o una imagen
+            (borde naranja) para poner tu foto.
           </p>
+          <input
+            ref={selectorFoto}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(e) => {
+              void alElegirFoto(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          {estadoFoto === 'subiendo' && (
+            <p className="mt-2 text-sm text-ink-muted" role="status">
+              Subiendo tu foto…
+            </p>
+          )}
+          {estadoFoto === 'fallo' && (
+            <p role="alert" className="mt-2 text-sm text-negative">
+              {errorFoto}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Colores de la web">
             <span className="mr-1 text-xs text-ink-subtle">Colores:</span>
             {paletas.map((p) => {
