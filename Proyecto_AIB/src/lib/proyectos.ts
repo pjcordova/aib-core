@@ -12,7 +12,7 @@
 import { supabase } from './supabase';
 import type { QAHistory } from '../Types/productOwner';
 import { generarDocumentacion, type TokenUsage, type Documentacion } from './api';
-import type { FichaWeb, TipoServicio } from './servicios';
+import type { FichaWeb, Paleta, TipoServicio } from './servicios';
 
 /** Plantilla del catálogo con la que se hizo la maqueta. */
 export interface PlantillaUsada {
@@ -227,7 +227,7 @@ export async function cargarProyecto(id: string): Promise<ProyectoCompleto | nul
  */
 async function modificarPayload(
   id: string,
-  cambios: Partial<PayloadDiscovery>,
+  cambios: Partial<PayloadDiscovery> | ((actual: PayloadDiscovery) => Partial<PayloadDiscovery>),
   accion: string
 ): Promise<{ ok: boolean; error: string | null }> {
   const { data, error: errorLectura } = await supabase
@@ -240,7 +240,11 @@ async function modificarPayload(
     return { ok: false, error: errorLectura?.message ?? 'No se encontró el proyecto.' };
   }
 
-  const payload: PayloadDiscovery = { ...(data.payload as PayloadDiscovery), ...cambios };
+  const actual = data.payload as PayloadDiscovery;
+  const payload: PayloadDiscovery = {
+    ...actual,
+    ...(typeof cambios === 'function' ? cambios(actual) : cambios),
+  };
   const { error } = await supabase.from('proyectos').update({ payload }).eq('id', id);
 
   if (error) {
@@ -271,6 +275,36 @@ export async function eliminarProyecto(id: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+/**
+ * Guarda lo que el cliente cambió a mano en su maqueta (textos y colores). No
+ * pasa por la IA ni toca el consumo registrado. Si cambió la paleta, se
+ * actualiza también en la ficha y en el historial, que es lo que después lee
+ * la documentación del ingeniero.
+ */
+export function guardarEdicion(
+  id: string,
+  { documento, paleta }: { documento: string; paleta: Paleta }
+): Promise<{ ok: boolean; error: string | null }> {
+  return modificarPayload(
+    id,
+    (actual) => ({
+      documento,
+      ficha: actual.ficha ? { ...actual.ficha, paleta } : actual.ficha,
+      historial: conPaletaEnHistorial(actual.historial ?? [], paleta),
+    }),
+    'guardar los cambios de la maqueta'
+  );
+}
+
+/** El historial con la respuesta de colores al día. */
+export function conPaletaEnHistorial(historial: QAHistory[], paleta: Paleta): QAHistory[] {
+  return historial.map((h) =>
+    h.question_id === 'paleta'
+      ? { ...h, answer: `${paleta.nombre} (${paleta.primario} y ${paleta.secundario})` }
+      : h
+  );
 }
 
 /**

@@ -10,11 +10,13 @@ import { WebPreview } from './components/web/WebPreview';
 import { Wordmark, Shell } from './components/ui/Primitives';
 import {
   cargarProyecto,
+  conPaletaEnHistorial,
   enviarEncargo,
+  guardarEdicion,
   type ProyectoCompleto,
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
-import { SERVICIOS, obtenerServicio, type TipoServicio } from './lib/servicios';
+import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
 import type { QAHistory } from './Types/productOwner';
@@ -110,6 +112,21 @@ export default function Home() {
     refrescarLista();
   };
 
+  /** Cambios a mano en un proyecto reabierto: igual que en el flujo, sin IA. */
+  const guardarCambiosAbierto = async (cambios: { documento: string; paleta: Paleta }) => {
+    if (!abierto) return false;
+    const { ok } = await guardarEdicion(abierto.id, cambios);
+    if (ok) {
+      setAbierto({
+        ...abierto,
+        documento: cambios.documento,
+        ficha: abierto.ficha ? { ...abierto.ficha, paleta: cambios.paleta } : abierto.ficha,
+        historial: conPaletaEnHistorial(abierto.historial, cambios.paleta),
+      });
+    }
+    return ok;
+  };
+
   const servicio = tipo ? obtenerServicio(tipo) : null;
 
   const empezarIA = (texto: string) => {
@@ -156,11 +173,13 @@ export default function Home() {
                 cuerpo={abierto.html}
                 documento={abierto.documento}
                 plantilla={abierto.plantilla?.nombre}
+                plantillaBase={abierto.plantilla?.base}
                 ficha={abierto.ficha}
                 usage={abierto.usage}
                 guardado="guardado"
                 aceptacion={aceptacionAbierto}
                 onAceptar={() => setPidiendoContacto(true)}
+                onGuardarEdicion={guardarCambiosAbierto}
               />
             ) : (
               <PrototypePreview

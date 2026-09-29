@@ -10,6 +10,7 @@ import {
   guardarProyecto,
   actualizarMaqueta,
   enviarEncargo,
+  guardarEdicion,
   type PlantillaUsada,
 } from '../../lib/proyectos';
 import { prepararLogo, coloresDelLogo } from '../../lib/marca';
@@ -287,6 +288,17 @@ export function FlujoWeb({ onGuardado }: Props) {
     }
   };
 
+  /** El cliente editó textos o colores a mano: se guarda sin pasar por la IA. */
+  const guardarCambios = async (cambios: { documento: string; paleta: Paleta }) => {
+    if (!proyectoId.current) return false;
+    const { ok } = await guardarEdicion(proyectoId.current, cambios);
+    if (ok) {
+      setDocumento(cambios.documento);
+      setPaleta(cambios.paleta);
+    }
+    return ok;
+  };
+
   /** El cliente dejó sus datos en el último paso: el encargo pasa al ingeniero. */
   const aceptar = async (datos: DatosEncargo) => {
     if (!proyectoId.current) return;
@@ -353,6 +365,7 @@ export function FlujoWeb({ onGuardado }: Props) {
           cuerpo={cuerpo}
           documento={documento || undefined}
           plantilla={plantillaUsada?.nombre}
+          plantillaBase={plantillaUsada?.base}
           ficha={ficha()}
           usage={consumo}
           guardado={guardado}
@@ -363,6 +376,7 @@ export function FlujoWeb({ onGuardado }: Props) {
               : generarConIA())
           }
           onAceptar={() => setPidiendoContacto(true)}
+          onGuardarEdicion={guardarCambios}
         />
         {pidiendoContacto && (
           <ContactoEncargo

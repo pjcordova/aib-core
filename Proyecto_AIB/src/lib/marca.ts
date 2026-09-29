@@ -11,9 +11,15 @@ import type { FichaWeb, Paleta } from './servicios';
 
 /** Versiones fijadas: una maqueta no debe cambiar porque salga Bootstrap 6. */
 const BOOTSTRAP_CSS = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
-const BOOTSTRAP_JS = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
+export const BOOTSTRAP_JS = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
 const BOOTSTRAP_ICONS =
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css';
+
+/**
+ * id del bloque <style> con los colores del cliente. Con él, la edición en vivo
+ * cambia la paleta de una maqueta ya hecha sin volver a generarla.
+ */
+export const ID_PALETA = 'paleta-cliente';
 
 /** Marcador que la IA pone donde va la marca; aquí se sustituye por logo o nombre. */
 export const MARCADOR_MARCA = '{{MARCA}}';
@@ -138,7 +144,7 @@ export function construirDocumento(cuerpo: string, ficha: FichaWeb): string {
 <title>${escapar(ficha.empresa)}</title>
 <link rel="stylesheet" href="${BOOTSTRAP_CSS}">
 <link rel="stylesheet" href="${BOOTSTRAP_ICONS}">
-<style>${estilosDeMarca(ficha.paleta)}</style>
+<style id="${ID_PALETA}">${estilosDeMarca(ficha.paleta)}</style>
 </head>
 <body>
 ${limpio}
@@ -182,7 +188,7 @@ function marcaHtml(ficha: FichaWeb): string {
  * Traduce la paleta a variables de Bootstrap. Así la IA usa `btn-primary` o
  * `bg-primary` sin escribir un solo color, y la web sale con los de la marca.
  */
-function estilosDeMarca(p: Paleta): string {
+export function estilosDeMarca(p: Paleta): string {
   const oscuro = ajustar(p.primario, -0.18);
   const sobrePrimario = textoLegible(p.primario);
   const sobreSecundario = textoLegible(p.secundario);

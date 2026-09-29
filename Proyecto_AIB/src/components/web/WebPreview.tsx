@@ -1,11 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TokenUsage } from '../../lib/api';
+import {
+  aplicarPaleta,
+  cssDePaleta,
+  documentoEditable,
+  MENSAJE_EDICION,
+  MENSAJE_PALETA,
+  sanearDocumento,
+} from '../../lib/edicion';
 import { construirDocumento } from '../../lib/marca';
-import type { FichaWeb } from '../../lib/servicios';
+import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 type Vista = 'escritorio' | 'movil' | 'codigo';
+type EstadoEdicion = 'inactivo' | 'guardando' | 'fallo';
 
 interface Props {
   /** Cuerpo generado por IA; se monta con construirDocumento. */
@@ -14,12 +23,19 @@ interface Props {
   documento?: string;
   /** Nombre de la plantilla usada, si la hay. */
   plantilla?: string;
+  /** Id de la plantilla base: hace falta para recalcular sus colores al editar. */
+  plantillaBase?: string;
   ficha: FichaWeb;
   usage?: TokenUsage | null;
   guardado?: EstadoGuardado;
   aceptacion?: EstadoAceptacion;
   onRegenerar?: () => void;
   onAceptar?: () => void;
+  /**
+   * Guarda lo que el cliente editó a mano. Si no se pasa, no se puede editar.
+   * Devuelve si se guardó.
+   */
+  onGuardarEdicion?: (cambios: { documento: string; paleta: Paleta }) => Promise<boolean>;
 }
 
 /**
@@ -31,15 +47,26 @@ export function WebPreview({
   cuerpo = '',
   documento: documentoListo,
   plantilla,
+  plantillaBase,
   ficha,
   usage,
   guardado = 'inactivo',
   aceptacion = 'inactivo',
   onRegenerar,
   onAceptar,
+  onGuardarEdicion,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
+
+  // Edición en vivo
+  const [editando, setEditando] = useState(false);
+  const [baseEdicion, setBaseEdicion] = useState('');
+  const [borrador, setBorrador] = useState<string | null>(null);
+  const [paletaEdicion, setPaletaEdicion] = useState<Paleta>(ficha.paleta);
+  const [estadoEdicion, setEstadoEdicion] = useState<EstadoEdicion>('inactivo');
+  const [seEdito, setSeEdito] = useState(false);
+  const marco = useRef<HTMLIFrameElement>(null);
 
   const documento = useMemo(
     () => documentoListo ?? construirDocumento(cuerpo, ficha),
@@ -66,6 +93,74 @@ export function WebPreview({
   };
 
   const aceptado = aceptacion === 'aceptado';
+  const puedeEditar = !!onGuardarEdicion && !aceptado;
+
+  // Mientras se edita, el iframe muestra una copia con el editor dentro. Se
+  // calcula una sola vez al entrar: si cambiara con cada tecla, se recargaría.
+  const documentoEnPantalla = useMemo(
+    () => (editando ? documentoEditable(baseEdicion) : documento),
+    [editando, baseEdicion, documento]
+  );
+
+  // La maqueta avisa de cada cambio. Solo se atiende a nuestro propio iframe.
+  useEffect(() => {
+    if (!editando) return;
+    const alRecibir = (e: MessageEvent) => {
+      if (e.source !== marco.current?.contentWindow) return;
+      const datos = e.data as { tipo?: unknown; html?: unknown } | null;
+      if (datos?.tipo === MENSAJE_EDICION && typeof datos.html === 'string' && datos.html.length < 5_000_000) {
+        setBorrador(datos.html);
+      }
+    };
+    window.addEventListener('message', alRecibir);
+    return () => window.removeEventListener('message', alRecibir);
+  }, [editando]);
+
+  // Las paletas de siempre, más la del cliente si es otra (la de su logo).
+  const paletas = PALETAS.some((p) => p.id === ficha.paleta.id) ? PALETAS : [ficha.paleta, ...PALETAS];
+  const mismaPaleta = (a: Paleta, b: Paleta) => a.primario === b.primario && a.secundario === b.secundario;
+  const hayCambios = borrador !== null || !mismaPaleta(paletaEdicion, ficha.paleta);
+
+  const empezarEdicion = () => {
+    setBaseEdicion(documento);
+    setBorrador(null);
+    setPaletaEdicion(ficha.paleta);
+    setEstadoEdicion('inactivo');
+    if (vista === 'codigo') setVista('escritorio');
+    setEditando(true);
+  };
+
+  const elegirPaleta = (p: Paleta) => {
+    setPaletaEdicion(p);
+    // Se aplica dentro de la maqueta sin recargarla: no se pierde lo escrito.
+    marco.current?.contentWindow?.postMessage({ tipo: MENSAJE_PALETA, css: cssDePaleta(p, plantillaBase) }, '*');
+  };
+
+  const cancelarEdicion = () => {
+    setEditando(false);
+    setBorrador(null);
+  };
+
+  const guardarEdicion = async () => {
+    if (!onGuardarEdicion) return;
+    const final = sanearDocumento(aplicarPaleta(borrador ?? baseEdicion, cssDePaleta(paletaEdicion, plantillaBase)));
+    setEstadoEdicion('guardando');
+    const ok = await onGuardarEdicion({ documento: final, paleta: paletaEdicion });
+    if (!ok) {
+      setEstadoEdicion('fallo');
+      return;
+    }
+    setEstadoEdicion('inactivo');
+    setEditando(false);
+    setBorrador(null);
+    setSeEdito(true);
+  };
+
+  const regenerar = () => {
+    if (!onRegenerar) return;
+    if (seEdito && !window.confirm('Si pruebas otra versión perderás los cambios que hiciste. ¿Continuar?')) return;
+    onRegenerar();
+  };
 
   return (
     <div className="animate-fade-up py-6">
@@ -85,8 +180,9 @@ export function WebPreview({
             Así se vería la web de {ficha.empresa}
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Es una primera idea para validar el estilo. Los textos y fotos finales los
-            afinas con el ingeniero.
+            {puedeEditar
+              ? 'Es una primera idea: con «Editar» cambias los textos y los colores. Las fotos las afinas con el ingeniero.'
+              : 'Es una primera idea para validar el estilo. Los textos y fotos finales los afinas con el ingeniero.'}
           </p>
         </div>
 
@@ -108,6 +204,7 @@ export function WebPreview({
                 role="tab"
                 aria-selected={vista === v}
                 onClick={() => setVista(v)}
+                disabled={editando && v === 'codigo'}
                 className={
                   'rounded-md px-3 py-1.5 text-sm font-medium transition-colors ' +
                   (vista === v ? 'bg-accent text-surface-deep' : 'text-ink-muted hover:text-ink')
@@ -118,34 +215,57 @@ export function WebPreview({
             ))}
           </div>
 
-          <button type="button" onClick={descargar} className="btn btn-ghost">
-            Descargar
-          </button>
-          {onRegenerar && !aceptado && (
-            <button
-              type="button"
-              onClick={onRegenerar}
-              disabled={aceptacion === 'procesando'}
-              className="btn btn-ghost"
-            >
-              Probar otra versión
-            </button>
-          )}
-          {onAceptar && !aceptado && (
-            <button
-              type="button"
-              onClick={onAceptar}
-              disabled={aceptacion === 'procesando' || guardado !== 'guardado'}
-              title={guardado !== 'guardado' ? 'Se habilita cuando la maqueta queda guardada' : undefined}
-              className="btn btn-primary"
-            >
-              {aceptacion === 'procesando' ? 'Enviando…' : '¡Me gusta, sigamos!'}
-            </button>
-          )}
-          {aceptado && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm font-medium text-positive">
-              ✓ Enviado al ingeniero
-            </span>
+          {editando ? (
+            <>
+              <button type="button" onClick={cancelarEdicion} disabled={estadoEdicion === 'guardando'} className="btn btn-ghost">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void guardarEdicion()}
+                disabled={!hayCambios || estadoEdicion === 'guardando'}
+                className="btn btn-primary"
+              >
+                {estadoEdicion === 'guardando' ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={descargar} className="btn btn-ghost">
+                Descargar
+              </button>
+              {puedeEditar && (
+                <button type="button" onClick={empezarEdicion} disabled={aceptacion === 'procesando'} className="btn btn-ghost">
+                  ✏️ Editar
+                </button>
+              )}
+              {onRegenerar && !aceptado && (
+                <button
+                  type="button"
+                  onClick={regenerar}
+                  disabled={aceptacion === 'procesando'}
+                  className="btn btn-ghost"
+                >
+                  Probar otra versión
+                </button>
+              )}
+              {onAceptar && !aceptado && (
+                <button
+                  type="button"
+                  onClick={onAceptar}
+                  disabled={aceptacion === 'procesando' || guardado !== 'guardado'}
+                  title={guardado !== 'guardado' ? 'Se habilita cuando la maqueta queda guardada' : undefined}
+                  className="btn btn-primary"
+                >
+                  {aceptacion === 'procesando' ? 'Enviando…' : '¡Me gusta, sigamos!'}
+                </button>
+              )}
+              {aceptado && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm font-medium text-positive">
+                  ✓ Enviado al ingeniero
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -161,6 +281,42 @@ export function WebPreview({
           ¡Listo! Tu proyecto ya está con el equipo de ingeniería junto a toda la
           información que nos diste. Te contactarán con una propuesta.
         </p>
+      )}
+
+      {editando && (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <p className="text-sm text-ink">
+            <strong>Modo edición.</strong> Toca cualquier texto de tu web para cambiarlo.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Colores de la web">
+            <span className="mr-1 text-xs text-ink-subtle">Colores:</span>
+            {paletas.map((p) => {
+              const elegida = mismaPaleta(p, paletaEdicion);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => elegirPaleta(p)}
+                  aria-pressed={elegida}
+                  aria-label={`Paleta ${p.nombre}`}
+                  title={p.nombre}
+                  className={
+                    'flex -space-x-1.5 rounded-full border p-1 transition-colors ' +
+                    (elegida ? 'border-accent ring-2 ring-accent/40' : 'border-line hover:border-accent/50')
+                  }
+                >
+                  <span className="h-5 w-5 rounded-full ring-1 ring-black/10" style={{ background: p.primario }} />
+                  <span className="h-5 w-5 rounded-full ring-1 ring-black/10" style={{ background: p.secundario }} />
+                </button>
+              );
+            })}
+          </div>
+          {estadoEdicion === 'fallo' && (
+            <p role="alert" className="mt-3 text-sm text-negative">
+              No pudimos guardar tus cambios. Revisa tu conexión y vuelve a intentarlo.
+            </p>
+          )}
+        </div>
       )}
 
       {/* ------------------------------------------------------------ marco */}
@@ -192,8 +348,9 @@ export function WebPreview({
         ) : (
           <div className="flex justify-center bg-surface-deep/60">
             <iframe
+              ref={marco}
               title={`Maqueta web de ${ficha.empresa}`}
-              srcDoc={documento}
+              srcDoc={documentoEnPantalla}
               sandbox="allow-scripts"
               className={
                 'h-[720px] border-0 bg-white transition-[width] duration-300 ' +

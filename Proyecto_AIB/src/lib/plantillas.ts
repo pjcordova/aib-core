@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import Mustache from 'mustache';
-import { ajustar, escapar, textoLegible } from './marca';
+import { ajustar, escapar, ID_PALETA, textoLegible } from './marca';
 import type { FichaWeb, Paleta } from './servicios';
 
 /** Tipos de negocio con los que se empareja una plantilla. */
@@ -96,7 +96,7 @@ function marcaDe(ficha: Pick<FichaWeb, 'empresa' | 'logo'>): string {
  * guardas de contraste: si el color principal es claro, el texto blanco que
  * el ingeniero puso sobre él dejaría de leerse.
  */
-function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, 'primario' | 'secundario'>): string {
+export function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, 'primario' | 'secundario'>): string {
   const valores: Record<RolColor, string> = {
     primario: paleta.primario,
     'primario-oscuro': ajustar(paleta.primario, -0.15),
@@ -138,7 +138,10 @@ export function renderizarPlantilla<T>(
     secciones: ficha.secciones ?? null,
   };
 
-  const cuerpo = Mustache.render(plantilla.html, plantilla.vista(textos, contexto));
+  // Los comentarios de la plantilla son notas del ingeniero (de dónde sale,
+  // cómo funciona): no tienen por qué llegar a la web del cliente.
+  const html = plantilla.html.replace(/<!--[\s\S]*?-->/g, '');
+  const cuerpo = Mustache.render(html, plantilla.vista(textos, contexto));
 
   // Sin paleta del cliente no se toca nada: se ve exactamente con los colores
   // del ingeniero. Recalcular los tonos derivados a partir de su color base
@@ -153,7 +156,7 @@ export function renderizarPlantilla<T>(
 <title>${escapar(ficha.empresa)}</title>
 ${plantilla.fuentes.map((f) => `<link rel="stylesheet" href="${f}">`).join('\n')}
 <style>${plantilla.css}</style>
-${estilosCliente ? `<style>${estilosCliente}</style>` : ''}
+${estilosCliente ? `<style id="${ID_PALETA}">${estilosCliente}</style>` : ''}
 </head>
 <body>
 ${cuerpo}
