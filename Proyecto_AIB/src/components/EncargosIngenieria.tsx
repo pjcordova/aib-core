@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { cargarProyecto, documentarComoIngeniero, listarAceptados } from '../lib/proyectos';
 import type { ProyectoCompleto } from '../lib/proyectos';
 import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
+import { enlaceWhatsapp, formatearWhatsapp } from '../lib/contacto';
 import { obtenerServicio, PRESUPUESTOS, etiquetaDe } from '../lib/servicios';
 import { construirDocumento } from '../lib/marca';
 
@@ -94,6 +95,7 @@ export function EncargosIngenieria() {
                     })}
                     {doc?.estimacion?.semanas ? ` · ~${doc.estimacion.semanas} semanas` : ''}
                     {!doc && <span className="text-caution"> · documentación pendiente</span>}
+                    {e.contacto && <span> · {e.contacto.nombre}</span>}
                   </p>
                 </div>
                 <span className="shrink-0 text-ink-subtle">{desplegado ? '−' : '+'}</span>
@@ -101,6 +103,7 @@ export function EncargosIngenieria() {
 
               {desplegado && (
                 <div className="animate-fade-up border-t border-line p-5 pt-6">
+                  <DatosCliente encargo={e} />
                   {!doc ? (
                     <SinDocumentacion
                       encargo={e}
@@ -253,6 +256,69 @@ export function EncargosIngenieria() {
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * Con quién hablar y lo que más cambia el precio, arriba de todo: es lo
+ * primero que el ingeniero necesita para responder al encargo.
+ */
+function DatosCliente({ encargo }: { encargo: ProyectoCompleto }) {
+  const c = encargo.contacto;
+  const alcance = encargo.historial.filter((h) => h.question_id.startsWith('alcance-'));
+
+  if (!c) {
+    return (
+      <p className="mb-6 rounded-lg border border-line px-4 py-3 text-sm text-ink-muted">
+        Este encargo se aceptó antes de que pidiéramos los datos de contacto del cliente.
+      </p>
+    );
+  }
+
+  const whatsapp = enlaceWhatsapp(
+    c.whatsapp,
+    `Hola ${c.nombre}, te escribo de AIB+ por tu proyecto «${encargo.servicio}». ¿Tienes unos minutos para conversar la propuesta?`
+  );
+
+  return (
+    <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold tracking-wide text-accent uppercase">Cliente</p>
+          <p className="mt-0.5 font-semibold text-ink">{c.nombre}</p>
+          <p className="text-sm break-all text-ink-muted">
+            {formatearWhatsapp(c.whatsapp)}
+            {c.correo ? ` · ${c.correo}` : ''}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {whatsapp && (
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+              Escribir por WhatsApp
+            </a>
+          )}
+          {c.correo && (
+            <a
+              href={`mailto:${encodeURIComponent(c.correo)}?subject=${encodeURIComponent(`Tu proyecto en AIB+: ${encargo.servicio}`)}`}
+              className="btn btn-ghost"
+            >
+              Enviar correo
+            </a>
+          )}
+        </div>
+      </div>
+
+      {alcance.length > 0 && (
+        <dl className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
+          {alcance.map((a) => (
+            <div key={a.question_id}>
+              <dt className="text-xs text-ink-subtle">{a.question}</dt>
+              <dd className="mt-0.5 text-sm font-medium text-ink">{a.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
   );
 }
 

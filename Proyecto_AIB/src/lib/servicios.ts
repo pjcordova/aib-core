@@ -180,6 +180,57 @@ export const PREGUNTAS_WEB: Pregunta[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
+/* Al aceptar                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface PreguntaEncargo {
+  /** Empieza por "alcance-": así el panel del ingeniero las reconoce. */
+  id: string;
+  titulo: string;
+  opciones: Opcion[];
+  /** Solo tiene sentido para páginas web. */
+  soloWeb?: boolean;
+}
+
+/**
+ * Se preguntan al aceptar, no antes: no retrasan la maqueta y solo las
+ * contesta quien de verdad quiere seguir. Son las que más cambian el precio.
+ */
+export const PREGUNTAS_ENCARGO: PreguntaEncargo[] = [
+  {
+    id: 'alcance-venta',
+    titulo: '¿Qué quieres que haga tu web?',
+    soloWeb: true,
+    opciones: [
+      { valor: 'vitrina', etiqueta: 'Mostrar mi negocio y recibir mensajes' },
+      { valor: 'pedidos-whatsapp', etiqueta: 'Recibir pedidos por WhatsApp' },
+      { valor: 'tienda-online', etiqueta: 'Vender en línea, con carrito y pagos' },
+      { valor: 'no-se', etiqueta: 'Aún no lo sé' },
+    ],
+  },
+  {
+    id: 'alcance-dominio',
+    titulo: '¿Ya tienes dominio? (por ejemplo, tunegocio.pe)',
+    soloWeb: true,
+    opciones: [
+      { valor: 'si', etiqueta: 'Sí, ya tengo' },
+      { valor: 'no', etiqueta: 'No, necesito uno' },
+      { valor: 'no-se', etiqueta: 'No sé qué es' },
+    ],
+  },
+  {
+    id: 'alcance-plazo',
+    titulo: '¿Para cuándo lo necesitas?',
+    opciones: [
+      { valor: 'urgente', etiqueta: 'Lo antes posible' },
+      { valor: '1-mes', etiqueta: 'En un mes' },
+      { valor: '2-3-meses', etiqueta: 'En dos o tres meses' },
+      { valor: 'sin-apuro', etiqueta: 'Sin apuro' },
+    ],
+  },
+];
+
+/* -------------------------------------------------------------------------- */
 /* Respuestas                                                                 */
 /* -------------------------------------------------------------------------- */
 

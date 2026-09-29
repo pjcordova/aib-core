@@ -32,6 +32,9 @@
         {{/categorias}}
         <div class="my-2 border-t border-linea"></div>
         <a href="#novedades" class="block rounded-lg px-2 py-3 text-sm font-semibold text-terracota-oscuro transition hover:bg-rosa-suave/40">Ver todo el catálogo</a>
+        {{#hay_nosotros}}<a href="#nosotros" class="block rounded-lg px-2 py-3 text-sm text-carbon transition hover:bg-rosa-suave/40">Nosotros</a>{{/hay_nosotros}}
+        {{#hay_testimonios}}<a href="#testimonios" class="block rounded-lg px-2 py-3 text-sm text-carbon transition hover:bg-rosa-suave/40">Opiniones</a>{{/hay_testimonios}}
+        {{#hay_preguntas}}<a href="#preguntas" class="block rounded-lg px-2 py-3 text-sm text-carbon transition hover:bg-rosa-suave/40">Preguntas frecuentes</a>{{/hay_preguntas}}
         <a href="#destacados" class="block rounded-lg px-2 py-3 text-sm text-carbon transition hover:bg-rosa-suave/40">Mi carrito</a>
       </div>
     </details>
@@ -70,6 +73,8 @@
         </div>
       </div>
       <a href="#novedades" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-carbon transition hover:text-terracota">{{novedades_titulo}}</a>
+      {{#hay_nosotros}}<a href="#nosotros" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-carbon transition hover:text-terracota">Nosotros</a>{{/hay_nosotros}}
+      {{#hay_preguntas}}<a href="#preguntas" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-carbon transition hover:text-terracota">Preguntas</a>{{/hay_preguntas}}
       <a href="#destacados" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-carbon transition hover:text-terracota">Ver todo</a>
     </nav>
 
@@ -193,6 +198,20 @@
     </section>
   </div>
 
+  <!-- ============================================================ quiénes somos (opcional) -->
+  {{#hay_nosotros}}
+  <section id="nosotros" class="mx-auto mt-20 grid max-w-6xl scroll-mt-24 items-center gap-10 px-4 md:grid-cols-2 md:gap-14" aria-labelledby="titulo-nosotros">
+    <div class="relative aspect-[4/3] overflow-hidden rounded-tarjeta">
+      <div class="absolute inset-0 bg-gradient-to-br from-rosa-suave to-terracota/25"></div>
+    </div>
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-carbon-suave">Quiénes somos</p>
+      <h2 id="titulo-nosotros" class="mt-3 text-xl font-semibold uppercase tracking-[0.12em] text-carbon md:text-2xl">{{nosotros.titulo}}</h2>
+      <p class="mt-5 text-sm leading-relaxed text-carbon-suave md:text-base">{{nosotros.texto}}</p>
+    </div>
+  </section>
+  {{/hay_nosotros}}
+
   <!-- ============================================================ edición limitada -->
   <section class="mt-16 bg-rosa-suave/40" aria-label="{{edicion.etiqueta}}">
     <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr]">
@@ -290,7 +309,8 @@
     </div>
   </div>
 
-  <!-- ============================================================ shop the look -->
+  <!-- ============================================================ shop the look (galería) -->
+  {{#hay_look}}
   <section class="mt-20" aria-labelledby="titulo-look">
     <h2 id="titulo-look" class="text-center text-xl font-semibold uppercase tracking-[0.25em] text-carbon md:text-2xl">{{look.titulo}}</h2>
     <div class="mx-auto mt-10 grid max-w-6xl gap-8 px-4 md:grid-cols-[1.4fr_1fr] md:gap-12">
@@ -322,8 +342,26 @@
       </div>
     </div>
   </section>
+  {{/hay_look}}
 
-  <!-- ============================================================ tienda -->
+  <!-- ============================================================ testimonios (opcional) -->
+  {{#hay_testimonios}}
+  <section id="testimonios" class="mt-20 scroll-mt-24 bg-rosa-suave/40 py-16" aria-labelledby="titulo-testimonios">
+    <h2 id="titulo-testimonios" class="text-center text-xl font-semibold uppercase tracking-[0.25em] text-carbon md:text-2xl">Lo que dicen</h2>
+    <ul class="mx-auto mt-10 grid max-w-6xl gap-5 px-4 md:grid-cols-3">
+      {{#testimonios}}
+      <li class="rounded-tarjeta bg-white p-6 sombra-tarjeta">
+        <p class="text-3xl font-semibold leading-none text-terracota" aria-hidden="true">&ldquo;</p>
+        <p class="mt-2 text-sm leading-relaxed text-carbon">{{texto}}</p>
+        <p class="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-carbon-suave">{{autor}}</p>
+      </li>
+      {{/testimonios}}
+    </ul>
+  </section>
+  {{/hay_testimonios}}
+
+  <!-- ============================================================ tienda (contacto) -->
+  {{#hay_tienda}}
   <section class="relative mt-20" aria-label="Nuestra tienda">
     <div class="relative h-[26rem] w-full overflow-hidden md:h-[38rem]">
       <div class="absolute inset-0 bg-gradient-to-br from-terracota/40 via-rosa to-rosa-suave"></div>
@@ -334,6 +372,25 @@
       </div>
     </div>
   </section>
+  {{/hay_tienda}}
+
+  <!-- ============================================================ preguntas (opcional) -->
+  {{#hay_preguntas}}
+  <section id="preguntas" class="mx-auto mt-20 max-w-3xl scroll-mt-24 px-4" aria-labelledby="titulo-preguntas">
+    <h2 id="titulo-preguntas" class="text-center text-xl font-semibold uppercase tracking-[0.25em] text-carbon md:text-2xl">Preguntas frecuentes</h2>
+    <div class="mt-10 divide-y divide-linea border-y border-linea">
+      {{#preguntas}}
+      <details class="group/faq py-4">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-carbon [&::-webkit-details-marker]:hidden">
+          {{pregunta}}
+          <svg class="shrink-0 transition group-open/faq:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <p class="mt-3 text-sm leading-relaxed text-carbon-suave">{{respuesta}}</p>
+      </details>
+      {{/preguntas}}
+    </div>
+  </section>
+  {{/hay_preguntas}}
 
   <!-- ============================================================ garantías -->
   <section class="my-6 bg-carbon py-12" aria-label="Cómo compras con nosotros">

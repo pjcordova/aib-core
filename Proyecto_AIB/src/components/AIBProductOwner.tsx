@@ -6,7 +6,8 @@ import {
   ApiError,
   type TokenUsage,
 } from '../lib/api';
-import { guardarProyecto, aceptarProyecto, documentarEnSegundoPlano } from '../lib/proyectos';
+import { guardarProyecto, enviarEncargo } from '../lib/proyectos';
+import { ContactoEncargo, type DatosEncargo } from './ContactoEncargo';
 import { PrototypePreview } from './PrototypePreview';
 import { ErrorState, ProgressTrail, QuestionSkeleton } from './ui/Primitives';
 
@@ -39,6 +40,8 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
   const [guardado, setGuardado] = useState<EstadoGuardado>('inactivo');
   const [proyectoId, setProyectoId] = useState<string | null>(null);
   const [aceptacion, setAceptacion] = useState<EstadoAceptacion>('inactivo');
+  const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   // Guarda la última acción fallida para que "Reintentar" repita exactamente esa.
   const reintentar = useRef<(() => void) | null>(null);
@@ -140,21 +143,26 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
   }, [servicioInicial, pedirPreguntas]);
 
   /**
-   * Aceptar la propuesta la pasa al ingeniero al instante; la documentación
-   * técnica se genera y se adjunta después, sin hacer esperar al cliente.
+   * Tras el último paso (contacto y plazo), la propuesta pasa al ingeniero al
+   * instante; la documentación se genera después, sin hacer esperar al cliente.
    */
-  const aceptar = async () => {
+  const aceptar = async (datos: DatosEncargo) => {
     if (!proyectoId) return;
     setAceptacion('procesando');
-    try {
-      const { ok, error: errorGuardado } = await aceptarProyecto(proyectoId);
-      if (!ok) throw new ApiError(errorGuardado ?? 'No se pudo guardar la aceptación.', 500, true);
-      documentarEnSegundoPlano(proyectoId, servicioInicial, historial);
-      setAceptacion('aceptado');
-    } catch (e) {
-      console.error('[AIB+] Error aceptando la propuesta:', e);
-      setAceptacion('fallo');
+    setErrorEnvio(null);
+    const { ok, error: errorGuardado } = await enviarEncargo(proyectoId, {
+      servicio: servicioInicial,
+      historial,
+      ...datos,
+    });
+    if (!ok) {
+      console.error('[AIB+] Error enviando la propuesta:', errorGuardado);
+      setErrorEnvio('No pudimos enviar tu proyecto. Revisa tu conexión y vuelve a intentarlo.');
+      setAceptacion('inactivo');
+      return;
     }
+    setPidiendoContacto(false);
+    setAceptacion('aceptado');
   };
 
   const responder = (pregunta: AIBQuestion, respuesta: string) => {
@@ -199,16 +207,26 @@ export const AIBProductOwner = ({ servicioInicial, onComplete }: Props) => {
 
   if (fase === 'listo' && codigo) {
     return (
-      <PrototypePreview
-        code={codigo}
-        servicio={servicioInicial}
-        respuestas={historial.length}
-        usage={consumo}
-        guardado={guardado}
-        aceptacion={aceptacion}
-        onAceptar={() => void aceptar()}
-        onRegenerar={() => void construirPrototipo(servicioInicial, historial)}
-      />
+      <>
+        <PrototypePreview
+          code={codigo}
+          servicio={servicioInicial}
+          respuestas={historial.length}
+          usage={consumo}
+          guardado={guardado}
+          aceptacion={aceptacion}
+          onAceptar={() => setPidiendoContacto(true)}
+          onRegenerar={() => void construirPrototipo(servicioInicial, historial)}
+        />
+        {pidiendoContacto && (
+          <ContactoEncargo
+            enviando={aceptacion === 'procesando'}
+            error={errorEnvio}
+            onEnviar={(datos) => void aceptar(datos)}
+            onCancelar={() => setPidiendoContacto(false)}
+          />
+        )}
+      </>
     );
   }
 

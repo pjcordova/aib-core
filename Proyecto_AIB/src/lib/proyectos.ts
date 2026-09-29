@@ -22,6 +22,17 @@ export interface PlantillaUsada {
   nombre: string;
 }
 
+/**
+ * Cómo contactar al cliente. Se guarda en el proyecto, no en el historial: el
+ * historial viaja a la IA para documentar, y su teléfono no tiene por qué.
+ */
+export interface ContactoCliente {
+  nombre: string;
+  /** Formato internacional sin símbolos, listo para wa.me: "51987654321". */
+  whatsapp: string;
+  correo: string | null;
+}
+
 /** Marca que distingue estas filas de las del formulario antiguo. */
 export const TIPO_DISCOVERY = 'aib-discovery';
 
@@ -53,6 +64,8 @@ export interface PayloadDiscovery {
   /** El cliente validó la previsualización: el encargo pasa a ingeniería. */
   aceptado?: boolean;
   aceptado_en?: string;
+  /** Lo deja el cliente al aceptar. Los encargos anteriores no lo tienen. */
+  contacto?: ContactoCliente;
   /** Documento técnico, generado solo al aceptar. */
   documentacion?: Documentacion | null;
 }
@@ -79,6 +92,7 @@ export interface ProyectoCompleto extends ProyectoResumen {
   documentacion?: Documentacion | null;
   /** Cuándo aceptó el cliente; sirve para saber si la documentación sigue en camino. */
   aceptadoEn?: string;
+  contacto?: ContactoCliente;
 }
 
 /** Campos comunes que se leen de cualquier fila del flujo de discovery. */
@@ -107,6 +121,7 @@ function completoDe(id: string, creadoEn: string, p: PayloadDiscovery): Proyecto
     usage: p.usage ?? null,
     documentacion: p.documentacion ?? null,
     aceptadoEn: p.aceptado_en,
+    contacto: p.contacto,
   };
 }
 
@@ -259,12 +274,43 @@ export async function eliminarProyecto(id: string): Promise<boolean> {
 }
 
 /**
- * Marca un proyecto como aceptado por el cliente. Es inmediato a propósito: la
- * documentación tarda cerca de un minuto y el cliente no tiene por qué
- * esperarla. Se genera después con `documentarEnSegundoPlano`.
+ * El cliente acepta y el encargo pasa al ingeniero con lo que necesita para
+ * escribirle (contacto) y para cotizar (respuestas de alcance, que se suman al
+ * historial). Es inmediato a propósito: la documentación tarda cerca de un
+ * minuto y el cliente no tiene por qué esperarla, así que se genera después.
  */
-export function aceptarProyecto(id: string): Promise<{ ok: boolean; error: string | null }> {
-  return modificarPayload(id, { aceptado: true, aceptado_en: new Date().toISOString() }, 'aceptar el proyecto');
+export async function enviarEncargo(
+  id: string,
+  datos: {
+    servicio: string;
+    historial: QAHistory[];
+    contacto: Omit<ContactoCliente, 'correo'>;
+    respuestas: QAHistory[];
+  }
+): Promise<{ ok: boolean; error: string | null }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Si reintenta, las respuestas de alcance sustituyen a las anteriores.
+  const historial = [
+    ...datos.historial.filter((h) => !h.question_id.startsWith('alcance-')),
+    ...datos.respuestas,
+  ];
+
+  const resultado = await modificarPayload(
+    id,
+    {
+      aceptado: true,
+      aceptado_en: new Date().toISOString(),
+      contacto: { ...datos.contacto, correo: user?.email ?? null },
+      historial,
+    },
+    'enviar el encargo'
+  );
+
+  if (resultado.ok) documentarEnSegundoPlano(id, datos.servicio, historial);
+  return resultado;
 }
 
 /**

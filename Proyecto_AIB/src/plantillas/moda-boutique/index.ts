@@ -47,6 +47,10 @@ export interface TextosModaBoutique {
   tienda: { nombre: string; ciudad: string };
   garantias: { titulo: string; detalle: string }[];
   pie_descripcion: string;
+  // Solo llegan si el cliente pidió esa sección.
+  nosotros?: { titulo: string; texto: string };
+  testimonios?: { texto: string; autor: string }[];
+  preguntas?: { pregunta: string; respuesta: string }[];
 }
 
 const TALLAS = ['XS', 'S', 'M', 'L', 'XL'];
@@ -130,7 +134,26 @@ const EJEMPLO: TextosModaBoutique = {
     { titulo: 'Asesoría personal', detalle: 'Te ayudamos a elegir talla y combinación.' },
   ],
   pie_descripcion: 'Moda seleccionada con cuidado, en pocas unidades por modelo.',
+  nosotros: {
+    titulo: 'Moda con historia',
+    texto:
+      'Somos una tienda que elige cada prenda pensando en quien la va a usar. Traemos pocas unidades por modelo para que tu estilo sea solo tuyo.',
+  },
+  testimonios: [
+    { texto: 'Me asesoraron con la talla y me quedó perfecta. Ya es mi tienda de confianza.', autor: 'Clienta frecuente' },
+    { texto: 'Siempre encuentro algo distinto y las prendas llegan muy bien cuidadas.', autor: 'Cliente habitual' },
+    { texto: 'Pedí por WhatsApp y me respondieron al toque.', autor: 'Clienta nueva' },
+  ],
+  preguntas: [
+    { pregunta: '¿Cómo sé cuál es mi talla?', respuesta: 'Escríbenos por WhatsApp con tus medidas y te recomendamos la ideal.' },
+    { pregunta: '¿Puedo cambiar una prenda?', respuesta: 'Consúltanos por WhatsApp y te explicamos cómo hacerlo.' },
+    { pregunta: '¿Cómo hago un pedido?', respuesta: 'Elige tus prendas y envíanos un mensaje: coordinamos el pago y la entrega.' },
+    { pregunta: '¿Tienen tienda física?', respuesta: 'Escríbenos y te contamos dónde puedes ver las prendas.' },
+  ],
 };
+
+/** Qué secciones que puede pedir el cliente sabe mostrar esta plantilla. */
+const SECCIONES = ['nosotros', 'servicios', 'galeria', 'testimonios', 'precios', 'preguntas', 'contacto'];
 
 export const modaBoutique: PlantillaBase<TextosModaBoutique> = {
   id: 'moda-boutique',
@@ -140,6 +163,10 @@ export const modaBoutique: PlantillaBase<TextosModaBoutique> = {
   categoria: 'tienda-ropa',
   estilo: 'premium',
   etiquetas: ['moda', 'ropa', 'boutique', 'catalogo', 'whatsapp', 'elegante', 'minimalista', 'tienda-fisica'],
+  // Productos y precios son el catálogo fijo; galería es "arma tu look" y
+  // contacto el bloque "Visítanos". Nosotros, testimonios y preguntas tienen
+  // bloque propio.
+  secciones: SECCIONES,
   html,
   css,
   fuentes: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'],
@@ -151,45 +178,62 @@ export const modaBoutique: PlantillaBase<TextosModaBoutique> = {
   },
   paletaOriginal: { primario: '#c9a48d', secundario: '#d4a59a' },
   ejemplo: EJEMPLO,
-  vista: (t, contexto) => ({
-    ...contexto,
-    whatsapp: '999 999 999',
-    anuncio: t.anuncio,
-    hero: t.hero,
-    categorias: t.categorias.map((nombre) => ({ nombre })),
-    destacados_titulo: t.destacados_titulo,
-    destacados: t.destacados.map(producto),
-    novedades_titulo: t.novedades_titulo,
-    novedades: t.novedades.map(producto),
-    marquesina_1: t.marquesinas[0] ?? '',
-    marquesina_2: t.marquesinas[1] ?? t.marquesinas[0] ?? '',
-    marquesina_3: t.marquesinas[2] ?? t.marquesinas[0] ?? '',
-    edicion: { ...t.edicion, precio_numero: soloNumero(t.edicion.precio) },
-    top: {
-      ...t.top,
-      precio_texto: soles(t.top.precio),
-      color: colorSeguro(t.top.color),
-      // La primera talla disponible sale marcada, como si la clienta ya la
-      // hubiera elegido; las que no existen quedan apagadas.
-      tallas: TALLAS.map((talla) => {
-        const existe = t.top.tallas.includes(talla);
-        const elegida = talla === t.top.tallas[0];
-        return {
-          talla,
-          clase: elegida
-            ? 'border-carbon bg-carbon text-white'
-            : existe
-              ? 'border-linea bg-white text-carbon'
-              : 'border-linea bg-white text-linea',
-        };
-      }),
-    },
-    look: {
-      ...t.look,
-      prenda: { nombre: t.look.prenda.nombre, precio_texto: soles(t.look.prenda.precio) },
-    },
-    tienda: t.tienda,
-    garantias: t.garantias.slice(0, 4).map((g, i) => ({ ...g, icono: ICONOS_GARANTIA[i] })),
-    pie_descripcion: t.pie_descripcion,
-  }),
+  vista: (t, contexto) => {
+    // Sin cliente (catálogo del ingeniero) se enseña todo.
+    const pidio = (seccion: string) => !contexto.secciones || contexto.secciones.includes(seccion);
+    const nosotros = pidio('nosotros') ? (t.nosotros ?? null) : null;
+    const testimonios = pidio('testimonios') ? (t.testimonios ?? []) : [];
+    const preguntas = pidio('preguntas') ? (t.preguntas ?? []) : [];
+
+    return {
+      ...contexto,
+      // Un hueco visible, no un número que parezca real.
+      whatsapp: '[Tu WhatsApp]',
+      hay_look: pidio('galeria'),
+      hay_tienda: pidio('contacto'),
+      hay_nosotros: !!nosotros,
+      nosotros,
+      hay_testimonios: testimonios.length > 0,
+      testimonios,
+      hay_preguntas: preguntas.length > 0,
+      preguntas,
+      anuncio: t.anuncio,
+      hero: t.hero,
+      categorias: t.categorias.map((nombre) => ({ nombre })),
+      destacados_titulo: t.destacados_titulo,
+      destacados: t.destacados.map(producto),
+      novedades_titulo: t.novedades_titulo,
+      novedades: t.novedades.map(producto),
+      marquesina_1: t.marquesinas[0] ?? '',
+      marquesina_2: t.marquesinas[1] ?? t.marquesinas[0] ?? '',
+      marquesina_3: t.marquesinas[2] ?? t.marquesinas[0] ?? '',
+      edicion: { ...t.edicion, precio_numero: soloNumero(t.edicion.precio) },
+      top: {
+        ...t.top,
+        precio_texto: soles(t.top.precio),
+        color: colorSeguro(t.top.color),
+        // La primera talla disponible sale marcada, como si la clienta ya la
+        // hubiera elegido; las que no existen quedan apagadas.
+        tallas: TALLAS.map((talla) => {
+          const existe = t.top.tallas.includes(talla);
+          const elegida = talla === t.top.tallas[0];
+          return {
+            talla,
+            clase: elegida
+              ? 'border-carbon bg-carbon text-white'
+              : existe
+                ? 'border-linea bg-white text-carbon'
+                : 'border-linea bg-white text-linea',
+          };
+        }),
+      },
+      look: {
+        ...t.look,
+        prenda: { nombre: t.look.prenda.nombre, precio_texto: soles(t.look.prenda.precio) },
+      },
+      tienda: t.tienda,
+      garantias: t.garantias.slice(0, 4).map((g, i) => ({ ...g, icono: ICONOS_GARANTIA[i] })),
+      pie_descripcion: t.pie_descripcion,
+    };
+  },
 };

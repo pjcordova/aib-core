@@ -8,13 +8,22 @@ const { config } = require('../config');
 const { generateText } = require('../claude');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
+const { cobrarCuota } = require('../cuota');
 const { obtenerPlantilla } = require('../plantillas');
 
 const router = Router();
 
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'rellenar-plantilla' });
 
-router.post('/rellenar-plantilla', limitar, requireAuth, async (req, res, next) => {
+/** Las mismas claves que la pregunta de secciones del frontend (servicios.ts). */
+const SECCIONES_VALIDAS = ['nosotros', 'servicios', 'galeria', 'testimonios', 'precios', 'preguntas', 'contacto', 'blog'];
+
+function leerSecciones(valor) {
+  if (!Array.isArray(valor)) return [];
+  return [...new Set(valor.filter((s) => SECCIONES_VALIDAS.includes(s)))];
+}
+
+router.post('/rellenar-plantilla', limitar, requireAuth, cobrarCuota('plantilla'), async (req, res, next) => {
   try {
     const { plantilla: id, ficha } = req.body ?? {};
 
@@ -27,6 +36,7 @@ router.post('/rellenar-plantilla', limitar, requireAuth, async (req, res, next) 
     const empresa = texto(ficha?.empresa, 80);
     const rubro = texto(ficha?.rubro, 600);
     const estilo = texto(ficha?.estilo, 60) || 'Moderno y minimalista';
+    const secciones = leerSecciones(ficha?.secciones);
 
     if (!empresa || !rubro) {
       return res.status(400).json({ success: false, error: 'Faltan el nombre o el rubro del negocio.' });
@@ -34,10 +44,10 @@ router.post('/rellenar-plantilla', limitar, requireAuth, async (req, res, next) 
 
     const { text, usage } = await generateText({
       label: `plantilla:${plantilla.id}`,
-      prompt: plantilla.prompt({ empresa, rubro, estilo }),
+      prompt: plantilla.prompt({ empresa, rubro, estilo, secciones }),
       maxTokens: config.maxTokens.plantilla,
       temperature: 0.6,
-      schema: plantilla.esquema,
+      schema: plantilla.esquema(secciones),
     });
 
     let crudo;
@@ -48,7 +58,7 @@ router.post('/rellenar-plantilla', limitar, requireAuth, async (req, res, next) 
       return res.status(502).json({ success: false, error: 'No pudimos preparar los textos. Vuelve a intentarlo.' });
     }
 
-    const textos = plantilla.normalizar(crudo);
+    const textos = plantilla.normalizar(crudo, secciones);
     if (!textos) {
       return res.status(502).json({ success: false, error: 'Los textos llegaron incompletos. Vuelve a intentarlo.' });
     }

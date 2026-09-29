@@ -9,8 +9,7 @@ import {
 import {
   guardarProyecto,
   actualizarMaqueta,
-  aceptarProyecto,
-  documentarEnSegundoPlano,
+  enviarEncargo,
   type PlantillaUsada,
 } from '../../lib/proyectos';
 import { prepararLogo, coloresDelLogo } from '../../lib/marca';
@@ -28,7 +27,14 @@ import {
   registrarEvento,
   type PlantillaDelCatalogo,
 } from '../../lib/catalogo';
-import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type CategoriaNegocio } from '../../lib/plantillas';
+import {
+  CATEGORIAS_NEGOCIO,
+  renderizarPlantilla,
+  seccionesQueFaltan,
+  type CategoriaNegocio,
+} from '../../lib/plantillas';
+import { obtenerPlantillaBase } from '../../plantillas';
+import { ContactoEncargo, type DatosEncargo } from '../ContactoEncargo';
 import { ErrorState } from '../ui/Primitives';
 import { MiniVista } from '../panel/MiniVista';
 import { WebPreview } from './WebPreview';
@@ -83,6 +89,8 @@ export function FlujoWeb({ onGuardado }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState<EstadoGuardado>('inactivo');
   const [aceptacion, setAceptacion] = useState<EstadoAceptacion>('inactivo');
+  const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const proyectoId = useRef<string | null>(null);
   const reintentar = useRef<(() => void) | null>(null);
 
@@ -122,6 +130,9 @@ export function FlujoWeb({ onGuardado }: Props) {
   const historialDe = (f: FichaWeb, plantilla: PlantillaUsada | null): QAHistory[] => {
     const seccionesPregunta = PREGUNTAS_WEB.find((p) => p.id === 'secciones');
     const presupuestoPregunta = PREGUNTAS_WEB.find((p) => p.id === 'presupuesto');
+    // Lo que pidió y la plantilla no trae: el ingeniero tiene que añadirlo.
+    const base = plantilla ? obtenerPlantillaBase(plantilla.base) : null;
+    const faltan = base ? seccionesQueFaltan(base, f.secciones) : [];
     return [
       { question_id: 'empresa', question: 'Nombre de la empresa', answer: f.empresa },
       {
@@ -149,6 +160,15 @@ export function FlujoWeb({ onGuardado }: Props) {
       },
       ...(plantilla
         ? [{ question_id: 'plantilla', question: 'Plantilla elegida', answer: plantilla.nombre }]
+        : []),
+      ...(faltan.length
+        ? [
+            {
+              question_id: 'secciones-pendientes',
+              question: 'Secciones pedidas que la plantilla no incluye (hay que añadirlas)',
+              answer: faltan.map((s) => etiquetaDe(seccionesPregunta?.opciones, s)).join(', '),
+            },
+          ]
         : []),
     ];
   };
@@ -189,7 +209,13 @@ export function FlujoWeb({ onGuardado }: Props) {
     setFase('buscando');
     const f = ficha();
     const activas = await listarPlantillasActivas();
-    const mejores = emparejar(activas, { categoria, estilo, rubro: f.rubro, empresa: f.empresa });
+    const mejores = emparejar(activas, {
+      categoria,
+      estilo,
+      rubro: f.rubro,
+      empresa: f.empresa,
+      secciones: f.secciones,
+    });
 
     if (mejores.length === 0) {
       void generarConIA();
@@ -219,6 +245,7 @@ export function FlujoWeb({ onGuardado }: Props) {
         empresa: f.empresa,
         rubro: f.rubro,
         estilo: estiloTexto(f),
+        secciones: f.secciones,
       });
       const doc = renderizarPlantilla(c.base, textos, f);
       setDocumento(doc);
@@ -260,21 +287,27 @@ export function FlujoWeb({ onGuardado }: Props) {
     }
   };
 
-  const aceptar = async () => {
+  /** El cliente dejó sus datos en el último paso: el encargo pasa al ingeniero. */
+  const aceptar = async (datos: DatosEncargo) => {
     if (!proyectoId.current) return;
     const f = ficha();
     setAceptacion('procesando');
-    try {
-      const { ok, error: errorAceptar } = await aceptarProyecto(proyectoId.current);
-      if (!ok) throw new Error(errorAceptar ?? 'No se pudo registrar la aceptación.');
-      documentarEnSegundoPlano(proyectoId.current, servicioDe(f), historialDe(f, plantillaUsada));
-      if (plantillaUsada) void registrarEvento(plantillaUsada.id, 'aceptada');
-      setAceptacion('aceptado');
-      onGuardado?.();
-    } catch (e) {
-      console.error('[AIB+] Error aceptando la maqueta web:', e);
-      setAceptacion('fallo');
+    setErrorEnvio(null);
+    const { ok, error: errorAceptar } = await enviarEncargo(proyectoId.current, {
+      servicio: servicioDe(f),
+      historial: historialDe(f, plantillaUsada),
+      ...datos,
+    });
+    if (!ok) {
+      console.error('[AIB+] Error enviando el encargo web:', errorAceptar);
+      setErrorEnvio('No pudimos enviar tu proyecto. Revisa tu conexión y vuelve a intentarlo.');
+      setAceptacion('inactivo');
+      return;
     }
+    if (plantillaUsada) void registrarEvento(plantillaUsada.id, 'aceptada');
+    setPidiendoContacto(false);
+    setAceptacion('aceptado');
+    onGuardado?.();
   };
 
   /* ------------------------------------------------------------- pantallas */
@@ -329,8 +362,17 @@ export function FlujoWeb({ onGuardado }: Props) {
               ? elegirPlantilla(ultimaElegida.current)
               : generarConIA())
           }
-          onAceptar={() => void aceptar()}
+          onAceptar={() => setPidiendoContacto(true)}
         />
+        {pidiendoContacto && (
+          <ContactoEncargo
+            tipoServicio="web"
+            enviando={aceptacion === 'procesando'}
+            error={errorEnvio}
+            onEnviar={(datos) => void aceptar(datos)}
+            onCancelar={() => setPidiendoContacto(false)}
+          />
+        )}
         {candidatas.length > 0 && aceptacion !== 'aceptado' && aceptacion !== 'procesando' && (
           <p className="-mt-2 text-center text-sm">
             <button type="button" onClick={() => setFase('eligiendo')} className="text-accent hover:underline">
@@ -436,6 +478,7 @@ function EleccionPlantilla({
             <div className="p-4">
               <p className="font-semibold text-ink">{c.fila.nombre}</p>
               <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>
+              <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />
               <button type="button" onClick={() => onElegir(c)} className="btn btn-primary mt-4 w-full">
                 Me gusta este
               </button>
@@ -460,6 +503,23 @@ function EleccionPlantilla({
         Las fotos y los textos de ejemplo se cambian por los de tu negocio.
       </p>
     </section>
+  );
+}
+
+/**
+ * Si el diseño trae las secciones que pidió. Mejor decirlo aquí que dejar que
+ * lo descubra en la maqueta: lo que falte lo añade el ingeniero.
+ */
+function Cobertura({ faltan }: { faltan: string[] }) {
+  const opciones = PREGUNTAS_WEB.find((p) => p.id === 'secciones')?.opciones;
+  if (faltan.length === 0) {
+    return <p className="mt-2 text-xs text-positive">✓ Incluye todas las secciones que pediste</p>;
+  }
+  return (
+    <p className="mt-2 text-xs text-ink-subtle">
+      No incluye {faltan.map((s) => etiquetaDe(opciones, s)).join(', ')}: el ingeniero lo añade
+      después.
+    </p>
   );
 }
 
@@ -928,7 +988,7 @@ function PantallaArmando({ empresa, conPlantilla = false }: { empresa: string; c
 
       <h2 className="text-2xl font-semibold">¡Gracias! Estamos armando la web de {empresa}</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        {conPlantilla ? 'Suele tardar unos 20 segundos.' : 'Suele tardar menos de un minuto. Ya casi.'}
+        Suele tardar menos de un minuto. Ya casi.
       </p>
 
       <ul className="mt-9 space-y-3 text-left">

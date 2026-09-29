@@ -9,6 +9,7 @@ const { generateText, stripMarkdownFences } = require('../claude');
 const { webPreviewPrompt } = require('../prompts');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
+const { cobrarCuota } = require('../cuota');
 
 const router = Router();
 
@@ -76,7 +77,7 @@ function extraerCuerpo(html) {
     .trim();
 }
 
-router.post('/generar-preview-web', limitar, requireAuth, async (req, res, next) => {
+router.post('/generar-preview-web', limitar, requireAuth, cobrarCuota('preview-web'), async (req, res, next) => {
   try {
     const { ficha, error } = leerFicha(req.body);
     if (error) return res.status(400).json({ success: false, error });

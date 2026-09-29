@@ -6,6 +6,7 @@ const { generateText, stripMarkdownFences } = require('../claude');
 const { DISCOVERY_SYSTEM, discoveryUserMessage } = require('../prompts');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
+const { cobrarCuota } = require('../cuota');
 
 const router = Router();
 
@@ -15,7 +16,7 @@ const limitar = crearLimitador({ maxPorMinuto: 20, nombre: 'generar-preguntas' }
 
 // El limitador va antes que la autenticación: así un aluvión de peticiones
 // sin sesión se corta aquí y no llega a golpear a Supabase.
-router.post('/generar-preguntas', limitar, requireAuth, async (req, res, next) => {
+router.post('/generar-preguntas', limitar, requireAuth, cobrarCuota('preguntas'), async (req, res, next) => {
   try {
     const { servicio, historial } = req.body ?? {};
 

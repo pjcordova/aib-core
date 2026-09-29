@@ -26,7 +26,8 @@ function leerToken(req) {
 
 /**
  * Middleware: exige una sesión de Supabase válida.
- * Deja `req.usuario` con { id, email } para el resto de la cadena.
+ * Deja `req.usuario` con { id, email } y `req.tokenUsuario` con el token, que
+ * el tope de gasto (cuota.js) usa para identificarse ante Supabase.
  */
 async function requireAuth(req, res, next) {
   const token = leerToken(req);
@@ -61,6 +62,7 @@ async function requireAuth(req, res, next) {
     }
 
     req.usuario = { id: usuario.id, email: usuario.email };
+    req.tokenUsuario = token;
     return next();
   } catch (error) {
     // Si Supabase no responde no podemos afirmar que el usuario sea legítimo,

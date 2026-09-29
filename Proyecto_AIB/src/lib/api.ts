@@ -211,7 +211,7 @@ export async function generarPreviewWeb(
  */
 export async function rellenarPlantilla<T>(
   plantilla: string,
-  ficha: { empresa: string; rubro: string; estilo: string }
+  ficha: { empresa: string; rubro: string; estilo: string; secciones: string[] }
 ): Promise<{ textos: T; usage?: TokenUsage }> {
   const data = await post<{ success: boolean; textos?: T; error?: string; usage?: TokenUsage }>(
     '/api/rellenar-plantilla',

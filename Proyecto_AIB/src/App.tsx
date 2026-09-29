@@ -4,13 +4,13 @@ import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreview';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
+import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
 import { WebPreview } from './components/web/WebPreview';
 import { Wordmark, Shell } from './components/ui/Primitives';
 import {
-  aceptarProyecto,
   cargarProyecto,
-  documentarEnSegundoPlano,
+  enviarEncargo,
   type ProyectoCompleto,
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
@@ -29,6 +29,8 @@ export default function Home() {
   const [iniciado, setIniciado] = useState(false);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
   const [aceptacionAbierto, setAceptacionAbierto] = useState<EstadoAceptacion>('inactivo');
+  const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [cargandoProyecto, setCargandoProyecto] = useState(false);
   // Se incrementa al guardar un proyecto para que la lista se recargue.
   const [versionLista, setVersionLista] = useState(0);
@@ -51,6 +53,8 @@ export default function Home() {
     setCargandoProyecto(false);
     if (proyecto) {
       setAceptacionAbierto(proyecto.aceptado ? 'aceptado' : 'inactivo');
+      setPidiendoContacto(false);
+      setErrorEnvio(null);
       setAbierto(proyecto);
     }
   }, []);
@@ -77,24 +81,31 @@ export default function Home() {
     setDescripcion('');
     setIniciado(false);
     setAbierto(null);
+    setPidiendoContacto(false);
   };
 
   /**
    * Aceptar un proyecto reabierto desde la lista: el cliente pudo cerrar la
-   * página sin aceptar y volver otro día. Hace lo mismo que al aceptar en el
-   * flujo: pasa al ingeniero al instante y documenta en segundo plano.
+   * página sin aceptar y volver otro día. Pasa por el mismo último paso que en
+   * el flujo: deja su contacto y el encargo llega al ingeniero al instante.
    */
-  const aceptarAbierto = async () => {
+  const aceptarAbierto = async (datos: DatosEncargo) => {
     if (!abierto || abierto.aceptado) return;
     setAceptacionAbierto('procesando');
-    const { ok } = await aceptarProyecto(abierto.id);
+    setErrorEnvio(null);
+    const { ok } = await enviarEncargo(abierto.id, {
+      servicio: abierto.servicio,
+      historial: abierto.historial,
+      ...datos,
+    });
     if (!ok) {
-      setAceptacionAbierto('fallo');
+      setErrorEnvio('No pudimos enviar tu proyecto. Revisa tu conexión y vuelve a intentarlo.');
+      setAceptacionAbierto('inactivo');
       return;
     }
-    documentarEnSegundoPlano(abierto.id, abierto.servicio, abierto.historial);
     if (abierto.plantilla) void registrarEvento(abierto.plantilla.id, 'aceptada');
     setAbierto({ ...abierto, aceptado: true });
+    setPidiendoContacto(false);
     setAceptacionAbierto('aceptado');
     refrescarLista();
   };
@@ -149,7 +160,7 @@ export default function Home() {
                 usage={abierto.usage}
                 guardado="guardado"
                 aceptacion={aceptacionAbierto}
-                onAceptar={() => void aceptarAbierto()}
+                onAceptar={() => setPidiendoContacto(true)}
               />
             ) : (
               <PrototypePreview
@@ -159,7 +170,7 @@ export default function Home() {
                 usage={abierto.usage}
                 guardado="guardado"
                 aceptacion={aceptacionAbierto}
-                onAceptar={() => void aceptarAbierto()}
+                onAceptar={() => setPidiendoContacto(true)}
               />
             )
           ) : tipo === 'web' ? (
@@ -218,6 +229,16 @@ export default function Home() {
           )}
         </Shell>
       </main>
+
+      {abierto && pidiendoContacto && (
+        <ContactoEncargo
+          tipoServicio={abierto.tipoServicio}
+          enviando={aceptacionAbierto === 'procesando'}
+          error={errorEnvio}
+          onEnviar={(datos) => void aceptarAbierto(datos)}
+          onCancelar={() => setPidiendoContacto(false)}
+        />
+      )}
     </div>
   );
 }

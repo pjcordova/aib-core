@@ -9,13 +9,14 @@ const { generateText, stripMarkdownFences } = require('../claude');
 const { documentationPrompt } = require('../prompts');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
+const { cobrarCuota } = require('../cuota');
 
 const router = Router();
 
 // Aceptar una propuesta es un acto puntual, no algo que se repita en bucle.
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'generar-documentacion' });
 
-router.post('/generar-documentacion', limitar, requireAuth, async (req, res, next) => {
+router.post('/generar-documentacion', limitar, requireAuth, cobrarCuota('documentacion'), async (req, res, next) => {
   try {
     const { servicio, historial } = req.body ?? {};
 

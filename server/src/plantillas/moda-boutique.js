@@ -29,11 +29,40 @@ const producto = objeto({
 });
 
 /**
+ * Bloques que solo aparecen si el cliente pidió esa sección. Así la IA no
+ * escribe textos que nadie va a ver y la maqueta respeta lo que eligió.
+ * El resto de secciones (productos, precios, galería, contacto) salen de los
+ * bloques fijos de la plantilla y se encienden o apagan en el frontend.
+ */
+const BLOQUES_OPCIONALES = {
+  nosotros: objeto({
+    titulo: texto('Título de la sección, máximo 4 palabras'),
+    texto: texto('Quiénes son, con lo que contó la tienda; máximo 55 palabras, sin inventar años, cifras ni premios'),
+  }),
+  testimonios: {
+    type: 'array',
+    items: objeto({
+      texto: texto('Opinión de ejemplo, máximo 25 palabras'),
+      autor: texto('Tipo de cliente, como "Clienta frecuente"; nunca un nombre de persona'),
+    }),
+    description: 'Exactamente 3',
+  },
+  preguntas: {
+    type: 'array',
+    items: objeto({
+      pregunta: texto('Duda típica al comprar en esta tienda, máximo 12 palabras'),
+      respuesta: texto('Respuesta de máximo 30 palabras; si no se conoce la política, invitar a consultar por WhatsApp en vez de prometer'),
+    }),
+    description: 'Exactamente 4',
+  },
+};
+
+/**
  * JSON Schema para structured outputs. Solo tipos, enums y `required`: las
  * longitudes y cantidades se piden en las descripciones y se imponen después
  * en `normalizar`, que no depende de lo que el modelo haya respetado.
  */
-const esquema = objeto({
+const propiedadesBase = {
   anuncio: texto('Frase de la barra superior, máximo 6 palabras'),
   hero: objeto({
     etiqueta: texto('Etiqueta corta sobre el título, 1 a 3 palabras'),
@@ -79,9 +108,26 @@ const esquema = objeto({
       'Exactamente 4, en este orden: tienda o recojo; entrega (si el negocio no habló de envíos, algo que no prometa, como "Coordinamos tu entrega"); novedades; asesoría',
   },
   pie_descripcion: texto('Descripción del negocio para el pie de página, máximo 22 palabras'),
-});
+};
 
-function prompt({ empresa, rubro, estilo }) {
+/** Esquema con los bloques fijos más los opcionales que pidió el cliente. */
+function esquema(secciones = []) {
+  const extra = Object.entries(BLOQUES_OPCIONALES).filter(([seccion]) => secciones.includes(seccion));
+  return objeto({ ...propiedadesBase, ...Object.fromEntries(extra) });
+}
+
+const INSTRUCCIONES_BLOQUE = {
+  nosotros: '- nosotros: quiénes son, con lo que contó la tienda. Sin inventar años, cifras ni premios.',
+  testimonios: '- testimonios: opiniones de ejemplo, firmadas con el tipo de cliente, nunca con nombres.',
+  preguntas:
+    '- preguntas: dudas típicas al comprar aquí (tallas, cambios, pedidos). Si no se sabe la política, que la respuesta invite a consultar por WhatsApp en vez de prometer.',
+};
+
+function prompt({ empresa, rubro, estilo, secciones = [] }) {
+  const bloques = Object.keys(BLOQUES_OPCIONALES)
+    .filter((seccion) => secciones.includes(seccion))
+    .map((seccion) => INSTRUCCIONES_BLOQUE[seccion]);
+
   return `
 Eres redactor de tiendas de moda. Escribe los textos de la página de inicio de
 esta tienda, que usa una plantilla de boutique ya diseñada.
@@ -89,7 +135,7 @@ esta tienda, que usa una plantilla de boutique ya diseñada.
 TIENDA: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO QUE BUSCA: ${estilo}
-
+${bloques.length ? `\nSECCIONES EXTRA QUE PIDIÓ LA TIENDA\n${bloques.join('\n')}\n` : ''}
 REGLAS
 - Todo en español de Perú, cercano y breve. Respeta los límites de palabras.
 - Las prendas tienen que ser las que vende ESTA tienda: si es ropa de hombre,
@@ -135,11 +181,40 @@ function productoNormalizado(p) {
   };
 }
 
+/** Los bloques opcionales, solo si se pidieron y llegaron con contenido. */
+function bloquesOpcionales(t, secciones) {
+  const extra = {};
+
+  if (secciones.includes('nosotros')) {
+    const cuerpo = limitar(t.nosotros?.texto, 400, '');
+    if (cuerpo) extra.nosotros = { titulo: limitar(t.nosotros?.titulo, 40, 'Quiénes somos'), texto: cuerpo };
+  }
+
+  if (secciones.includes('testimonios')) {
+    const testimonios = exactamente(t.testimonios, 3, (x) => {
+      const opinion = limitar(x?.texto, 200, '');
+      return opinion ? { texto: opinion, autor: limitar(x?.autor, 40, 'Cliente') } : null;
+    });
+    if (testimonios) extra.testimonios = testimonios;
+  }
+
+  if (secciones.includes('preguntas')) {
+    const preguntas = exactamente(t.preguntas, 4, (x) => {
+      const pregunta = limitar(x?.pregunta, 100, '');
+      const respuesta = limitar(x?.respuesta, 240, '');
+      return pregunta && respuesta ? { pregunta, respuesta } : null;
+    });
+    if (preguntas) extra.preguntas = preguntas;
+  }
+
+  return extra;
+}
+
 /**
  * Impone los límites que el esquema no puede expresar y valida lo que acaba
  * dentro de atributos (colores). Devuelve null si falta algo imprescindible.
  */
-function normalizar(t) {
+function normalizar(t, secciones = []) {
   if (!t || typeof t !== 'object') return null;
 
   const destacados = exactamente(t.destacados, 6, productoNormalizado);
@@ -198,6 +273,7 @@ function normalizar(t) {
           : null
       ) ?? [],
     pie_descripcion: limitar(t.pie_descripcion, 180, ''),
+    ...bloquesOpcionales(t, secciones),
   };
 }
 

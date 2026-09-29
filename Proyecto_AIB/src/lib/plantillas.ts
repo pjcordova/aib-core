@@ -42,6 +42,11 @@ export interface ContextoVista {
   /** HTML ya seguro de la marca: el logo o el nombre escapado. */
   marca: string;
   anio: number;
+  /**
+   * Secciones que pidió el cliente (claves de la pregunta de secciones). null
+   * cuando no hay cliente, como en el catálogo del ingeniero: se ve todo.
+   */
+  secciones: string[] | null;
 }
 
 export interface PlantillaBase<T = unknown> {
@@ -53,6 +58,12 @@ export interface PlantillaBase<T = unknown> {
   /** Mismo vocabulario que la pregunta de estilo del cliente. */
   estilo: string;
   etiquetas: string[];
+  /**
+   * Secciones de las que el cliente puede pedir (servicios.ts) que esta
+   * plantilla sabe mostrar. Las que no estén aquí se avisan al elegir y le
+   * llegan al ingeniero como pendientes.
+   */
+  secciones: string[];
   html: string;
   css: string;
   /** Hojas externas (tipografías). */
@@ -115,12 +126,16 @@ function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, 'primari
 export function renderizarPlantilla<T>(
   plantilla: PlantillaBase<T>,
   textos: T,
-  ficha: Pick<FichaWeb, 'empresa' | 'logo'> & { paleta?: Pick<Paleta, 'primario' | 'secundario'> | null }
+  ficha: Pick<FichaWeb, 'empresa' | 'logo'> & {
+    paleta?: Pick<Paleta, 'primario' | 'secundario'> | null;
+    secciones?: string[] | null;
+  }
 ): string {
   const contexto: ContextoVista = {
     empresa: ficha.empresa,
     marca: marcaDe(ficha),
     anio: new Date().getFullYear(),
+    secciones: ficha.secciones ?? null,
   };
 
   const cuerpo = Mustache.render(plantilla.html, plantilla.vista(textos, contexto));
@@ -144,6 +159,11 @@ ${estilosCliente ? `<style>${estilosCliente}</style>` : ''}
 ${cuerpo}
 </body>
 </html>`;
+}
+
+/** Secciones que pidió el cliente y la plantilla no sabe mostrar. */
+export function seccionesQueFaltan(plantilla: Pick<PlantillaBase, 'secciones'>, pedidas: string[]): string[] {
+  return pedidas.filter((s) => !plantilla.secciones.includes(s));
 }
 
 /* -------------------------------------------------------------------------- */

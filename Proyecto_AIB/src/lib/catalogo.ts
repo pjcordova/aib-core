@@ -162,14 +162,15 @@ function normalizar(texto: string): string {
  *
  *   - el tipo de negocio manda: una plantilla de otra categoría no se ofrece;
  *   - coincidir en estilo suma;
- *   - cada etiqueta que aparece en lo que escribió el cliente suma.
+ *   - cada etiqueta que aparece en lo que escribió el cliente suma;
+ *   - cada sección pedida que la plantilla sabe mostrar suma.
  *
  * Con pocas plantillas es suficiente. Cuando un ingeniero tenga muchas, el
  * siguiente paso es ordenarlas por significado (Claude o búsqueda vectorial).
  */
 export function emparejar(
   candidatas: PlantillaDelCatalogo[],
-  cliente: { categoria: CategoriaNegocio | ''; estilo: string } & Pick<FichaWeb, 'rubro' | 'empresa'>,
+  cliente: { categoria: CategoriaNegocio | ''; estilo: string } & Pick<FichaWeb, 'rubro' | 'empresa' | 'secciones'>,
   maximo = 3
 ): PlantillaDelCatalogo[] {
   const texto = normalizar(`${cliente.empresa} ${cliente.rubro}`);
@@ -181,6 +182,9 @@ export function emparejar(
       if (c.fila.estilo === cliente.estilo) puntos += 5;
       for (const etiqueta of c.fila.etiquetas) {
         if (texto.includes(normalizar(etiqueta).replace(/-/g, ' '))) puntos += 2;
+      }
+      for (const seccion of cliente.secciones) {
+        if (c.base.secciones.includes(seccion)) puntos += 1;
       }
       // Desempate por lo que ya demostró funcionar con otros clientes.
       const tasa = c.fila.veces_mostrada > 0 ? c.fila.veces_aceptada / c.fila.veces_mostrada : 0;
