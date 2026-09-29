@@ -1,0 +1,54 @@
+/*
+  Hoja de origen de la plantilla "Restaurante".
+
+  DM Serif Display para títulos y DM Sans para el texto, sobre un fondo papel
+  cálido. Se compila a estilos.css con:
+
+    npm run plantillas
+
+  `source(none)` + `@source` limitan el escaneo a esta plantilla, así el CSS
+  resultante solo trae las clases que la plantilla usa de verdad.
+*/
+@import 'tailwindcss' source(none);
+@source './plantilla.html';
+
+/* Los colores de marca y acento, con sus variantes, se sustituyen por la
+   paleta de cada cliente al renderizar; los neutros se mantienen porque son
+   los que dan el tono cálido de restaurante. */
+@theme {
+  --color-marca: #b5452b;
+  --color-marca-oscuro: #943621;
+  --color-marca-texto: #b5452b;
+  --color-acento: #e3a72f;
+  --color-acento-oscuro: #9c6d12;
+  --color-acento-suave: #fbeccb;
+
+  --color-papel: #fbf7f0;
+  --color-tinta: #241a14;
+  --color-tinta-suave: #4d3e33;
+  --color-pie: #1f1712;
+  --color-linea: #eadfce;
+  --color-whatsapp: #25d366;
+
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'DM Serif Display', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4.5rem;
+  }
+
+  body {
+    background-color: var(--color-papel);
+    color: var(--color-tinta-suave);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+  }
+}

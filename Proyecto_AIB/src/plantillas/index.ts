@@ -10,8 +10,15 @@
 import type { PlantillaBase } from '../lib/plantillas';
 import { consultora } from './consultora';
 import { modaBoutique } from './moda-boutique';
+import { restaurante } from './restaurante';
+import { saludBelleza } from './salud-belleza';
 
-export const PLANTILLAS_BASE: PlantillaBase[] = [modaBoutique as PlantillaBase, consultora as PlantillaBase];
+export const PLANTILLAS_BASE: PlantillaBase[] = [
+  modaBoutique as PlantillaBase,
+  consultora as PlantillaBase,
+  restaurante as PlantillaBase,
+  saludBelleza as PlantillaBase,
+];
 
 export function obtenerPlantillaBase(id: string): PlantillaBase | null {
   return PLANTILLAS_BASE.find((p) => p.id === id) ?? null;

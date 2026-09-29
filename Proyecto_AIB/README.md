@@ -111,7 +111,16 @@ Una plantilla es una web que el ingeniero ya sabe construir, con huecos donde va
 - **Secciones**: los bloques opcionales (quiénes somos, testimonios, preguntas…) solo aparecen, y solo se le piden a la IA, si el cliente eligió esa sección. La plantilla declara en `secciones` cuáles sabe mostrar; las demás se avisan al elegir y le llegan al ingeniero como pendientes.
 - **Fotos**: los elementos con `data-aib-foto` son huecos donde el cliente puede poner una foto suya desde «Editar».
 
-Plantillas incluidas: `moda-boutique` (tiendas de ropa, derivada de bithia-web) y `consultora` (servicios profesionales, derivada de la web de BuenVivir).
+Plantillas incluidas:
+
+| id | Para | Origen |
+|---|---|---|
+| `moda-boutique` | Tiendas de ropa | Derivada de bithia-web |
+| `consultora` | Consultoras y servicios profesionales | Derivada de la web de BuenVivir |
+| `restaurante` | Restaurantes, cafeterías y comida | Diseñada desde cero |
+| `salud-belleza` | Spas, salones, barberías, estética y consultorios | Diseñada desde cero |
+
+La IA nunca escribe datos de contacto, direcciones ni nombres de personas; en `restaurante` y `salud-belleza` tampoco precios, horarios ni duraciones. La plantilla los muestra como huecos visibles (`[Precio]`, `[Tu dirección]`…) que el cliente completa desde «Editar». Los precios de `moda-boutique` sí son de ejemplo, escritos por la IA.
 
 ### Añadir una plantilla
 

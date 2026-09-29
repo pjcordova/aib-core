@@ -1,0 +1,356 @@
+<!--
+  Plantilla "Salud y belleza".
+  Diseñada desde cero para AIB+ para spas, salones, barberías, estética y
+  consultorios: servicios con precio y duración, reservas por WhatsApp y el
+  equipo.
+
+  Sin JavaScript: el menú móvil es un <details>.
+
+  Precios, duraciones, nombres del equipo, horario y dirección son huecos
+  visibles ([Precio], [Nombre]…): la IA no los inventa, el cliente los
+  completa en «Editar».
+
+  data-aib-foto marca los huecos donde el cliente puede poner una foto suya
+  (lib/edicion.ts). La foto entra como primer hijo del hueco, así que el hueco
+  debe estar posicionado y el texto que va encima, fuera de él.
+
+  En los bloques con fondo de marca, el texto hereda el color (o usa
+  text-white a secas) para que la guarda de contraste de lib/plantillas.ts lo
+  oscurezca si el cliente eligió un color principal claro.
+-->
+
+<!-- ============================================================ cabecera -->
+<header class="sticky top-0 z-40 border-b border-linea/70 bg-white/90 px-5 backdrop-blur sm:px-8">
+  <div class="mx-auto flex h-18 max-w-6xl items-center justify-between">
+    <a href="#" class="text-xl font-bold tracking-tight text-tinta">{{{marca}}}</a>
+
+    <nav class="hidden items-center gap-8 text-[0.95rem] font-medium text-tinta-suave md:flex" aria-label="Principal">
+      <a href="#servicios" class="transition-colors hover:text-marca-texto">Servicios</a>
+      {{#hay_equipo}}<a href="#equipo" class="transition-colors hover:text-marca-texto">Equipo</a>{{/hay_equipo}}
+      {{#hay_preguntas}}<a href="#preguntas" class="transition-colors hover:text-marca-texto">Preguntas</a>{{/hay_preguntas}}
+      <a href="#reservar" class="rounded-full bg-marca px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro">{{reserva.cta}}</a>
+    </nav>
+
+    <details class="group/menu md:hidden">
+      <summary class="-mr-2 flex cursor-pointer list-none p-2 text-tinta [&::-webkit-details-marker]:hidden" aria-label="Abrir menú">
+        <svg class="block group-open/menu:hidden" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="hidden group-open/menu:block" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </summary>
+      <nav class="absolute inset-x-0 top-full z-50 flex flex-col border-b border-linea bg-white px-5 pb-5 shadow-sm" aria-label="Menú">
+        <a href="#servicios" class="py-3 text-lg font-medium text-tinta-suave">Servicios</a>
+        {{#hay_equipo}}<a href="#equipo" class="py-3 text-lg font-medium text-tinta-suave">Equipo</a>{{/hay_equipo}}
+        {{#hay_preguntas}}<a href="#preguntas" class="py-3 text-lg font-medium text-tinta-suave">Preguntas frecuentes</a>{{/hay_preguntas}}
+        <a href="#reservar" class="mt-2 rounded-full bg-marca px-5 py-3 text-center font-semibold text-white">{{reserva.cta}}</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <!-- ============================================================ portada -->
+  <section class="relative overflow-hidden bg-niebla px-5 sm:px-8" aria-label="Portada">
+    <div class="pointer-events-none absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-acento-suave blur-3xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -bottom-48 -left-32 h-96 w-96 rounded-full bg-marca/10 blur-3xl" aria-hidden="true"></div>
+
+    <div class="relative mx-auto grid max-w-6xl items-center gap-14 pb-20 pt-14 md:grid-cols-2 md:pb-24 md:pt-20">
+      <div>
+        <p class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-marca-texto ring-1 ring-linea">
+          <span class="h-1.5 w-1.5 rounded-full bg-marca" aria-hidden="true"></span>
+          {{hero.etiqueta}}
+        </p>
+        <h1 class="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-tinta sm:text-6xl">
+          <span>{{hero.titulo}}</span>
+          <em class="font-display font-normal text-marca-texto">{{hero.titulo_acento}}</em>
+        </h1>
+        <p class="mt-6 max-w-lg text-lg leading-relaxed text-tinta-suave">{{hero.subtitulo}}</p>
+
+        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+          <a href="#reservar" class="inline-flex items-center justify-center gap-2 rounded-full bg-marca px-7 py-3.5 font-semibold text-white shadow-lg shadow-marca/25 transition-colors hover:bg-marca-oscuro">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+            {{hero.cta_principal}}
+          </a>
+          <a href="#servicios" class="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 font-semibold text-tinta ring-1 ring-linea transition hover:ring-marca">
+            {{hero.cta_secundario}}
+          </a>
+        </div>
+      </div>
+
+      <div class="relative mx-auto w-full max-w-md md:max-w-none">
+        <div class="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-white shadow-[0_40px_80px_-40px_rgba(23,33,31,0.55)]">
+          <div class="absolute inset-0 bg-gradient-to-br from-marca/35 via-acento-suave to-white" data-aib-foto="portada">
+            <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/45" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+          </div>
+        </div>
+        <div class="absolute -bottom-6 left-4 flex items-center gap-3 rounded-2xl bg-white p-4 pr-6 shadow-xl ring-1 ring-linea/60 sm:-left-8">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-acento-suave text-marca-texto" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+          </span>
+          <div>
+            <p class="text-sm font-semibold text-tinta">Reserva tu cita</p>
+            <p class="text-xs text-tinta-suave">Escríbenos por WhatsApp</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ beneficios -->
+  <section class="border-y border-linea bg-white px-5 py-12 sm:px-8" aria-label="Por qué elegirnos">
+    <ul class="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+      {{#beneficios}}
+      <li class="flex gap-4">
+        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-niebla text-marca-texto" aria-hidden="true">{{{icono}}}</span>
+        <div>
+          <p class="font-semibold text-tinta">{{titulo}}</p>
+          <p class="mt-1 text-sm leading-relaxed text-tinta-suave">{{detalle}}</p>
+        </div>
+      </li>
+      {{/beneficios}}
+    </ul>
+  </section>
+
+  <!-- ============================================================ servicios -->
+  <section id="servicios" class="scroll-mt-20 bg-niebla px-5 py-20 sm:px-8 sm:py-24">
+    <div class="mx-auto max-w-6xl">
+      <header class="mx-auto max-w-2xl text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-marca-texto">Servicios</p>
+        <h2 class="mt-3 text-balance text-3xl font-semibold tracking-tight text-tinta sm:text-5xl">{{servicios_intro.titulo}}</h2>
+        <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{servicios_intro.bajada}}</p>
+      </header>
+
+      <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {{#servicios}}
+        <article class="flex flex-col rounded-3xl bg-white p-7 ring-1 ring-linea transition hover:-translate-y-1 hover:shadow-xl">
+          <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-acento-suave text-marca-texto" aria-hidden="true">{{{icono}}}</span>
+          <h3 class="mt-6 text-xl font-semibold text-tinta">{{nombre}}</h3>
+          <p class="mt-3 flex-1 text-[0.95rem] leading-relaxed text-tinta-suave">{{descripcion}}</p>
+          <div class="mt-6 flex items-center justify-between gap-4 border-t border-linea pt-5">
+            <span class="flex items-center gap-2 text-sm text-tinta-suave">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              {{duracion}}
+            </span>
+            <span class="text-lg font-semibold text-tinta">{{precio}}</span>
+          </div>
+          <a href="#reservar" class="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-niebla px-5 py-2.5 text-sm font-semibold text-marca-texto transition-colors hover:bg-marca hover:text-white">
+            Reservar
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </article>
+        {{/servicios}}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ equipo (opcional) -->
+  {{#hay_equipo}}
+  <section id="equipo" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-equipo">
+    <div class="mx-auto max-w-6xl">
+      <header class="grid gap-6 md:grid-cols-2 md:items-end">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-marca-texto">Nuestro equipo</p>
+          <h2 id="titulo-equipo" class="mt-3 text-balance text-3xl font-semibold tracking-tight text-tinta sm:text-5xl">{{nosotros.titulo}}</h2>
+        </div>
+        <p class="text-lg leading-relaxed text-tinta-suave">{{nosotros.texto}}</p>
+      </header>
+
+      <ul class="mt-12 grid gap-6 sm:grid-cols-3">
+        {{#equipo}}
+        <li class="overflow-hidden rounded-3xl bg-niebla">
+          <div class="relative aspect-[4/5] overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-b from-acento-suave to-marca/25" data-aib-foto="equipo">
+              <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/40" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+            </div>
+          </div>
+          <div class="p-6">
+            <p class="text-lg font-semibold text-tinta">{{nombre}}</p>
+            <p class="mt-0.5 text-sm font-medium text-marca-texto">{{rol}}</p>
+            <p class="mt-3 text-sm leading-relaxed text-tinta-suave">{{detalle}}</p>
+          </div>
+        </li>
+        {{/equipo}}
+      </ul>
+    </div>
+  </section>
+  {{/hay_equipo}}
+
+  <!-- ============================================================ galería (opcional) -->
+  {{#hay_galeria}}
+  <section id="galeria" class="scroll-mt-20 bg-niebla px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-galeria">
+    <div class="mx-auto max-w-6xl">
+      <header class="mx-auto max-w-2xl text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-marca-texto">Galería</p>
+        <h2 id="titulo-galeria" class="mt-3 text-balance text-3xl font-semibold tracking-tight text-tinta sm:text-5xl">{{galeria.titulo}}</h2>
+        <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{galeria.bajada}}</p>
+      </header>
+
+      <div class="mt-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div class="relative aspect-[3/4] overflow-hidden rounded-3xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-marca/30 to-acento-suave" data-aib-foto="galeria">
+            <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+        </div>
+        <div class="relative aspect-[3/4] overflow-hidden rounded-3xl md:translate-y-8">
+          <div class="absolute inset-0 bg-gradient-to-br from-acento-suave to-white" data-aib-foto="galeria">
+            <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+        </div>
+        <div class="relative aspect-[3/4] overflow-hidden rounded-3xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-white to-marca/25" data-aib-foto="galeria">
+            <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+        </div>
+        <div class="relative aspect-[3/4] overflow-hidden rounded-3xl md:translate-y-8">
+          <div class="absolute inset-0 bg-gradient-to-br from-acento-suave via-white to-marca/30" data-aib-foto="galeria">
+            <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {{/hay_galeria}}
+
+  <!-- ============================================================ testimonios (opcional) -->
+  {{#hay_testimonios}}
+  <section id="testimonios" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-testimonios">
+    <div class="mx-auto max-w-6xl">
+      <h2 id="titulo-testimonios" class="text-center text-3xl font-semibold tracking-tight text-tinta sm:text-5xl"><span>Lo que dicen</span> <em class="font-display font-normal text-marca-texto">nuestros clientes</em></h2>
+      <ul class="mt-12 grid gap-6 md:grid-cols-3">
+        {{#testimonios}}
+        <li class="flex flex-col rounded-3xl bg-niebla p-7">
+          <p class="font-display text-5xl leading-none text-acento-oscuro" aria-hidden="true">&ldquo;</p>
+          <p class="mt-2 flex-1 text-[0.95rem] leading-relaxed text-tinta-suave">{{texto}}</p>
+          <p class="mt-5 flex items-center gap-2 text-sm font-semibold text-tinta">
+            <span class="h-1.5 w-1.5 rounded-full bg-marca" aria-hidden="true"></span>
+            {{autor}}
+          </p>
+        </li>
+        {{/testimonios}}
+      </ul>
+    </div>
+  </section>
+  {{/hay_testimonios}}
+
+  <!-- ============================================================ preguntas (opcional) -->
+  {{#hay_preguntas}}
+  <section id="preguntas" class="scroll-mt-20 bg-niebla px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-preguntas">
+    <h2 id="titulo-preguntas" class="text-center text-3xl font-semibold tracking-tight text-tinta sm:text-5xl">Preguntas frecuentes</h2>
+    <div class="mx-auto mt-10 max-w-3xl space-y-3">
+      {{#preguntas}}
+      <details class="group/faq rounded-2xl bg-white px-6 py-5 ring-1 ring-linea">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-tinta [&::-webkit-details-marker]:hidden">
+          {{pregunta}}
+          <svg class="shrink-0 text-marca-texto transition group-open/faq:rotate-45" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </summary>
+        <p class="mt-3 text-[0.95rem] leading-relaxed text-tinta-suave">{{respuesta}}</p>
+      </details>
+      {{/preguntas}}
+    </div>
+  </section>
+  {{/hay_preguntas}}
+
+  <!-- ============================================================ reservas y contacto -->
+  <section id="reservar" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-reservar">
+    <div class="mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-marca text-white">
+      <div class="grid gap-10 p-8 sm:p-12 md:grid-cols-2 md:p-16">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] opacity-80">Reservas</p>
+          <h2 id="titulo-reservar" class="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-5xl">{{reserva.titulo}}</h2>
+          <p class="mt-4 text-lg leading-relaxed opacity-85">{{reserva.bajada}}</p>
+          <a href="#reservar" class="mt-8 inline-flex items-center gap-3 rounded-full bg-white px-7 py-3.5 font-semibold text-tinta shadow-lg transition-transform hover:-translate-y-0.5">
+            <svg class="text-whatsapp" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.48 1.34 5L2 22l5.17-1.35a9.93 9.93 0 0 0 4.87 1.24h.01c5.5 0 9.96-4.46 9.96-9.96 0-2.66-1.04-5.16-2.92-7.04A9.88 9.88 0 0 0 12.04 2Zm0 18.18h-.01a8.27 8.27 0 0 1-4.21-1.15l-.3-.18-3.13.82.84-3.05-.2-.31a8.24 8.24 0 0 1-1.26-4.39c0-4.56 3.71-8.27 8.28-8.27 2.21 0 4.29.86 5.85 2.43a8.22 8.22 0 0 1 2.42 5.85c0 4.57-3.71 8.25-8.28 8.25Zm4.54-6.18c-.25-.13-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.8-.79.97-.14.16-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.44-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.23.25-.86.84-.86 2.05s.88 2.38 1 2.54c.13.17 1.74 2.65 4.2 3.72.59.25 1.05.4 1.4.52.59.18 1.12.16 1.55.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29Z"/></svg>
+            {{reserva.cta}}
+          </a>
+        </div>
+
+        <ol class="space-y-4">
+          {{#reserva.pasos}}
+          <li class="flex gap-4 rounded-2xl bg-white/10 p-5 ring-1 ring-white/20">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-tinta">{{numero}}</span>
+            <div>
+              <p class="font-semibold">{{titulo}}</p>
+              <p class="mt-1 text-sm leading-relaxed opacity-80">{{detalle}}</p>
+            </div>
+          </li>
+          {{/reserva.pasos}}
+        </ol>
+      </div>
+    </div>
+
+    <dl class="mx-auto mt-6 grid max-w-6xl gap-4 sm:grid-cols-3">
+      <div class="flex gap-4 rounded-3xl bg-niebla p-6">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-marca-texto" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </span>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Horario</dt>
+          <dd class="mt-1 text-tinta-suave">{{horario}}</dd>
+        </div>
+      </div>
+      <div class="flex gap-4 rounded-3xl bg-niebla p-6">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-marca-texto" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </span>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Dirección</dt>
+          <dd class="mt-1 text-tinta-suave">{{direccion}}</dd>
+          <dd class="text-sm text-tinta-suave/75">{{ciudad}}</dd>
+        </div>
+      </div>
+      <div class="flex gap-4 rounded-3xl bg-niebla p-6">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-marca-texto" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+        </span>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">WhatsApp</dt>
+          <dd class="mt-1 text-tinta-suave">{{whatsapp}}</dd>
+        </div>
+      </div>
+    </dl>
+  </section>
+</main>
+
+<!-- ============================================================ pie -->
+<footer class="bg-pie px-5 py-16 text-sm sm:px-8">
+  <div class="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <p class="text-xl font-bold tracking-tight text-white">{{{marca}}}</p>
+      <p class="mt-4 leading-relaxed text-white/70">{{pie_descripcion}}</p>
+      <p class="mt-4 flex items-center gap-2 text-xs text-acento">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        {{ciudad}}
+      </p>
+    </div>
+
+    <nav aria-labelledby="pie-servicios">
+      <h2 id="pie-servicios" class="font-semibold text-white">Servicios</h2>
+      <ul class="mt-4 space-y-2.5">
+        {{#servicios}}
+        <li><a href="#servicios" class="text-white/70 transition-colors hover:text-white">{{nombre}}</a></li>
+        {{/servicios}}
+      </ul>
+    </nav>
+
+    <div>
+      <h2 class="font-semibold text-white">Reservas</h2>
+      <ul class="mt-4 space-y-2.5 text-white/70">
+        <li class="flex items-center gap-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-white/50" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+          {{whatsapp}}
+        </li>
+        <li class="flex items-center gap-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-white/50" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          {{horario}}
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mx-auto mt-12 max-w-6xl border-t border-white/15 pt-6 text-xs text-white/50">
+    <p>© {{anio}} {{empresa}}. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+<!-- ============================================================ WhatsApp -->
+<span aria-label="Reservar por WhatsApp" class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-whatsapp text-white shadow-lg sm:bottom-8 sm:right-8">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.48 1.34 5L2 22l5.17-1.35a9.93 9.93 0 0 0 4.87 1.24h.01c5.5 0 9.96-4.46 9.96-9.96 0-2.66-1.04-5.16-2.92-7.04A9.88 9.88 0 0 0 12.04 2Zm0 18.18h-.01a8.27 8.27 0 0 1-4.21-1.15l-.3-.18-3.13.82.84-3.05-.2-.31a8.24 8.24 0 0 1-1.26-4.39c0-4.56 3.71-8.27 8.28-8.27 2.21 0 4.29.86 5.85 2.43a8.22 8.22 0 0 1 2.42 5.85c0 4.57-3.71 8.25-8.28 8.25Zm4.54-6.18c-.25-.13-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.8-.79.97-.14.16-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.44-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.16 0-.43.06-.65.31-.23.25-.86.84-.86 2.05s.88 2.38 1 2.54c.13.17 1.74 2.65 4.2 3.72.59.25 1.05.4 1.4.52.59.18 1.12.16 1.55.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29Z"/></svg>
+</span>

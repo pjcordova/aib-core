@@ -8,8 +8,10 @@
 
 const modaBoutique = require('./moda-boutique');
 const consultora = require('./consultora');
+const restaurante = require('./restaurante');
+const saludBelleza = require('./salud-belleza');
 
-const PLANTILLAS = { [modaBoutique.id]: modaBoutique, [consultora.id]: consultora };
+const PLANTILLAS = Object.fromEntries([modaBoutique, consultora, restaurante, saludBelleza].map((p) => [p.id, p]));
 
 function obtenerPlantilla(id) {
   return Object.prototype.hasOwnProperty.call(PLANTILLAS, id) ? PLANTILLAS[id] : null;

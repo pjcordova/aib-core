@@ -35,7 +35,13 @@ export const CATEGORIAS_NEGOCIO: { valor: CategoriaNegocio; etiqueta: string }[]
  * Qué papel cumple cada variable de color de la plantilla. Al renderizar, la
  * paleta del cliente se traduce a estos papeles y sustituye la del ingeniero.
  */
-export type RolColor = 'primario' | 'primario-oscuro' | 'secundario' | 'secundario-oscuro' | 'secundario-suave';
+export type RolColor =
+  | 'primario'
+  | 'primario-oscuro'
+  | 'primario-texto'
+  | 'secundario'
+  | 'secundario-oscuro'
+  | 'secundario-suave';
 
 export interface ContextoVista {
   empresa: string;
@@ -97,9 +103,14 @@ function marcaDe(ficha: Pick<FichaWeb, 'empresa' | 'logo'>): string {
  * el ingeniero puso sobre él dejaría de leerse.
  */
 export function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, 'primario' | 'secundario'>): string {
+  const principalClaro = textoLegible(paleta.primario) !== '#ffffff';
+
   const valores: Record<RolColor, string> = {
     primario: paleta.primario,
     'primario-oscuro': ajustar(paleta.primario, -0.15),
+    // Para usar el principal como texto sobre fondo claro (precios,
+    // etiquetas): si es un color claro, como un amarillo, se oscurece.
+    'primario-texto': principalClaro ? ajustar(paleta.primario, -0.45) : paleta.primario,
     secundario: paleta.secundario,
     // Para usar el secundario como texto sobre blanco: un ámbar o un amarillo
     // tal cual no se leerían.
@@ -111,7 +122,6 @@ export function estilosDePaleta(plantilla: PlantillaBase, paleta: Pick<Paleta, '
     .map(([variable, rol]) => `${variable}:${valores[rol]}`)
     .join(';');
 
-  const principalClaro = textoLegible(paleta.primario) !== '#ffffff';
   const guarda = principalClaro
     ? Object.entries(plantilla.colores)
         .filter(([, rol]) => rol === 'primario')

@@ -1,0 +1,54 @@
+/*
+  Hoja de origen de la plantilla "Salud y belleza".
+
+  Manrope para todo el texto e Instrument Serif en cursiva para los
+  acentos, sobre fondos claros y suaves. Se compila a estilos.css con:
+
+    npm run plantillas
+
+  `source(none)` + `@source` limitan el escaneo a esta plantilla, así el CSS
+  resultante solo trae las clases que la plantilla usa de verdad.
+*/
+@import 'tailwindcss' source(none);
+@source './plantilla.html';
+
+/* Los colores de marca y acento, con sus variantes, se sustituyen por la
+   paleta de cada cliente al renderizar; los neutros se mantienen porque son
+   los que dan el aire limpio y sereno. */
+@theme {
+  --color-marca: #3f6f63;
+  --color-marca-oscuro: #2f564c;
+  --color-marca-texto: #3f6f63;
+  --color-acento: #e6a893;
+  --color-acento-oscuro: #b0634a;
+  --color-acento-suave: #fbe9e2;
+
+  --color-niebla: #f4f6f5;
+  --color-tinta: #17211f;
+  --color-tinta-suave: #3d4b48;
+  --color-pie: #142120;
+  --color-linea: #dde5e2;
+  --color-whatsapp: #25d366;
+
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4.5rem;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--color-tinta-suave);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+  }
+}
