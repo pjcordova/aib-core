@@ -4,6 +4,7 @@ import {
   eliminarProyecto,
   type ProyectoResumen,
 } from '../lib/proyectos';
+import { estadoActual, etiquetaEtapa, listarSeguimiento, type CambioEstado } from '../lib/seguimiento';
 
 interface Props {
   onAbrir: (id: string) => void;
@@ -20,15 +21,19 @@ export function ProyectosGuardados({ onAbrir, recargar = 0 }: Props) {
   const [proyectos, setProyectos] = useState<ProyectoResumen[]>([]);
   const [cargando, setCargando] = useState(true);
   const [borrando, setBorrando] = useState<string | null>(null);
+  const [etapas, setEtapas] = useState<Map<string, CambioEstado[]>>(new Map());
 
   useEffect(() => {
     let activo = true;
     // No marcamos "cargando" aquí: un setState síncrono dentro del efecto
     // encadena renders, y en una recarga es además preferible mantener la lista
     // anterior en pantalla hasta que llegue la nueva, sin parpadeo.
-    listarProyectos().then((lista) => {
+    listarProyectos().then(async (lista) => {
+      // Solo los aceptados tienen seguimiento.
+      const seguimiento = await listarSeguimiento(lista.filter((p) => p.aceptado).map((p) => p.id));
       if (!activo) return;
       setProyectos(lista);
+      setEtapas(seguimiento);
       setCargando(false);
     });
     return () => {
@@ -73,6 +78,11 @@ export function ProyectosGuardados({ onAbrir, recargar = 0 }: Props) {
                   month: 'short',
                   year: 'numeric',
                 })}
+                {p.aceptado && (
+                  <span className="ml-2 font-medium text-accent">
+                    ● {etiquetaEtapa(estadoActual(etapas.get(p.id)), p.tipoServicio)}
+                  </span>
+                )}
               </p>
             </button>
 

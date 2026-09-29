@@ -43,6 +43,11 @@ interface Props {
   onGuardarEdicion?: (cambios: { documento: string; paleta: Paleta }) => Promise<boolean>;
   /** Proyecto guardado: con él se puede crear un enlace para compartir. */
   proyectoId?: string | null;
+  /**
+   * El estado del encargo ya se muestra encima (proyecto reabierto): no se
+   * repite el aviso de aceptado, que diría algo distinto de la etapa real.
+   */
+  conSeguimiento?: boolean;
 }
 
 /**
@@ -63,6 +68,7 @@ export function WebPreview({
   onAceptar,
   onGuardarEdicion,
   proyectoId,
+  conSeguimiento = false,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
@@ -323,7 +329,7 @@ export function WebPreview({
         </p>
       )}
 
-      {aceptado && (
+      {aceptado && !conSeguimiento && (
         <p className="mb-4 rounded-lg border border-positive/30 bg-positive/10 px-4 py-3 text-sm text-ink">
           ¡Listo! Tu proyecto ya está con el equipo de ingeniería junto a toda la
           información que nos diste. Te contactarán con una propuesta.

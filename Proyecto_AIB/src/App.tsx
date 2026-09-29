@@ -7,6 +7,7 @@ import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
 import { WebPreview } from './components/web/WebPreview';
+import { SeguimientoCliente } from './components/SeguimientoEncargo';
 import { Wordmark, Shell } from './components/ui/Primitives';
 import {
   cargarProyecto,
@@ -168,31 +169,41 @@ export default function Home() {
       <main>
         <Shell>
           {abierto ? (
-            (abierto.documento || abierto.html) && abierto.ficha ? (
-              <WebPreview
-                cuerpo={abierto.html}
-                documento={abierto.documento}
-                plantilla={abierto.plantilla?.nombre}
-                plantillaBase={abierto.plantilla?.base}
-                ficha={abierto.ficha}
-                usage={abierto.usage}
-                guardado="guardado"
-                aceptacion={aceptacionAbierto}
-                onAceptar={() => setPidiendoContacto(true)}
-                onGuardarEdicion={guardarCambiosAbierto}
-                proyectoId={abierto.id}
-              />
-            ) : (
-              <PrototypePreview
-                code={abierto.reactCode ?? ''}
-                servicio={abierto.servicio}
-                respuestas={abierto.respuestas}
-                usage={abierto.usage}
-                guardado="guardado"
-                aceptacion={aceptacionAbierto}
-                onAceptar={() => setPidiendoContacto(true)}
-              />
-            )
+            <>
+              {abierto.aceptado && (
+                <SeguimientoCliente
+                  proyectoId={abierto.id}
+                  aceptadoEn={abierto.aceptadoEn}
+                  tipo={abierto.tipoServicio}
+                />
+              )}
+              {(abierto.documento || abierto.html) && abierto.ficha ? (
+                <WebPreview
+                  cuerpo={abierto.html}
+                  documento={abierto.documento}
+                  plantilla={abierto.plantilla?.nombre}
+                  plantillaBase={abierto.plantilla?.base}
+                  ficha={abierto.ficha}
+                  usage={abierto.usage}
+                  guardado="guardado"
+                  aceptacion={aceptacionAbierto}
+                  onAceptar={() => setPidiendoContacto(true)}
+                  onGuardarEdicion={guardarCambiosAbierto}
+                  proyectoId={abierto.id}
+                  conSeguimiento={abierto.aceptado}
+                />
+              ) : (
+                <PrototypePreview
+                  code={abierto.reactCode ?? ''}
+                  servicio={abierto.servicio}
+                  respuestas={abierto.respuestas}
+                  usage={abierto.usage}
+                  guardado="guardado"
+                  aceptacion={aceptacionAbierto}
+                  onAceptar={() => setPidiendoContacto(true)}
+                />
+              )}
+            </>
           ) : tipo === 'web' ? (
             <FlujoWeb onGuardado={refrescarLista} />
           ) : servicio && iniciado ? (

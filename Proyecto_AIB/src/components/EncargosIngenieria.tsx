@@ -5,6 +5,8 @@ import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
 import { enlaceWhatsapp, formatearWhatsapp } from '../lib/contacto';
 import { obtenerServicio, PRESUPUESTOS, etiquetaDe, solesEnteros } from '../lib/servicios';
 import { construirDocumento } from '../lib/marca';
+import { listarSeguimiento, type CambioEstado } from '../lib/seguimiento';
+import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 
 // ---------------------------------------------------------------------------
 // Encargos aceptados
@@ -19,12 +21,15 @@ export function EncargosIngenieria() {
   const [encargos, setEncargos] = useState<ProyectoCompleto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [seguimiento, setSeguimiento] = useState<Map<string, CambioEstado[]>>(new Map());
 
   useEffect(() => {
     let activo = true;
-    listarAceptados().then((lista) => {
+    listarAceptados().then(async (lista) => {
+      const etapas = await listarSeguimiento(lista.map((e) => e.id));
       if (!activo) return;
       setEncargos(lista);
+      setSeguimiento(etapas);
       setCargando(false);
     });
     return () => {
@@ -75,6 +80,7 @@ export function EncargosIngenieria() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="truncate font-semibold text-ink">{e.servicio}</h3>
                     <EtiquetaServicio proyecto={e} />
+                    <ChipEstado cambios={seguimiento.get(e.id) ?? []} tipo={e.tipoServicio} />
                     {e.plantilla && (
                       <span className="rounded-full border border-accent/30 px-2 py-0.5 text-[11px] text-accent">
                         Plantilla: {e.plantilla.nombre}
@@ -105,6 +111,13 @@ export function EncargosIngenieria() {
               {desplegado && (
                 <div className="animate-fade-up border-t border-line p-5 pt-6">
                   <DatosCliente encargo={e} />
+                  <EditorSeguimiento
+                    encargo={e}
+                    cambios={seguimiento.get(e.id) ?? []}
+                    onCambio={(cambio) =>
+                      setSeguimiento((previo) => new Map(previo).set(e.id, [...(previo.get(e.id) ?? []), cambio]))
+                    }
+                  />
                   {!doc ? (
                     <SinDocumentacion
                       encargo={e}
