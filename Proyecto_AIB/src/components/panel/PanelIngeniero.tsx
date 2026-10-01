@@ -5,8 +5,9 @@ import { usePerfil } from '../../hooks/usePerfil';
 import { EncargosIngenieria } from '../EncargosIngenieria';
 import { Shell, Wordmark } from '../ui/Primitives';
 import { CatalogoPlantillas } from './CatalogoPlantillas';
+import { InvitacionesPanel } from './InvitacionesPanel';
 
-type Pestana = 'encargos' | 'catalogo';
+type Pestana = 'encargos' | 'invitaciones' | 'catalogo';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -68,6 +69,7 @@ export function PanelIngeniero() {
             {(
               [
                 ['encargos', 'Encargos'],
+                ['invitaciones', 'Invitaciones'],
                 ['catalogo', 'Catálogo de plantillas'],
               ] as const
             ).map(([id, texto]) => (
@@ -98,7 +100,15 @@ export function PanelIngeniero() {
         </Shell>
       </header>
 
-      <main>{pestana === 'encargos' ? <EncargosIngenieria onNuevos={setNuevos} /> : <CatalogoPlantillas />}</main>
+      <main>
+        {pestana === 'encargos' ? (
+          <EncargosIngenieria onNuevos={setNuevos} />
+        ) : pestana === 'invitaciones' ? (
+          <InvitacionesPanel />
+        ) : (
+          <CatalogoPlantillas />
+        )}
+      </main>
     </div>
   );
 }

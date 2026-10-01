@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
@@ -17,6 +17,7 @@ import {
   type ProyectoCompleto,
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
+import { miInvitacion, registrarInicioInvitacion } from './lib/invitaciones';
 import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
@@ -62,6 +63,21 @@ export default function Home() {
     }
   }, []);
 
+  // Cliente que entró con el enlace de un ingeniero: sesión anónima, sin
+  // cuenta. Solo ve el módulo web, con la bienvenida de su invitación.
+  const esInvitado = session?.user.is_anonymous === true;
+  const [invitacion, setInvitacion] = useState<{ negocio: string; activa: boolean } | null | undefined>(undefined);
+  useEffect(() => {
+    if (!esInvitado) return;
+    let vigente = true;
+    void miInvitacion().then((inv) => {
+      if (vigente) setInvitacion(inv);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [esInvitado, session?.user.id]);
+
   // Mientras Supabase resuelve la sesión no decidimos nada: si pintáramos el
   // login aquí, un usuario ya autenticado vería un parpadeo en cada recarga.
   if (initializing) {
@@ -77,6 +93,18 @@ export default function Home() {
 
   if (!session) {
     return <LoginRegistro onAuthSuccess={() => {}} />;
+  }
+
+  if (esInvitado && invitacion === undefined) {
+    return (
+      <div className="grid min-h-screen place-items-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+      </div>
+    );
+  }
+
+  if (esInvitado && !invitacion?.activa) {
+    return <InvitacionInactiva />;
   }
 
   const reiniciar = () => {
@@ -147,8 +175,14 @@ export default function Home() {
             <div className="flex items-center gap-3">
               {(tipo || abierto) && (
                 <button type="button" onClick={reiniciar} className="btn btn-ghost">
-                  <span className="sm:hidden">Nuevo</span>
-                  <span className="hidden sm:inline">Nuevo proyecto</span>
+                  {esInvitado ? (
+                    'Volver al inicio'
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Nuevo</span>
+                      <span className="hidden sm:inline">Nuevo proyecto</span>
+                    </>
+                  )}
                 </button>
               )}
               {perfil.rol === 'ingeniero' && (
@@ -157,10 +191,16 @@ export default function Home() {
                   <span className="hidden sm:inline">Panel del ingeniero</span>
                 </Link>
               )}
-              <span className="hidden text-sm text-ink-subtle lg:inline">{session.user.email}</span>
-              <button type="button" onClick={signOut} className="btn btn-ghost">
-                Salir
-              </button>
+              {/* El invitado no tiene cuenta: si saliera, perdería su sesión
+                  hasta volver a abrir el enlace. */}
+              {!esInvitado && (
+                <>
+                  <span className="hidden text-sm text-ink-subtle lg:inline">{session.user.email}</span>
+                  <button type="button" onClick={signOut} className="btn btn-ghost">
+                    Salir
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </Shell>
@@ -205,7 +245,11 @@ export default function Home() {
               )}
             </>
           ) : tipo === 'web' ? (
-            <FlujoWeb onGuardado={refrescarLista} />
+            <FlujoWeb
+              onGuardado={refrescarLista}
+              empresaInicial={esInvitado ? invitacion?.negocio : undefined}
+              onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
+            />
           ) : servicio && iniciado ? (
             <AIBProductOwner servicioInicial={descripcion} onComplete={handleComplete} />
           ) : servicio ? (
@@ -215,6 +259,14 @@ export default function Home() {
               ejemplos={servicio.ejemplos}
               onEmpezar={empezarIA}
               onVolver={reiniciar}
+            />
+          ) : esInvitado ? (
+            <BienvenidaInvitado
+              negocio={invitacion?.negocio ?? ''}
+              onEmpezar={() => setTipo('web')}
+              cargandoProyecto={cargandoProyecto}
+              onAbrir={abrirProyecto}
+              versionLista={versionLista}
             />
           ) : (
             <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
@@ -275,6 +327,56 @@ export default function Home() {
 }
 
 /* -------------------------------------------------------------------------- */
+
+/** Portada del cliente que entró con una invitación: directo a su web. */
+function BienvenidaInvitado({
+  negocio,
+  onEmpezar,
+  cargandoProyecto,
+  onAbrir,
+  versionLista,
+}: {
+  negocio: string;
+  onEmpezar: () => void;
+  cargandoProyecto: boolean;
+  onAbrir: (id: string) => void;
+  versionLista: number;
+}) {
+  return (
+    <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
+      <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">Tu invitación</p>
+      <h1 className="text-4xl font-bold text-balance sm:text-5xl">Hola, {negocio} 👋</h1>
+      <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
+        Te invitaron a ver cómo se vería tu página web. Responde 6 preguntas rápidas y en un minuto
+        verás una primera versión con tu nombre y tus colores. No necesitas crear cuenta ni pagar nada.
+      </p>
+      <button type="button" onClick={onEmpezar} className="btn btn-primary mt-8 px-8 py-3 text-base">
+        Empezar
+      </button>
+      <p className="mt-4 text-xs text-ink-subtle">Puedes volver cuando quieras con el mismo enlace.</p>
+
+      {cargandoProyecto ? (
+        <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>
+      ) : (
+        <ProyectosGuardados onAbrir={onAbrir} recargar={versionLista} />
+      )}
+    </section>
+  );
+}
+
+/** El ingeniero desactivó la invitación (o ya no existe). */
+function InvitacionInactiva() {
+  return (
+    <div className="grid min-h-screen place-items-center px-6">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-semibold text-ink">Tu invitación ya no está activa</h1>
+        <p className="mt-3 text-sm text-ink-muted">
+          Pide a quien te envió el enlace que te mande uno nuevo.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /** Paso de descripción libre para los servicios que aún usan el discovery con IA. */
 function DescribirIdea({

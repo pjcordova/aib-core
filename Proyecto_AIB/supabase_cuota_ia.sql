@@ -53,6 +53,8 @@ CREATE POLICY "Cada usuario ve su gasto"
 
 -- ----------------------------------------------------------------------------
 -- 3. Reservar gasto antes de llamar a la IA
+-- supabase_invitaciones.sql la sustituye para contar también el gasto de los
+-- invitados (tope total por invitación).
 -- ----------------------------------------------------------------------------
 -- Devuelve 'ok', 'limite_usuario', 'limite_global', 'sin_sesion' o
 -- 'tipo_desconocido'. El coste de cada acción está aquí, con margen sobre lo

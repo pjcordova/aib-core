@@ -18,6 +18,8 @@ const MENSAJES = {
     'Llegaste al límite de uso de hoy. Vuelve mañana y seguimos con tu proyecto.',
   limite_global:
     'El servicio de IA alcanzó su límite de hoy. Vuelve a intentarlo mañana.',
+  sin_invitacion:
+    'Tu invitación ya no está activa. Pídele al ingeniero que te envíe un enlace nuevo.',
 };
 
 /**
@@ -51,6 +53,10 @@ function cobrarCuota(tipo) {
       if (estado === 'limite_global') {
         console.error('[AIB+] ⚠ TOPE DIARIO GLOBAL DE IA ALCANZADO. Se sube en la tabla limites_ia.');
         return res.status(503).json({ success: false, error: MENSAJES.limite_global });
+      }
+      // Sesión anónima sin invitación activa (supabase_invitaciones.sql).
+      if (estado === 'sin_invitacion') {
+        return res.status(403).json({ success: false, error: MENSAJES.sin_invitacion });
       }
       if (estado === 'limite_usuario') {
         console.warn(`[AIB+] Usuario ${req.usuario?.id} alcanzó su tope diario (${tipo}).`);

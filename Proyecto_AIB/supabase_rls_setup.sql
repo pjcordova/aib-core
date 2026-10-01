@@ -38,6 +38,7 @@ CREATE POLICY "Users can view own projects"
   USING (auth.uid() = user_id);
 
 -- 6. RLS Policy: Users can only INSERT rows for themselves
+-- supabase_invitaciones.sql la sustituye: una sesión anónima sin invitación activa no crea proyectos.
 CREATE POLICY "Users can insert own projects"
   ON proyectos
   FOR INSERT

@@ -19,6 +19,7 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Cada usuario sube solo a su carpeta: fotos/<su id>/...
+-- supabase_invitaciones.sql la sustituye: una sesión anónima sin invitación activa no sube fotos.
 DROP POLICY IF EXISTS "Cada usuario sube fotos a su carpeta" ON storage.objects;
 CREATE POLICY "Cada usuario sube fotos a su carpeta"
   ON storage.objects FOR INSERT

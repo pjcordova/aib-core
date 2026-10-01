@@ -49,6 +49,10 @@ type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 interface Props {
   /** Avisa al padre cuando el proyecto queda guardado, para refrescar listas. */
   onGuardado?: () => void;
+  /** Nombre del negocio ya conocido (cliente invitado): se rellena, editable. */
+  empresaInicial?: string;
+  /** El cliente pasó la primera pregunta. Se avisa una vez. */
+  onEmpezar?: () => void;
 }
 
 const MAX_EMPRESA = 80;
@@ -65,12 +69,12 @@ const MIN_RUBRO = 10;
  * solo entonces la IA escribe sus textos. Si ninguna encaja, o prefiere algo a
  * medida, se genera una maqueta nueva como antes.
  */
-export function FlujoWeb({ onGuardado }: Props) {
+export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
   const [paso, setPaso] = useState(0);
   const [fase, setFase] = useState<Fase>('preguntas');
 
   // Respuestas
-  const [empresa, setEmpresa] = useState('');
+  const [empresa, setEmpresa] = useState(empresaInicial ?? '');
   const [categoria, setCategoria] = useState<CategoriaNegocio | ''>('');
   const [rubro, setRubro] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
@@ -118,7 +122,12 @@ export function FlujoWeb({ onGuardado }: Props) {
 
   /* -------------------------------------------------------------- navegación */
 
+  const empezado = useRef(false);
   const avanzar = () => {
+    if (paso === 0 && !empezado.current) {
+      empezado.current = true;
+      onEmpezar?.();
+    }
     if (paso < total - 1) setPaso(paso + 1);
   };
   const retroceder = () => {
