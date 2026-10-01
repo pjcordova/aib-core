@@ -520,8 +520,7 @@ function EleccionPlantilla({
         <p className="mb-2 text-sm font-medium tracking-widest text-accent uppercase">¡Listo, {ficha.empresa}!</p>
         <h2 className="text-3xl font-bold text-balance">¿Cuál de estos diseños te gusta más?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-ink-muted">
-          Ya tienen tu nombre y tus colores. Elige uno y escribimos los textos pensando en tu
-          negocio.
+          Ya tienen tu nombre y tus colores. Elige uno y escribimos los textos pensando en ti.
         </p>
       </div>
 
@@ -561,7 +560,7 @@ function EleccionPlantilla({
       </div>
 
       <p className="mt-6 text-center text-xs text-ink-subtle">
-        Las fotos y los textos de ejemplo se cambian por los de tu negocio.
+        Las fotos y los textos de ejemplo se cambian por los tuyos.
       </p>
     </section>
   );

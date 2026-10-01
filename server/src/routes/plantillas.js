@@ -18,7 +18,7 @@ const router = Router();
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'rellenar-plantilla' });
 
 /** Las mismas claves que la pregunta de secciones del frontend (servicios.ts). */
-const SECCIONES_VALIDAS = ['nosotros', 'servicios', 'galeria', 'testimonios', 'precios', 'preguntas', 'contacto', 'blog'];
+const SECCIONES_VALIDAS = ['nosotros', 'servicios', 'galeria', 'testimonios', 'precios', 'preguntas', 'contacto', 'blog', 'documentos'];
 
 function leerSecciones(valor) {
   if (!Array.isArray(valor)) return [];

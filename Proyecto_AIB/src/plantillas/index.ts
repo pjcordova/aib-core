@@ -12,12 +12,14 @@ import { consultora } from './consultora';
 import { modaBoutique } from './moda-boutique';
 import { restaurante } from './restaurante';
 import { saludBelleza } from './salud-belleza';
+import { institucional } from './institucional';
 
 export const PLANTILLAS_BASE: PlantillaBase[] = [
   modaBoutique as PlantillaBase,
   consultora as PlantillaBase,
   restaurante as PlantillaBase,
   saludBelleza as PlantillaBase,
+  institucional as PlantillaBase,
 ];
 
 export function obtenerPlantillaBase(id: string): PlantillaBase | null {

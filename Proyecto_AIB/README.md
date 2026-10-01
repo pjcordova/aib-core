@@ -127,8 +127,9 @@ Plantillas incluidas:
 | `consultora` | Consultoras y servicios profesionales | Derivada de la web de BuenVivir |
 | `restaurante` | Restaurantes, cafeterías y comida | Diseñada desde cero |
 | `salud-belleza` | Spas, salones, barberías, estética y consultorios | Diseñada desde cero |
+| `institucional` | Instituciones, ONG, asociaciones y entidades públicas (webs informativas, sin venta) | Diseñada desde cero |
 
-La IA nunca escribe datos de contacto, direcciones ni nombres de personas; en `restaurante` y `salud-belleza` tampoco precios, horarios ni duraciones. La plantilla los muestra como huecos visibles (`[Precio]`, `[Tu dirección]`…) que el cliente completa desde «Editar». Los precios de `moda-boutique` sí son de ejemplo, escritos por la IA.
+La IA nunca escribe datos de contacto, direcciones ni nombres de personas; en `restaurante` y `salud-belleza` tampoco precios, horarios ni duraciones, y en `institucional` tampoco fechas de noticias ni enlaces a documentos. La plantilla los muestra como huecos visibles (`[Precio]`, `[Tu dirección]`…) que el cliente completa desde «Editar». Los precios de `moda-boutique` sí son de ejemplo, escritos por la IA.
 
 ### Añadir una plantilla
 

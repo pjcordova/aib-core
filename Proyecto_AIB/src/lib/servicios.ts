@@ -196,6 +196,7 @@ export const PREGUNTAS_WEB: Pregunta[] = [
       { valor: 'preguntas', etiqueta: 'Preguntas frecuentes' },
       { valor: 'contacto', etiqueta: 'Contacto' },
       { valor: 'blog', etiqueta: 'Blog o noticias' },
+      { valor: 'documentos', etiqueta: 'Documentos o descargas' },
     ],
   },
   {

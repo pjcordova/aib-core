@@ -1,0 +1,52 @@
+/*
+  Hoja de origen de la plantilla "Institucional".
+
+  Public Sans en todo (sobria y muy legible, pensada para servicios públicos)
+  sobre fondos claros y fríos. Se compila a estilos.css con:
+
+    npm run plantillas
+
+  `source(none)` + `@source` limitan el escaneo a esta plantilla, así el CSS
+  resultante solo trae las clases que la plantilla usa de verdad.
+*/
+@import 'tailwindcss' source(none);
+@source './plantilla.html';
+
+/* Los colores de marca y acento, con sus variantes, se sustituyen por la
+   paleta de cada cliente al renderizar; los neutros se mantienen porque son
+   los que dan el aire serio y confiable. */
+@theme {
+  --color-marca: #1f4e8c;
+  --color-marca-oscuro: #183e70;
+  --color-marca-texto: #1f4e8c;
+  --color-acento: #e9a21b;
+  --color-acento-oscuro: #9a6a0e;
+  --color-acento-suave: #fdf1d8;
+
+  --color-fondo: #f4f6f9;
+  --color-tinta: #14213d;
+  --color-tinta-suave: #3f4a5e;
+  --color-pie: #0f1a2e;
+  --color-linea: #dfe4ec;
+
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4.5rem;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: var(--color-tinta-suave);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,359 @@
+<!--
+  Plantilla "Institucional".
+  Diseñada desde cero para AIB+ para instituciones, ONG, colegios, entidades
+  públicas y profesionales que quieren informar y darse a conocer, no vender:
+  aviso destacado, servicios con a quién van dirigidos, misión y visión,
+  noticias y comunicados, documentos descargables y atención al público.
+
+  Sin JavaScript: el menú móvil es un <details>.
+
+  Horario, dirección, teléfono, correo y fechas son huecos visibles
+  ([Tu horario de atención], [Fecha]…): la IA no los inventa, el cliente los
+  completa en «Editar».
+
+  data-aib-foto marca los huecos donde el cliente puede poner una foto suya
+  (lib/edicion.ts). La foto entra como primer hijo del hueco, así que el hueco
+  debe estar posicionado y el texto que va encima, fuera de él.
+
+  En los bloques con fondo de marca, el texto hereda el color (o usa
+  text-white a secas) para que la guarda de contraste de lib/plantillas.ts lo
+  oscurezca si el cliente eligió un color principal claro.
+-->
+
+<!-- ============================================================ aviso -->
+<div class="bg-marca px-5 py-2 text-white sm:px-8">
+  <p class="mx-auto flex max-w-6xl items-center gap-2 text-sm">
+    <svg class="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    {{aviso}}
+  </p>
+</div>
+
+<!-- ============================================================ cabecera -->
+<header class="sticky top-0 z-40 border-b border-linea bg-white/95 px-5 backdrop-blur sm:px-8">
+  <div class="mx-auto flex h-18 max-w-6xl items-center justify-between">
+    <a href="#" class="text-lg font-bold tracking-tight text-tinta">{{{marca}}}</a>
+
+    <nav class="hidden items-center gap-7 text-[0.95rem] font-medium text-tinta-suave lg:flex" aria-label="Principal">
+      {{#hay_nosotros}}<a href="#nosotros" class="transition-colors hover:text-marca-texto">Quiénes somos</a>{{/hay_nosotros}}
+      <a href="#servicios" class="transition-colors hover:text-marca-texto">Servicios</a>
+      {{#hay_noticias}}<a href="#noticias" class="transition-colors hover:text-marca-texto">Noticias</a>{{/hay_noticias}}
+      {{#hay_documentos}}<a href="#documentos" class="transition-colors hover:text-marca-texto">Documentos</a>{{/hay_documentos}}
+      <a href="#contacto" class="rounded-lg bg-marca px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-marca-oscuro">Contáctanos</a>
+    </nav>
+
+    <details class="group/menu lg:hidden">
+      <summary class="-mr-2 flex cursor-pointer list-none p-2 text-tinta [&::-webkit-details-marker]:hidden" aria-label="Abrir menú">
+        <svg class="block group-open/menu:hidden" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="hidden group-open/menu:block" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </summary>
+      <nav class="absolute inset-x-0 top-full z-50 flex flex-col border-b border-linea bg-white px-5 pb-5 shadow-sm" aria-label="Menú">
+        {{#hay_nosotros}}<a href="#nosotros" class="py-3 text-lg font-medium text-tinta-suave">Quiénes somos</a>{{/hay_nosotros}}
+        <a href="#servicios" class="py-3 text-lg font-medium text-tinta-suave">Servicios</a>
+        {{#hay_noticias}}<a href="#noticias" class="py-3 text-lg font-medium text-tinta-suave">Noticias</a>{{/hay_noticias}}
+        {{#hay_documentos}}<a href="#documentos" class="py-3 text-lg font-medium text-tinta-suave">Documentos</a>{{/hay_documentos}}
+        <a href="#contacto" class="mt-2 rounded-lg bg-marca px-5 py-3 text-center font-semibold text-white">Contáctanos</a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <!-- ============================================================ portada -->
+  <section class="bg-fondo px-5 sm:px-8" aria-label="Portada">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 py-14 md:grid-cols-2 md:py-20">
+      <div>
+        <p class="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-marca-texto ring-1 ring-linea">
+          <span class="h-1.5 w-1.5 rounded-full bg-acento" aria-hidden="true"></span>
+          {{hero.etiqueta}}
+        </p>
+        <h1 class="mt-6 text-balance text-4xl font-bold leading-[1.1] tracking-tight text-tinta sm:text-5xl">{{hero.titulo}}</h1>
+        <p class="mt-5 max-w-lg text-lg leading-relaxed text-tinta-suave">{{hero.subtitulo}}</p>
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href="#servicios" class="inline-flex items-center justify-center gap-2 rounded-lg bg-marca px-6 py-3.5 font-semibold text-white shadow-sm transition-colors hover:bg-marca-oscuro">
+            {{hero.cta_principal}}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#contacto" class="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3.5 font-semibold text-tinta ring-1 ring-linea transition hover:ring-marca">
+            {{hero.cta_secundario}}
+          </a>
+        </div>
+      </div>
+      <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-white shadow-[0_30px_70px_-40px_rgba(20,33,61,0.55)]">
+        <div class="absolute inset-0 bg-gradient-to-br from-marca/30 via-acento-suave to-white" data-aib-foto="portada">
+          <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ pilares -->
+  <section class="border-b border-linea bg-white px-5 py-12 sm:px-8" aria-label="Lo que nos define">
+    <ul class="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+      {{#pilares}}
+      <li class="flex gap-4">
+        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">{{{icono}}}</span>
+        <div>
+          <p class="font-semibold text-tinta">{{titulo}}</p>
+          <p class="mt-1 text-sm leading-relaxed text-tinta-suave">{{detalle}}</p>
+        </div>
+      </li>
+      {{/pilares}}
+    </ul>
+  </section>
+
+  <!-- ============================================================ quiénes somos (opcional) -->
+  {{#hay_nosotros}}
+  <section id="nosotros" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-nosotros">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
+      <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-fondo">
+        <div class="absolute inset-0 bg-gradient-to-br from-acento-suave via-white to-marca/25" data-aib-foto="nosotros">
+          <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Quiénes somos</p>
+        <h2 id="titulo-nosotros" class="mt-3 text-balance text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{{nosotros.titulo}}</h2>
+        <div class="mt-8 space-y-6">
+          <div class="border-l-4 border-marca pl-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Misión</p>
+            <p class="mt-2 leading-relaxed text-tinta-suave">{{nosotros.mision}}</p>
+          </div>
+          <div class="border-l-4 border-acento pl-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Visión</p>
+            <p class="mt-2 leading-relaxed text-tinta-suave">{{nosotros.vision}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {{/hay_nosotros}}
+
+  <!-- ============================================================ servicios -->
+  <section id="servicios" class="scroll-mt-20 bg-fondo px-5 py-20 sm:px-8 sm:py-24">
+    <div class="mx-auto max-w-6xl">
+      <header class="max-w-2xl">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Servicios</p>
+        <h2 class="mt-3 text-balance text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{{servicios_intro.titulo}}</h2>
+        <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{servicios_intro.bajada}}</p>
+      </header>
+
+      <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {{#servicios}}
+        <article class="flex flex-col rounded-2xl bg-white p-6 ring-1 ring-linea transition hover:shadow-lg">
+          <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-acento-suave text-marca-texto" aria-hidden="true">{{{icono}}}</span>
+          <h3 class="mt-5 text-lg font-semibold text-tinta">{{nombre}}</h3>
+          <p class="mt-2 flex-1 text-[0.95rem] leading-relaxed text-tinta-suave">{{descripcion}}</p>
+          <p class="mt-4 text-sm text-tinta-suave/80"><span class="font-semibold text-tinta">Dirigido a:</span> <span>{{dirigido_a}}</span></p>
+          <a href="#contacto" class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-texto hover:underline">
+            Más información
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </article>
+        {{/servicios}}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ noticias (opcional) -->
+  {{#hay_noticias}}
+  <section id="noticias" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-noticias">
+    <div class="mx-auto max-w-6xl">
+      <header class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Actualidad</p>
+          <h2 id="titulo-noticias" class="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">Noticias y comunicados</h2>
+        </div>
+        <p class="max-w-md text-tinta-suave">{{noticias_bajada}}</p>
+      </header>
+
+      <div class="mt-10 grid gap-6 md:grid-cols-3">
+        {{#noticias}}
+        <article class="overflow-hidden rounded-2xl bg-fondo ring-1 ring-linea">
+          <div class="relative aspect-[16/9] overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-marca/25 via-acento-suave to-white" data-aib-foto="noticia">
+              <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            </div>
+          </div>
+          <div class="p-5">
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="rounded-md bg-marca px-2 py-0.5 font-semibold text-white">{{tipo}}</span>
+              <span class="text-tinta-suave">{{fecha}}</span>
+            </div>
+            <h3 class="mt-3 text-lg font-semibold leading-snug text-tinta">{{titulo}}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-tinta-suave">{{resumen}}</p>
+            <a href="#noticias" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-marca-texto hover:underline">Leer más</a>
+          </div>
+        </article>
+        {{/noticias}}
+      </div>
+    </div>
+  </section>
+  {{/hay_noticias}}
+
+  <!-- ============================================================ documentos (opcional) -->
+  {{#hay_documentos}}
+  <section id="documentos" class="scroll-mt-20 bg-fondo px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-documentos">
+    <div class="mx-auto max-w-4xl">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Documentos</p>
+      <h2 id="titulo-documentos" class="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">Documentos para descargar</h2>
+      <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{documentos_bajada}}</p>
+
+      <ul class="mt-10 divide-y divide-linea overflow-hidden rounded-2xl bg-white ring-1 ring-linea">
+        {{#documentos}}
+        <li class="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-3 p-5 sm:flex sm:items-center">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold text-tinta">{{nombre}}</p>
+            <p class="mt-0.5 text-sm text-tinta-suave">{{descripcion}}</p>
+          </div>
+          <a href="#documentos" class="col-start-2 inline-flex shrink-0 items-center gap-1.5 justify-self-start rounded-lg bg-fondo px-3.5 py-2 text-sm font-semibold text-marca-texto ring-1 ring-linea transition hover:ring-marca">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            PDF
+          </a>
+        </li>
+        {{/documentos}}
+      </ul>
+    </div>
+  </section>
+  {{/hay_documentos}}
+
+  <!-- ============================================================ galería (opcional) -->
+  {{#hay_galeria}}
+  <section id="galeria" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-galeria">
+    <div class="mx-auto max-w-6xl">
+      <header class="max-w-2xl">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Galería</p>
+        <h2 id="titulo-galeria" class="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{{galeria.titulo}}</h2>
+        <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{galeria.bajada}}</p>
+      </header>
+      <div class="mt-10 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div class="relative aspect-square overflow-hidden rounded-2xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-marca/30 to-acento-suave" data-aib-foto="galeria"><svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+        </div>
+        <div class="relative aspect-square overflow-hidden rounded-2xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-acento-suave to-white" data-aib-foto="galeria"><svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+        </div>
+        <div class="relative aspect-square overflow-hidden rounded-2xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-white to-marca/25" data-aib-foto="galeria"><svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+        </div>
+        <div class="relative aspect-square overflow-hidden rounded-2xl">
+          <div class="absolute inset-0 bg-gradient-to-br from-acento-suave via-white to-marca/30" data-aib-foto="galeria"><svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {{/hay_galeria}}
+
+  <!-- ============================================================ preguntas (opcional) -->
+  {{#hay_preguntas}}
+  <section id="preguntas" class="scroll-mt-20 bg-fondo px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-preguntas">
+    <h2 id="titulo-preguntas" class="text-center text-3xl font-bold tracking-tight text-tinta sm:text-4xl">Preguntas frecuentes</h2>
+    <div class="mx-auto mt-10 max-w-3xl space-y-3">
+      {{#preguntas}}
+      <details class="group/faq rounded-xl bg-white px-6 py-5 ring-1 ring-linea">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-tinta [&::-webkit-details-marker]:hidden">
+          {{pregunta}}
+          <svg class="shrink-0 text-marca-texto transition group-open/faq:rotate-45" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </summary>
+        <p class="mt-3 text-[0.95rem] leading-relaxed text-tinta-suave">{{respuesta}}</p>
+      </details>
+      {{/preguntas}}
+    </div>
+  </section>
+  {{/hay_preguntas}}
+
+  <!-- ============================================================ atención al público -->
+  <section id="contacto" class="scroll-mt-20 bg-white px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="titulo-contacto">
+    <div class="mx-auto grid max-w-6xl gap-10 md:grid-cols-5 md:gap-14">
+      <div class="md:col-span-2">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-marca-texto">Atención al público</p>
+        <h2 id="titulo-contacto" class="mt-3 text-balance text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{{contacto_intro.titulo}}</h2>
+        <p class="mt-4 text-lg leading-relaxed text-tinta-suave">{{contacto_intro.bajada}}</p>
+
+        <dl class="mt-8 space-y-5">
+          <div class="flex gap-4">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </span>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Horario de atención</dt>
+              <dd class="mt-1 text-tinta-suave">{{horario}}</dd>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Dirección</dt>
+              <dd class="mt-1 text-tinta-suave">{{direccion}}</dd>
+              <dd class="text-sm text-tinta-suave/75">{{ciudad}}</dd>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </span>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Teléfono</dt>
+              <dd class="mt-1 text-tinta-suave">{{telefono}}</dd>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fondo text-marca-texto" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+            </span>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-[0.16em] text-tinta">Correo</dt>
+              <dd class="mt-1 text-tinta-suave">{{correo}}</dd>
+            </div>
+          </div>
+        </dl>
+      </div>
+
+      <div class="relative min-h-80 overflow-hidden rounded-2xl bg-fondo md:col-span-3">
+        <div class="absolute inset-0 bg-gradient-to-br from-marca/30 via-acento-suave to-white" data-aib-foto="local">
+          <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-marca-texto/40" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================================================ pie -->
+<footer class="bg-pie px-5 py-16 text-sm sm:px-8">
+  <div class="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <p class="text-lg font-bold tracking-tight text-white">{{{marca}}}</p>
+      <p class="mt-4 leading-relaxed text-white/70">{{pie_descripcion}}</p>
+      <p class="mt-4 flex items-center gap-2 text-xs text-acento">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        {{ciudad}}
+      </p>
+    </div>
+
+    <nav aria-labelledby="pie-servicios">
+      <h2 id="pie-servicios" class="font-semibold text-white">Servicios</h2>
+      <ul class="mt-4 space-y-2.5">
+        {{#servicios}}
+        <li><a href="#servicios" class="text-white/70 transition-colors hover:text-white">{{nombre}}</a></li>
+        {{/servicios}}
+      </ul>
+    </nav>
+
+    <div>
+      <h2 class="font-semibold text-white">Atención al público</h2>
+      <ul class="mt-4 space-y-2.5 text-white/70">
+        <li>{{horario}}</li>
+        <li>{{telefono}}</li>
+        <li>{{correo}}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mx-auto mt-12 max-w-6xl border-t border-white/15 pt-6 text-xs text-white/50">
+    <p>© {{anio}} {{empresa}}. Todos los derechos reservados.</p>
+  </div>
+</footer>
