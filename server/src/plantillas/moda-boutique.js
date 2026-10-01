@@ -16,6 +16,7 @@ const {
   exactamente,
   testimoniosNormalizados,
   preguntasNormalizadas,
+  lineasObjetivo,
 } = require('./comun');
 
 const producto = objeto({
@@ -121,7 +122,7 @@ const INSTRUCCIONES_BLOQUE = {
     '- preguntas: dudas típicas al comprar aquí (tallas, cambios, pedidos). Si no se sabe la política, que la respuesta invite a consultar por WhatsApp en vez de prometer.',
 };
 
-function prompt({ empresa, rubro, estilo, secciones = [] }) {
+function prompt({ empresa, rubro, estilo, secciones = [], objetivo = null }) {
   const bloques = Object.keys(BLOQUES_OPCIONALES)
     .filter((seccion) => secciones.includes(seccion))
     .map((seccion) => INSTRUCCIONES_BLOQUE[seccion]);
@@ -133,6 +134,7 @@ esta tienda, que usa una plantilla de boutique ya diseñada.
 TIENDA: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO QUE BUSCA: ${estilo}
+${lineasObjetivo(objetivo)}
 ${bloques.length ? `\nSECCIONES EXTRA QUE PIDIÓ LA TIENDA\n${bloques.join('\n')}\n` : ''}
 REGLAS
 - Todo en español de Perú, cercano y breve. Respeta los límites de palabras.

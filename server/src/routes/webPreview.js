@@ -11,6 +11,7 @@ const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
 const { cobrarCuota } = require('../cuota');
 const { mantenerConexion } = require('../mantenerConexion');
+const { leerObjetivo } = require('../plantillas/comun');
 
 const router = Router();
 
@@ -50,6 +51,7 @@ function leerFicha(cuerpo) {
       rubro,
       estilo: estilo || 'Moderno y minimalista',
       secciones,
+      objetivo: leerObjetivo(f.objetivo),
       paleta: {
         nombre: texto(paleta.nombre, 40) || 'Personalizada',
         primario: paleta.primario,

@@ -2,6 +2,8 @@
 // Prompts — separados del transporte para poder iterarlos sin tocar rutas.
 // ---------------------------------------------------------------------------
 
+const { lineasObjetivo } = require('./plantillas/comun');
+
 const DISCOVERY_SYSTEM = `
 Eres un Product Owner Senior B2B experto en diseño de software y requerimientos.
 
@@ -141,13 +143,15 @@ REGLAS:
  * cabecera, los colores de la marca, el logo y el script de Bootstrap se
  * añaden en el cliente. Menos tokens y un resultado más predecible.
  */
-function webPreviewPrompt({ empresa, rubro, paleta, secciones, estilo }) {
+function webPreviewPrompt({ empresa, rubro, paleta, secciones, estilo, objetivo = null }) {
   return `
-Eres un diseñador web senior. Maqueta la página de inicio de este negocio.
+Eres un diseñador web senior. Maqueta la página de inicio de este negocio u
+organización.
 
-NEGOCIO: ${empresa}
+NEGOCIO U ORGANIZACIÓN: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO: ${estilo}
+${lineasObjetivo(objetivo)}
 TONO DE COLOR: ${paleta.nombre}
 SECCIONES, en este orden: portada, ${secciones.join(', ')}
 

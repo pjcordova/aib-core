@@ -11,6 +11,7 @@ const { requireAuth } = require('../auth');
 const { cobrarCuota } = require('../cuota');
 const { mantenerConexion } = require('../mantenerConexion');
 const { obtenerPlantilla } = require('../plantillas');
+const { leerObjetivo } = require('../plantillas/comun');
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.post('/rellenar-plantilla', limitar, requireAuth, cobrarCuota('plantilla'
     const rubro = texto(ficha?.rubro, 600);
     const estilo = texto(ficha?.estilo, 60) || 'Moderno y minimalista';
     const secciones = leerSecciones(ficha?.secciones);
+    const objetivo = leerObjetivo(ficha?.objetivo);
 
     if (!empresa || !rubro) {
       return res.status(400).json({ success: false, error: 'Faltan el nombre o el rubro del negocio.' });
@@ -45,7 +47,7 @@ router.post('/rellenar-plantilla', limitar, requireAuth, cobrarCuota('plantilla'
 
     const { text, usage } = await generateText({
       label: `plantilla:${plantilla.id}`,
-      prompt: plantilla.prompt({ empresa, rubro, estilo, secciones }),
+      prompt: plantilla.prompt({ empresa, rubro, estilo, secciones, objetivo }),
       maxTokens: config.maxTokens.plantilla,
       temperature: 0.6,
       schema: plantilla.esquema(secciones),

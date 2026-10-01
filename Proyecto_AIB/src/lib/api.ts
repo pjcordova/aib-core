@@ -206,6 +206,7 @@ export interface FichaParaServidor {
   estilo: string;
   secciones: string[];
   paleta: { nombre: string; primario: string; secundario: string };
+  objetivo?: string;
 }
 
 /** Genera el cuerpo HTML de la maqueta web. */
@@ -231,7 +232,7 @@ export async function generarPreviewWeb(
  */
 export async function rellenarPlantilla<T>(
   plantilla: string,
-  ficha: { empresa: string; rubro: string; estilo: string; secciones: string[] }
+  ficha: { empresa: string; rubro: string; estilo: string; secciones: string[]; objetivo?: string }
 ): Promise<{ textos: T; usage?: TokenUsage }> {
   const data = await post<{ success: boolean; textos?: T; error?: string; usage?: TokenUsage }>(
     '/api/rellenar-plantilla',

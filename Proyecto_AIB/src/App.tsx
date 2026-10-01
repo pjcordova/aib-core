@@ -317,6 +317,7 @@ export default function Home() {
       {abierto && pidiendoContacto && (
         <ContactoEncargo
           tipoServicio={abierto.tipoServicio}
+          objetivo={abierto.ficha?.objetivo}
           enviando={aceptacionAbierto === 'procesando'}
           error={errorEnvio}
           onEnviar={(datos) => void aceptarAbierto(datos)}
@@ -348,8 +349,9 @@ function BienvenidaInvitado({
       <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">Tu invitación</p>
       <h1 className="text-4xl font-bold text-balance sm:text-5xl">Hola, {negocio} 👋</h1>
       <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-        Te invitaron a ver cómo se vería tu página web. Responde 6 preguntas rápidas y en un minuto
-        verás una primera versión con tu nombre y tus colores. No necesitas crear cuenta ni pagar nada.
+        Te invitaron a ver cómo se vería tu página web. Responde unas preguntas rápidas, casi todas con
+        un clic, y en un minuto verás una primera versión con tu nombre y tus colores. No necesitas crear
+        cuenta ni pagar nada.
       </p>
       <button type="button" onClick={onEmpezar} className="btn btn-primary mt-8 px-8 py-3 text-base">
         Empezar

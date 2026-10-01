@@ -89,6 +89,10 @@ BEGIN
     'cliente',       v_payload->'contacto'->>'nombre',
     'whatsapp',      v_payload->'contacto'->>'whatsapp',
     'correo',        v_payload->'contacto'->>'correo',
+    'objetivo', (
+      SELECT h->>'answer' FROM jsonb_array_elements(COALESCE(v_payload->'historial', '[]'::jsonb)) h
+      WHERE h->>'question_id' = 'objetivo' LIMIT 1
+    ),
     'presupuesto', (
       SELECT h->>'answer' FROM jsonb_array_elements(COALESCE(v_payload->'historial', '[]'::jsonb)) h
       WHERE h->>'question_id' = 'presupuesto' LIMIT 1

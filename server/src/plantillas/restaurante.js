@@ -18,6 +18,7 @@ const {
   exactamente,
   testimoniosNormalizados,
   preguntasNormalizadas,
+  lineasObjetivo,
 } = require('./comun');
 
 const plato = (maxPalabras) =>
@@ -126,7 +127,7 @@ const INSTRUCCIONES_BLOQUE = {
     '- preguntas: dudas típicas (pedidos, reservas, delivery, opciones). Si no se sabe la respuesta, invita a consultarlo por WhatsApp en vez de prometer.',
 };
 
-function prompt({ empresa, rubro, estilo, secciones = [] }) {
+function prompt({ empresa, rubro, estilo, secciones = [], objetivo = null }) {
   const bloques = Object.keys(BLOQUES_OPCIONALES)
     .filter((seccion) => secciones.includes(seccion))
     .map((seccion) => INSTRUCCIONES_BLOQUE[seccion]);
@@ -140,6 +141,7 @@ el local.
 NEGOCIO: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO QUE BUSCA: ${estilo}
+${lineasObjetivo(objetivo)}
 ${bloques.length ? `\nSECCIONES EXTRA QUE PIDIÓ EL NEGOCIO\n${bloques.join('\n')}\n` : ''}
 REGLAS
 - Todo en español de Perú, cercano y apetitoso, pero breve. Respeta los límites

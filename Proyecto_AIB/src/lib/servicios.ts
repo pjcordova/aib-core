@@ -90,6 +90,19 @@ export interface Pregunta {
 }
 
 /**
+ * Para qué quiere la web. Cambia el tono y los botones de la maqueta (no es lo
+ * mismo una tienda que una institución que solo quiere informar) y le dice al
+ * ingeniero qué tipo de web es. Mismas claves que OBJETIVOS en el servidor
+ * (server/src/plantillas/comun.js).
+ */
+export const OBJETIVOS_WEB: Opcion[] = [
+  { valor: 'vender', etiqueta: 'Vender o recibir pedidos', detalle: 'Tienda, restaurante, catálogo' },
+  { valor: 'clientes', etiqueta: 'Conseguir clientes o reservas', detalle: 'Que te contacten o agenden' },
+  { valor: 'informar', etiqueta: 'Informar y darme a conocer', detalle: 'Institución, ONG, colegio, profesional' },
+  { valor: 'promocionar', etiqueta: 'Promocionar algo puntual', detalle: 'Un evento, un lanzamiento, una campaña' },
+];
+
+/**
  * Presupuesto en soles. Son rangos a propósito: un número exacto intimida y un
  * rango basta para que el ingeniero sepa si el encargo le encaja.
  */
@@ -145,8 +158,15 @@ export const PREGUNTAS_WEB: Pregunta[] = [
   {
     id: 'negocio',
     tipo: 'negocio',
-    titulo: 'Para empezar, cuéntanos un poco de tu negocio',
-    ayuda: 'Con esto la web ya hablará como tu empresa, no como una plantilla.',
+    titulo: 'Para empezar, cuéntanos un poco de tu negocio u organización',
+    ayuda: 'Con esto la web ya hablará como tú, no como una plantilla.',
+  },
+  {
+    id: 'objetivo',
+    tipo: 'opcion',
+    titulo: '¿Para qué quieres tu web?',
+    ayuda: 'Así la pensamos para lo que necesitas: no es lo mismo vender que informar.',
+    opciones: OBJETIVOS_WEB,
   },
   {
     id: 'logo',
@@ -265,6 +285,8 @@ export interface FichaWeb {
   secciones: string[];
   estilo: string;
   presupuesto: string;
+  /** Clave de OBJETIVOS_WEB. Los proyectos anteriores no lo tienen. */
+  objetivo?: string;
 }
 
 export function etiquetaDe(opciones: Opcion[] | undefined, valor: string): string {

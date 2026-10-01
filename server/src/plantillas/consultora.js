@@ -15,6 +15,7 @@ const {
   exactamente,
   testimoniosNormalizados,
   preguntasNormalizadas,
+  lineasObjetivo,
 } = require('./comun');
 
 const servicio = objeto({
@@ -100,7 +101,7 @@ const INSTRUCCIONES_BLOQUE = {
     '- preguntas: dudas típicas de quien contrata este servicio. Si no se sabe un dato (precios, duración, modalidad), la respuesta invita a consultarlo en vez de prometer.',
 };
 
-function prompt({ empresa, rubro, estilo, secciones = [] }) {
+function prompt({ empresa, rubro, estilo, secciones = [], objetivo = null }) {
   const bloques = Object.keys(BLOQUES_OPCIONALES)
     .filter((seccion) => secciones.includes(seccion))
     .map((seccion) => INSTRUCCIONES_BLOQUE[seccion]);
@@ -113,6 +114,7 @@ diseñada: portada, propuesta de valor, tres servicios y cierre de contacto.
 NEGOCIO: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO QUE BUSCA: ${estilo}
+${lineasObjetivo(objetivo)}
 ${bloques.length ? `\nSECCIONES EXTRA QUE PIDIÓ EL NEGOCIO\n${bloques.join('\n')}\n` : ''}
 REGLAS
 - Todo en español de Perú, cercano, claro y breve. Respeta los límites de palabras.

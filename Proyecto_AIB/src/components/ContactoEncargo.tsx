@@ -13,6 +13,11 @@ export interface DatosEncargo {
 interface Props {
   /** Las preguntas de dominio y venta en línea solo salen para páginas web. */
   tipoServicio?: TipoServicio;
+  /**
+   * Para qué quiere la web (se pregunta al inicio). Si no es para vender, no se
+   * le pregunta cómo quiere vender.
+   */
+  objetivo?: string;
   enviando: boolean;
   error: string | null;
   onEnviar: (datos: DatosEncargo) => void;
@@ -23,14 +28,21 @@ interface Props {
  * Último paso al aceptar: cómo contactar al cliente y lo que más cambia el
  * precio. Sin esto el ingeniero recibía el encargo sin forma de responder.
  */
-export function ContactoEncargo({ tipoServicio, enviando, error, onEnviar, onCancelar }: Props) {
+export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnviar, onCancelar }: Props) {
   const { session } = useAuth();
   const [nombre, setNombre] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [whatsappTocado, setWhatsappTocado] = useState(false);
   const [elegidas, setElegidas] = useState<Record<string, string>>({});
 
-  const preguntas = PREGUNTAS_ENCARGO.filter((p) => !p.soloWeb || tipoServicio === 'web');
+  const preguntas = PREGUNTAS_ENCARGO.filter((p) => !p.soloWeb || tipoServicio === 'web')
+    .filter((p) => p.id !== 'alcance-venta' || !objetivo || objetivo === 'vender')
+    .map((p) =>
+      // Ya dijo que quiere vender: solo falta saber cómo.
+      p.id === 'alcance-venta' && objetivo === 'vender'
+        ? { ...p, titulo: '¿Cómo quieres vender por tu web?', opciones: p.opciones.filter((o) => o.valor !== 'vitrina') }
+        : p
+    );
   const numero = normalizarWhatsapp(whatsapp);
   const completo = nombre.trim().length >= 2 && !!numero && preguntas.every((p) => elegidas[p.id]);
 

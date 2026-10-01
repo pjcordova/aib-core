@@ -21,6 +21,7 @@ export type CategoriaNegocio =
   | 'servicios-profesionales'
   | 'restaurante'
   | 'salud-bienestar'
+  | 'institucion'
   | 'otro';
 
 export const CATEGORIAS_NEGOCIO: { valor: CategoriaNegocio; etiqueta: string }[] = [
@@ -28,7 +29,8 @@ export const CATEGORIAS_NEGOCIO: { valor: CategoriaNegocio; etiqueta: string }[]
   { valor: 'servicios-profesionales', etiqueta: 'Servicios profesionales o consultoría' },
   { valor: 'restaurante', etiqueta: 'Restaurante o comida' },
   { valor: 'salud-bienestar', etiqueta: 'Salud, belleza o bienestar' },
-  { valor: 'otro', etiqueta: 'Otro tipo de negocio' },
+  { valor: 'institucion', etiqueta: 'Institución, ONG o entidad' },
+  { valor: 'otro', etiqueta: 'Otro' },
 ];
 
 /**

@@ -19,6 +19,7 @@ const {
   exactamente,
   testimoniosNormalizados,
   preguntasNormalizadas,
+  lineasObjetivo,
 } = require('./comun');
 
 /** Los mismos nombres que ICONOS en el frontend. */
@@ -133,7 +134,7 @@ const INSTRUCCIONES_BLOQUE = {
     '- preguntas: dudas típicas antes de reservar. Si no se sabe la respuesta (precios, medios de pago, duración), invita a consultarlo por WhatsApp en vez de prometer.',
 };
 
-function prompt({ empresa, rubro, estilo, secciones = [] }) {
+function prompt({ empresa, rubro, estilo, secciones = [], objetivo = null }) {
   const bloques = Object.keys(BLOQUES_OPCIONALES)
     .filter((seccion) => secciones.includes(seccion))
     .map((seccion) => INSTRUCCIONES_BLOQUE[seccion]);
@@ -147,6 +148,7 @@ WhatsApp.
 NEGOCIO: ${empresa}
 A QUÉ SE DEDICA: ${rubro}
 ESTILO QUE BUSCA: ${estilo}
+${lineasObjetivo(objetivo)}
 ${bloques.length ? `\nSECCIONES EXTRA QUE PIDIÓ EL NEGOCIO\n${bloques.join('\n')}\n` : ''}
 REGLAS
 - Todo en español de Perú, cálido, claro y breve. Respeta los límites de

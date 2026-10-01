@@ -47,6 +47,7 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 6. `Proyecto_AIB/supabase_seguimiento.sql` — el seguimiento de los encargos (Recibido → En revisión → Propuesta enviada → En desarrollo → Publicada). Solo el ingeniero añade etapas; el cliente ve las de sus proyectos y no puede cambiarlas.
 7. `Proyecto_AIB/supabase_encargos.sql` — protege los encargos aceptados (su dueño no puede borrarlos ni deshacer la aceptación) y lleva la cuenta de los avisos al ingeniero, uno por encargo.
 8. `Proyecto_AIB/supabase_invitaciones.sql` — las invitaciones: el ingeniero crea un enlace por negocio y el cliente entra sin crear cuenta, con una sesión anónima atada a la invitación. Requiere activar **Allow anonymous sign-ins** en Supabase (Authentication → Sign In / Providers). Una sesión anónima sin invitación activa no puede crear proyectos, subir fotos ni gastar IA, y cada invitación tiene un tope total de gasto (`limites_ia.invitado_centimos`).
+9. `Proyecto_AIB/supabase_comentarios.sql` — los comentarios de los clientes sobre su maqueta («¿Qué te parece tu web?»). El cliente solo escribe sobre sus proyectos; solo el ingeniero los lee, en la pestaña Comentarios.
 
 Después convierte tu cuenta en ingeniero con la consulta que figura al final del segundo script. Sin eso, `/dashboard` no deja entrar.
 
@@ -69,7 +70,7 @@ La app queda en http://localhost:3000 y el backend en http://localhost:3001. El 
 ## Cómo funciona
 
 1. El ingeniero crea una **invitación** para cada negocio desde su panel y se la manda por WhatsApp (`/i/<código>`). El cliente entra sin crear cuenta y va directo a su página web; con el mismo enlace puede volver. El panel muestra hasta dónde llegó cada invitado: abrió el enlace, empezó, vio su maqueta, aceptó. También se puede entrar con cuenta propia y elegir servicio: **Página web**, **ERP** o **Automatización**.
-2. **Web** usa un cuestionario fijo de 6 pasos, sin IA mientras se contesta. ERP y Automatización usan el discovery guiado por IA.
+2. **Web** usa un cuestionario fijo de 7 pasos, sin IA mientras se contesta. El segundo es **para qué quiere la web** (vender, conseguir clientes, informar o promocionar algo puntual): cambia el tono y los botones de la maqueta, y le dice al ingeniero qué tipo de web es. ERP y Automatización usan el discovery guiado por IA.
 3. Al terminar el cuestionario web, AIB+ busca en el catálogo del ingeniero las plantillas que encajan con el negocio y le enseña las mejores ya con su nombre, logo y colores. El cliente elige una y la IA escribe solo sus textos. Si ninguna encaja, o prefiere algo a medida, la IA genera una maqueta completa.
 4. Con «Compartir», el cliente puede mandar su maqueta a otra persona con un enlace público de solo lectura, que desactiva cuando quiera. La página pública la muestra sin scripts, sin enlaces hacia fuera y con una política de contenido que solo deja cargar estilos, fuentes y fotos propias.
 5. El cliente acepta la propuesta y se genera la documentación técnica.

@@ -15,6 +15,7 @@ import {
 } from '../../lib/proyectos';
 import { prepararLogo, coloresDelLogo } from '../../lib/marca';
 import {
+  OBJETIVOS_WEB,
   PREGUNTAS_WEB,
   PALETAS,
   etiquetaDe,
@@ -83,6 +84,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
   const [secciones, setSecciones] = useState<string[]>([]);
   const [estilo, setEstilo] = useState('');
   const [presupuesto, setPresupuesto] = useState('');
+  const [objetivo, setObjetivo] = useState('');
 
   // Plantillas
   const [candidatas, setCandidatas] = useState<PlantillaDelCatalogo[]>([]);
@@ -115,6 +117,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
     secciones,
     estilo,
     presupuesto,
+    objetivo,
   });
 
   const estiloTexto = (f: FichaWeb) =>
@@ -153,6 +156,11 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         question_id: 'categoria',
         question: 'Tipo de negocio',
         answer: CATEGORIAS_NEGOCIO.find((c) => c.valor === f.categoria)?.etiqueta ?? '—',
+      },
+      {
+        question_id: 'objetivo',
+        question: '¿Para qué quiere su web?',
+        answer: etiquetaDe(OBJETIVOS_WEB, f.objetivo ?? '') || '—',
       },
       { question_id: 'rubro', question: '¿A qué se dedica la empresa?', answer: f.rubro },
       { question_id: 'logo', question: '¿Tiene logo?', answer: f.logo ? 'Sí, lo adjuntó' : 'No' },
@@ -275,6 +283,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         rubro: f.rubro,
         estilo: estiloTexto(f),
         secciones: f.secciones,
+        objetivo: f.objetivo,
       });
       const doc = renderizarPlantilla(c.base, textos, f);
       setDocumento(doc);
@@ -304,6 +313,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         estilo: estiloTexto(f),
         secciones: f.secciones.map((s) => etiquetaDe(seccionesPregunta?.opciones, s)),
         paleta: { nombre: f.paleta.nombre, primario: f.paleta.primario, secundario: f.paleta.secundario },
+        objetivo: f.objetivo,
       });
       setCuerpo(html);
       setConsumo(usage ?? null);
@@ -410,6 +420,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         {pidiendoContacto && (
           <ContactoEncargo
             tipoServicio="web"
+            objetivo={objetivo}
             enviando={aceptacion === 'procesando'}
             error={errorEnvio}
             onEnviar={(datos) => void aceptar(datos)}
@@ -445,7 +456,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         <div className="mt-6">
           <CuerpoPregunta
             pregunta={pregunta}
-            estado={{ empresa, categoria, rubro, logo, paletaLogo, paleta, secciones, estilo, presupuesto }}
+            estado={{ empresa, categoria, rubro, logo, paletaLogo, paleta, secciones, estilo, presupuesto, objetivo }}
             acciones={{
               setEmpresa,
               setCategoria,
@@ -462,6 +473,10 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
                 avanzar();
               },
               setPresupuesto: (v) => setPresupuesto(v),
+              setObjetivo: (v) => {
+                setObjetivo(v);
+                avanzar();
+              },
             }}
           />
         </div>
@@ -470,7 +485,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
           pregunta={pregunta}
           paso={paso}
           total={total}
-          puedeSeguir={puedeSeguir(pregunta, { empresa, categoria, rubro, paleta, secciones, estilo, presupuesto })}
+          puedeSeguir={puedeSeguir(pregunta, { empresa, categoria, rubro, paleta, secciones, estilo, presupuesto, objetivo })}
           onAtras={retroceder}
           onSeguir={avanzar}
           onTerminar={() => void terminar()}
@@ -601,11 +616,14 @@ function puedeSeguir(
     secciones: string[];
     estilo: string;
     presupuesto: string;
+    objetivo: string;
   }
 ): boolean {
   switch (p.id) {
     case 'negocio':
       return r.empresa.trim().length > 0 && !!r.categoria && r.rubro.trim().length >= MIN_RUBRO;
+    case 'objetivo':
+      return !!r.objetivo;
     case 'logo':
       return true;
     case 'paleta':
@@ -666,7 +684,7 @@ function Pie({
 }) {
   const ultimo = paso === total - 1;
   // En estas preguntas un clic ya avanza, así que el botón sobra.
-  const avanzaSola = pregunta.id === 'paleta' || pregunta.id === 'estilo';
+  const avanzaSola = pregunta.id === 'paleta' || pregunta.id === 'estilo' || pregunta.id === 'objetivo';
 
   return (
     <div className="mt-8 flex items-center justify-between gap-3">
@@ -703,6 +721,7 @@ interface EstadoRespuestas {
   secciones: string[];
   estilo: string;
   presupuesto: string;
+  objetivo: string;
 }
 
 interface AccionesRespuestas {
@@ -715,6 +734,7 @@ interface AccionesRespuestas {
   setSecciones: (v: string[]) => void;
   setEstilo: (v: string) => void;
   setPresupuesto: (v: string) => void;
+  setObjetivo: (v: string) => void;
 }
 
 function CuerpoPregunta({
@@ -739,8 +759,16 @@ function CuerpoPregunta({
       return (
         <PasoOpcion
           pregunta={pregunta}
-          valor={pregunta.id === 'estilo' ? estado.estilo : estado.presupuesto}
-          onElegir={pregunta.id === 'estilo' ? acciones.setEstilo : acciones.setPresupuesto}
+          valor={
+            pregunta.id === 'estilo' ? estado.estilo : pregunta.id === 'objetivo' ? estado.objetivo : estado.presupuesto
+          }
+          onElegir={
+            pregunta.id === 'estilo'
+              ? acciones.setEstilo
+              : pregunta.id === 'objetivo'
+                ? acciones.setObjetivo
+                : acciones.setPresupuesto
+          }
         />
       );
     default:
@@ -754,7 +782,7 @@ function PasoNegocio({ estado, acciones }: { estado: EstadoRespuestas; acciones:
     <div className="space-y-5">
       <div className="space-y-1.5">
         <label htmlFor="empresa" className="block text-sm font-medium text-ink-muted">
-          ¿Cómo se llama tu empresa o marca?
+          ¿Cómo se llama tu negocio, marca u organización?
         </label>
         <input
           id="empresa"
@@ -768,7 +796,7 @@ function PasoNegocio({ estado, acciones }: { estado: EstadoRespuestas; acciones:
       </div>
       <div className="space-y-2">
         <p className="text-sm font-medium text-ink-muted" id="tipo-negocio">
-          ¿Qué tipo de negocio es?
+          ¿Qué tipo de negocio u organización es?
         </p>
         <div className="flex flex-wrap gap-2" role="group" aria-labelledby="tipo-negocio">
           {CATEGORIAS_NEGOCIO.map((c) => {
@@ -795,7 +823,7 @@ function PasoNegocio({ estado, acciones }: { estado: EstadoRespuestas; acciones:
       </div>
       <div className="space-y-1.5">
         <label htmlFor="rubro" className="block text-sm font-medium text-ink-muted">
-          ¿A qué se dedica y a quién le vende?
+          ¿A qué se dedica y a quién está dirigido?
         </label>
         <textarea
           id="rubro"

@@ -60,6 +60,7 @@ function componerCorreo(e, enlacePanel) {
 
   const filas = [
     ['Proyecto', e.servicio],
+    ['Para qué quiere la web', e.objetivo],
     ['Cliente', e.cliente],
     ['WhatsApp', whatsappValido ? formatearWhatsapp(e.whatsapp) : null],
     ['Correo', e.correo],

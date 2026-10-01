@@ -14,6 +14,7 @@ import { subirFoto } from '../../lib/fotos';
 import { construirDocumento } from '../../lib/marca';
 import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
 import { CompartirMaqueta } from './CompartirMaqueta';
+import { ComentarioMaqueta } from './ComentarioMaqueta';
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
@@ -447,6 +448,8 @@ export function WebPreview({
           {usage.output_tokens.toLocaleString('es')} de salida
         </p>
       )}
+
+      {puedeCompartir && !editando && proyectoId && <ComentarioMaqueta proyectoId={proyectoId} />}
     </div>
   );
 }
