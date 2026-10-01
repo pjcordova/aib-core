@@ -10,6 +10,7 @@ const { webPreviewPrompt } = require('../prompts');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
 const { cobrarCuota } = require('../cuota');
+const { mantenerConexion } = require('../mantenerConexion');
 
 const router = Router();
 
@@ -77,7 +78,7 @@ function extraerCuerpo(html) {
     .trim();
 }
 
-router.post('/generar-preview-web', limitar, requireAuth, cobrarCuota('preview-web'), async (req, res, next) => {
+router.post('/generar-preview-web', limitar, requireAuth, cobrarCuota('preview-web'), mantenerConexion, async (req, res, next) => {
   try {
     const { ficha, error } = leerFicha(req.body);
     if (error) return res.status(400).json({ success: false, error });

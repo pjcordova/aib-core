@@ -19,7 +19,7 @@ const MENSAJES = {
   limite_global:
     'El servicio de IA alcanzó su límite de hoy. Vuelve a intentarlo mañana.',
   sin_invitacion:
-    'Tu invitación ya no está activa. Pídele al ingeniero que te envíe un enlace nuevo.',
+    'Tu enlace se abrió en otro navegador o dispositivo. Para seguir aquí, vuelve a abrir el enlace de tu invitación.',
 };
 
 /**

@@ -61,7 +61,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
   const startedAt = Date.now();
   res.on('finish', () => {
-    console.log(`[AIB+] ${req.method} ${req.originalUrl} → ${res.statusCode} (${Date.now() - startedAt}ms)`);
+    const estado = res.locals.estadoReal ?? res.statusCode;
+    console.log(`[AIB+] ${req.method} ${req.originalUrl} → ${estado} (${Date.now() - startedAt}ms)`);
   });
   next();
 });

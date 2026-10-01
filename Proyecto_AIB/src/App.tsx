@@ -104,7 +104,8 @@ export default function Home() {
   }
 
   if (esInvitado && !invitacion?.activa) {
-    return <InvitacionInactiva />;
+    // null: el enlace se abrió en otro navegador y la sesión pasó allí.
+    return <InvitacionInactiva enOtroNavegador={invitacion === null} />;
   }
 
   const reiniciar = () => {
@@ -364,14 +365,21 @@ function BienvenidaInvitado({
   );
 }
 
-/** El ingeniero desactivó la invitación (o ya no existe). */
-function InvitacionInactiva() {
+/**
+ * La sesión ya no tiene invitación: o se abrió el enlace en otro navegador (la
+ * invitación pasó allí) o el ingeniero la desactivó.
+ */
+function InvitacionInactiva({ enOtroNavegador }: { enOtroNavegador: boolean }) {
   return (
     <div className="grid min-h-screen place-items-center px-6">
       <div className="max-w-md text-center">
-        <h1 className="text-2xl font-semibold text-ink">Tu invitación ya no está activa</h1>
+        <h1 className="text-2xl font-semibold text-ink">
+          {enOtroNavegador ? 'Abriste tu enlace en otro navegador' : 'Tu invitación ya no está activa'}
+        </h1>
         <p className="mt-3 text-sm text-ink-muted">
-          Pide a quien te envió el enlace que te mande uno nuevo.
+          {enOtroNavegador
+            ? 'Tu proyecto sigue allí. Para continuar aquí, vuelve a abrir el enlace de tu invitación.'
+            : 'Pide a quien te envió el enlace que te mande uno nuevo.'}
         </p>
       </div>
     </div>

@@ -9,6 +9,7 @@ const { generateText } = require('../claude');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
 const { cobrarCuota } = require('../cuota');
+const { mantenerConexion } = require('../mantenerConexion');
 const { obtenerPlantilla } = require('../plantillas');
 
 const router = Router();
@@ -23,7 +24,7 @@ function leerSecciones(valor) {
   return [...new Set(valor.filter((s) => SECCIONES_VALIDAS.includes(s)))];
 }
 
-router.post('/rellenar-plantilla', limitar, requireAuth, cobrarCuota('plantilla'), async (req, res, next) => {
+router.post('/rellenar-plantilla', limitar, requireAuth, cobrarCuota('plantilla'), mantenerConexion, async (req, res, next) => {
   try {
     const { plantilla: id, ficha } = req.body ?? {};
 

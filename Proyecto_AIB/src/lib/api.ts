@@ -55,6 +55,8 @@ interface PrototypePayload {
   usage?: TokenUsage;
 }
 
+const CONEXION_CORTADA = 'Se cortó la conexión con AIB+. Revisa tu internet y vuelve a intentarlo.';
+
 async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -91,8 +93,9 @@ async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<
       );
     }
     throw new ApiError(
-      'No se pudo contactar con el servidor. Comprueba que el backend esté levantado en ' +
-        API_URL,
+      import.meta.env.DEV
+        ? `No se pudo contactar con el servidor. Comprueba que el backend esté levantado en ${API_URL}`
+        : CONEXION_CORTADA,
       0,
       true
     );
@@ -105,6 +108,12 @@ async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<
     payload = await response.json();
   } catch {
     // Respuesta sin cuerpo JSON: nos quedamos con el código de estado.
+  }
+
+  // Las respuestas largas de la IA llegan poco a poco (ver mantenerConexion
+  // en el servidor): si la conexión se corta a mitad, el cuerpo queda vacío.
+  if (response.ok && payload === null) {
+    throw new ApiError(CONEXION_CORTADA, 0, true);
   }
 
   if (!response.ok) {
