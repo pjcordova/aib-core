@@ -60,6 +60,17 @@ const config = {
     plantilla: 4000,
   },
 
+  // ABI, el asistente del ingeniero (src/abi.js). Lleva su propio modelo: es
+  // una conversación con herramientas, no una generación de un solo paso.
+  abi: {
+    model: process.env.ABI_MODEL?.trim() || 'claude-opus-5-5',
+    // Cuánto piensa antes de responder: low | medium | high.
+    effort: process.env.ABI_EFFORT?.trim() || 'medium',
+    maxTokens: 16000,
+    // Consultas seguidas que puede hacer para una sola pregunta.
+    maxVueltas: 6,
+  },
+
   // En desarrollo permitimos los puertos habituales de Vite. En producción se
   // define ALLOWED_ORIGINS con los dominios reales, separados por comas.
   allowedOrigins: (process.env.ALLOWED_ORIGINS?.trim()

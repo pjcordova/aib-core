@@ -24,6 +24,7 @@ const TIMEOUT_MS = {
   documentation: 120_000,
   web: 120_000, // Una maqueta web ronda los 40 s; dejamos margen.
   plantilla: 90_000, // Solo textos: ronda los 20-30 s.
+  abi: 150_000, // Puede consultar varias veces tus datos antes de responder.
 } as const;
 
 export class ApiError extends Error {
@@ -243,4 +244,32 @@ export async function rellenarPlantilla<T>(
     throw new ApiError(data.error ?? 'No llegaron los textos de la plantilla.', 502, true);
   }
   return { textos: data.textos, usage: data.usage };
+}
+
+/** Lo que ABI deja listo para que el ingeniero lo confirme. De momento, un WhatsApp. */
+export interface AccionAbi {
+  tipo: 'whatsapp';
+  /** A quién va: el cliente o el negocio. */
+  para: string;
+  mensaje: string;
+  /** Enlace wa.me con el texto ya escrito. Abrirlo no envía nada. */
+  url: string;
+}
+
+/** Le pasa la conversación a ABI y devuelve su respuesta y los borradores que preparó. */
+export async function preguntarAbi(
+  conversacion: { rol: 'usuario' | 'abi'; texto: string }[]
+): Promise<{ respuesta: string; acciones: AccionAbi[] }> {
+  const data = await post<{ success: boolean; respuesta?: string; acciones?: AccionAbi[]; error?: string }>(
+    '/api/abi',
+    { conversacion },
+    TIMEOUT_MS.abi
+  );
+  if (!data.success || typeof data.respuesta !== 'string') {
+    throw new ApiError(data.error ?? 'ABI no pudo responder. Vuelve a intentarlo.', 502, true);
+  }
+  const acciones = (data.acciones ?? []).filter(
+    (a) => a?.tipo === 'whatsapp' && typeof a.url === 'string' && a.url.startsWith('https://wa.me/')
+  );
+  return { respuesta: data.respuesta, acciones };
 }

@@ -86,6 +86,7 @@ BEGIN
     WHEN 'preview-web' THEN 6
     WHEN 'documentacion' THEN 6
     WHEN 'prototipo' THEN 25
+    WHEN 'abi' THEN 5  -- una pregunta a ABI (puede consultar varias veces tus datos)
   END;
   IF coste IS NULL THEN
     RETURN 'tipo_desconocido';

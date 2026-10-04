@@ -1,8 +1,8 @@
 -- ============================================================================
 -- AIB+ — Panel del ingeniero
 -- ============================================================================
--- Lo que lee el panel del ingeniero de un vistazo: la vista `encargos`, que
--- usan la pestaña Encargos y la página «Hoy» de ABI.
+-- Lo que usa el panel del ingeniero: la vista `encargos` (pestaña Encargos y
+-- página «Hoy» de ABI) y los ajustes de ABI.
 --
 -- Ejecutar después de supabase_seguimiento.sql y supabase_invitaciones.sql
 -- (usa seguimiento_encargos, perfiles e invitaciones). Se puede ejecutar más
@@ -62,3 +62,38 @@ WHERE p.payload->>'tipo' = 'aib-discovery'
 
 REVOKE ALL ON public.encargos FROM anon;
 GRANT SELECT ON public.encargos TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Ajustes de ABI
+-- ----------------------------------------------------------------------------
+-- Lo que ABI necesita saber del ingeniero para escribir en su nombre: cómo se
+-- llama (para firmar los mensajes) y su enlace para agendar reuniones (Google
+-- Calendar, Calendly…), que ABI incluye cuando propone una reunión. Cada
+-- ingeniero ve y cambia solo los suyos.
+CREATE TABLE IF NOT EXISTS public.ajustes_ingeniero (
+  user_id       UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+  nombre        TEXT CHECK (nombre IS NULL OR char_length(nombre) BETWEEN 1 AND 80),
+  enlace_agenda TEXT CHECK (enlace_agenda IS NULL OR (char_length(enlace_agenda) <= 300 AND enlace_agenda ~ '^https://')),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.ajustes_ingeniero ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "ajustes: el ingeniero ve los suyos" ON public.ajustes_ingeniero;
+CREATE POLICY "ajustes: el ingeniero ve los suyos"
+  ON public.ajustes_ingeniero FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+DROP POLICY IF EXISTS "ajustes: el ingeniero crea los suyos" ON public.ajustes_ingeniero;
+CREATE POLICY "ajustes: el ingeniero crea los suyos"
+  ON public.ajustes_ingeniero FOR INSERT TO authenticated
+  WITH CHECK (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+DROP POLICY IF EXISTS "ajustes: el ingeniero cambia los suyos" ON public.ajustes_ingeniero;
+CREATE POLICY "ajustes: el ingeniero cambia los suyos"
+  ON public.ajustes_ingeniero FOR UPDATE TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND public.es_ingeniero())
+  WITH CHECK (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+REVOKE ALL ON public.ajustes_ingeniero FROM anon;
+GRANT SELECT, INSERT, UPDATE ON public.ajustes_ingeniero TO authenticated;

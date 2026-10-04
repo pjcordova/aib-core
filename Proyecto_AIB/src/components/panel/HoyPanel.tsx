@@ -11,14 +11,17 @@ import {
   type EncargoPendiente,
   type ResumenHoy,
 } from '../../lib/hoy';
+import { AvatarAbi } from './AvatarAbi';
+import { ChatAbi } from './ChatAbi';
 
 // ---------------------------------------------------------------------------
 // Hoy, con ABI
 // ---------------------------------------------------------------------------
 // La portada del ingeniero: ABI le pone delante lo que necesita su atención,
 // empezando por los clientes que esperan respuesta. De momento son reglas
-// fijas sobre sus datos (lib/hoy.ts), sin IA. Desde aquí no se envía nada:
-// los botones abren WhatsApp con el mensaje escrito y el ingeniero decide.
+// fijas sobre sus datos (lib/hoy.ts), sin IA; debajo del saludo puede
+// preguntarle a ABI (ChatAbi). Desde aquí no se envía nada: los botones abren
+// WhatsApp con el mensaje escrito y el ingeniero decide.
 // ---------------------------------------------------------------------------
 
 export interface IrAEncargos {
@@ -72,6 +75,18 @@ export function HoyPanel({
 
   const r = resumen;
   const masAntiguo = r.esperando[0];
+  // Atajos para preguntarle a ABI, con los clientes de verdad.
+  const sugerencias = [
+    ...(masAntiguo
+      ? [
+          `¿Qué le respondo a ${nombreDe(masAntiguo)}?`,
+          `Propón una reunión a ${nombreDe(masAntiguo)}`,
+          `¿Cuánto debería cobrarle a ${nombreDe(masAntiguo)}?`,
+        ]
+      : []),
+    ...(r.totalInvitaciones > 0 ? ['¿Qué invitaciones debería reactivar y cómo?'] : []),
+    'Resume mi semana para el informe de Santander X',
+  ];
 
   return (
     <section className="mx-auto max-w-4xl px-5 py-8">
@@ -99,6 +114,8 @@ export function HoyPanel({
           No pude leer todo; puede faltar algo. Recarga la página en un momento.
         </p>
       )}
+
+      <ChatAbi sugerencias={sugerencias} />
 
       <div className="space-y-8">
         {/* ------------------------------------------------ esperan respuesta */}
@@ -314,26 +331,5 @@ function BotonWhatsapp({ href, texto = 'Escribir por WhatsApp' }: { href: string
     <a href={href} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-3 !py-1.5 text-xs">
       {texto}
     </a>
-  );
-}
-
-/** La cara de ABI: un robot sencillo, con los colores de la marca. */
-export function AvatarAbi({ tamano = 48 }: { tamano?: number }) {
-  return (
-    <span
-      className="grid shrink-0 place-items-center rounded-2xl border border-accent/30 bg-accent/10 text-accent"
-      style={{ width: tamano, height: tamano }}
-      aria-hidden="true"
-    >
-      <svg width={tamano * 0.6} height={tamano * 0.6} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2.5v3" />
-        <circle cx="12" cy="2.5" r="0.9" fill="currentColor" stroke="none" />
-        <rect x="4" y="6" width="16" height="13" rx="4" />
-        <circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none" />
-        <path d="M9.5 15.8h5" />
-        <path d="M2 11.5v3M22 11.5v3" />
-      </svg>
-    </span>
   );
 }

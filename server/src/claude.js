@@ -83,4 +83,4 @@ function stripMarkdownFences(raw) {
     .trim();
 }
 
-module.exports = { generateText, stripMarkdownFences, TruncatedError };
+module.exports = { anthropic, generateText, stripMarkdownFences, TruncatedError };
