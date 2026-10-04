@@ -111,7 +111,7 @@ function resumenDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoR
   };
 }
 
-function completoDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoCompleto {
+export function completoDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoCompleto {
   return {
     ...resumenDe(id, creadoEn, p),
     historial: p.historial ?? [],
@@ -388,23 +388,4 @@ export async function documentarComoIngeniero(
     return { ok: false, error: error.message };
   }
   return { ok: data === true, error: null };
-}
-
-/** Proyectos aceptados, que son los que ve el ingeniero en su dashboard. */
-export async function listarAceptados(): Promise<ProyectoCompleto[]> {
-  const { data, error } = await supabase
-    .from('proyectos')
-    .select('id, payload, created_at')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[AIB+] No se pudieron listar los proyectos aceptados:', error.message);
-    return [];
-  }
-
-  return (data ?? [])
-    .filter((fila) => esPayloadDiscovery(fila.payload) && (fila.payload as PayloadDiscovery).aceptado)
-    .map((fila) =>
-      completoDe(fila.id as string, fila.created_at as string, fila.payload as PayloadDiscovery)
-    );
 }
