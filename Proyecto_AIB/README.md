@@ -44,10 +44,11 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 3. `Proyecto_AIB/supabase_cuota_ia.sql` — el tope diario de gasto en IA por usuario y en total. Sin él, el servidor rechaza todas las llamadas a la IA. Los límites se cambian en la tabla `limites_ia` (en céntimos de dólar).
 4. `Proyecto_AIB/supabase_fotos.sql` — el bucket `fotos` de Storage, donde el cliente sube las fotos de su maqueta: cada usuario solo escribe en su carpeta, solo imágenes y de hasta 2 MB.
 5. `Proyecto_AIB/supabase_compartir.sql` — los enlaces para compartir la maqueta (`/ver/<código>`). Sin sesión solo se puede leer la maqueta de un código válido, nada más del proyecto.
-6. `Proyecto_AIB/supabase_seguimiento.sql` — el seguimiento de los encargos (Recibido → En revisión → Propuesta enviada → En desarrollo → Publicada). Solo el ingeniero añade etapas; el cliente ve las de sus proyectos y no puede cambiarlas. Incluye la vista `encargos`, con una fila ligera por encargo aceptado y su etapa actual: el panel la pide de cinco en cinco, con búsqueda y filtros, sin traerse las maquetas.
+6. `Proyecto_AIB/supabase_seguimiento.sql` — el seguimiento de los encargos (Recibido → En revisión → Propuesta enviada → En desarrollo → Publicada). Solo el ingeniero añade etapas; el cliente ve las de sus proyectos y no puede cambiarlas.
 7. `Proyecto_AIB/supabase_encargos.sql` — protege los encargos aceptados (su dueño no puede borrarlos ni deshacer la aceptación) y lleva la cuenta de los avisos al ingeniero, uno por encargo.
 8. `Proyecto_AIB/supabase_invitaciones.sql` — las invitaciones: el ingeniero crea un enlace por negocio y el cliente entra sin crear cuenta, con una sesión anónima atada a la invitación. Requiere activar **Allow anonymous sign-ins** en Supabase (Authentication → Sign In / Providers). Una sesión anónima sin invitación activa no puede crear proyectos, subir fotos ni gastar IA, y cada invitación tiene un tope total de gasto (`limites_ia.invitado_centimos`). Al eliminar una invitación (`eliminar_invitacion`) se borran también los proyectos de su cliente, salvo el encargo aceptado de una invitación real; las de prueba se borran enteras.
 9. `Proyecto_AIB/supabase_comentarios.sql` — los comentarios de los clientes sobre su maqueta («¿Qué te parece tu web?»). El cliente solo escribe sobre sus proyectos; solo el ingeniero los lee, en la pestaña Comentarios.
+10. `Proyecto_AIB/supabase_panel_ingeniero.sql` — la vista `encargos`, con una fila ligera por encargo aceptado, su etapa actual y si es una prueba del ingeniero. La pestaña Encargos la pide de cinco en cinco, con búsqueda y filtros, sin traerse las maquetas; la usa también la página «Hoy» de ABI.
 
 Después convierte tu cuenta en ingeniero con la consulta que figura al final del segundo script. Sin eso, `/dashboard` no deja entrar.
 
@@ -74,14 +75,14 @@ La app queda en http://localhost:3000 y el backend en http://localhost:3001. El 
 3. Al terminar el cuestionario web, AIB+ busca en el catálogo del ingeniero las plantillas que encajan con el negocio y le enseña las mejores ya con su nombre, logo y colores. El cliente elige una y la IA escribe solo sus textos. Si ninguna encaja, o prefiere algo a medida, la IA genera una maqueta completa.
 4. Con «Compartir», el cliente puede mandar su maqueta a otra persona con un enlace público de solo lectura, que desactiva cuando quiera. La página pública la muestra sin scripts, sin enlaces hacia fuera y con una política de contenido que solo deja cargar estilos, fuentes y fotos propias.
 5. El cliente acepta la propuesta y se genera la documentación técnica.
-6. El ingeniero la ve en `/dashboard`, junto con su catálogo y lo que rinde cada plantilla. Desde ahí marca la etapa del encargo, con una nota opcional, y puede avisar al cliente por WhatsApp con el mensaje ya escrito. El cliente ve la etapa en su lista de proyectos y la línea de tiempo al abrirlo.
+6. El ingeniero entra directo a su panel (`/dashboard`): la página «Hoy» de **ABI** le muestra los clientes que esperan su respuesta (con el botón de WhatsApp), las invitaciones que se quedaron a medio camino, los comentarios de la semana y los números de los últimos 7 días, sin contar sus pruebas. De momento son reglas fijas sobre sus datos, sin IA. Para ver la app como un cliente usa «Probar como cliente». Ve el encargo en la pestaña Encargos, junto con su catálogo y lo que rinde cada plantilla. Desde ahí marca la etapa del encargo, con una nota opcional, y puede avisar al cliente por WhatsApp con el mensaje ya escrito. El cliente ve la etapa en su lista de proyectos y la línea de tiempo al abrirlo.
 
 ## Arquitectura
 
 ```
 Proyecto_AIB/src/
   components/
-    panel/        Panel del ingeniero: encargos y catálogo de plantillas
+    panel/        Panel del ingeniero: «Hoy» con ABI, encargos, invitaciones, comentarios y catálogo
     web/          Módulo web: cuestionario, elección de plantilla, vista previa
     ui/           Primitivas compartidas
   plantillas/     Plantillas base: HTML con huecos, CSS compilado, metadatos

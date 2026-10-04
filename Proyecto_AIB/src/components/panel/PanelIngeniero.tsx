@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
@@ -7,19 +7,29 @@ import { Shell, Wordmark } from '../ui/Primitives';
 import { CatalogoPlantillas } from './CatalogoPlantillas';
 import { InvitacionesPanel } from './InvitacionesPanel';
 import { ComentariosPanel } from './ComentariosPanel';
+import { HoyPanel, type IrAEncargos } from './HoyPanel';
+import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo';
+type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
- * `/dashboard` lo podía abrir cualquiera con la URL.
+ * `/dashboard` lo podía abrir cualquiera con la URL. Es su portada: abre en
+ * «Hoy», donde ABI le dice qué necesita su atención.
  */
 export function PanelIngeniero() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
-  const [pestana, setPestana] = useState<Pestana>('encargos');
-  // Encargos aceptados que aún nadie ha revisado. Lo informa la pestaña de encargos.
+  const [pestana, setPestana] = useState<Pestana>('hoy');
+  // Encargos de clientes reales que aún nadie ha revisado. Lo informan «Hoy» y Encargos.
   const [nuevos, setNuevos] = useState(0);
+  // Cómo se abre la pestaña de encargos. Cambiar `vez` la monta de nuevo con ese filtro.
+  const [irEncargos, setIrEncargos] = useState<{ vez: number; destino: IrAEncargos }>({ vez: 0, destino: {} });
+
+  const abrirEncargos = useCallback((destino: IrAEncargos) => {
+    setIrEncargos((previo) => ({ vez: previo.vez + 1, destino }));
+    setPestana('encargos');
+  }, []);
 
   if (initializing || (session && perfil.cargando)) {
     return (
@@ -58,18 +68,20 @@ export function PanelIngeniero() {
           <div className="flex items-center justify-between gap-4 py-1">
             <Wordmark subtitle="Panel del ingeniero" />
             <div className="flex items-center gap-3">
-              <Link to="/" className="btn btn-ghost">
-                Ir a la app
+              <Link to="/" state={{ comoCliente: true }} onClick={activarModoCliente} className="btn btn-ghost">
+                <span className="sm:hidden">Ver como cliente</span>
+                <span className="hidden sm:inline">Probar como cliente</span>
               </Link>
               <button type="button" onClick={signOut} className="btn btn-ghost">
                 Salir
               </button>
             </div>
           </div>
-          {/* En el celular no caben las cuatro: la barra se desliza. */}
+          {/* En el celular no caben todas: la barra se desliza. */}
           <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Secciones del panel">
             {(
               [
+                ['hoy', 'Hoy con ABI', 'Hoy'],
                 ['encargos', 'Encargos', 'Encargos'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
@@ -79,7 +91,7 @@ export function PanelIngeniero() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setPestana(id)}
+                onClick={() => (id === 'encargos' ? abrirEncargos({}) : setPestana(id))}
                 aria-current={pestana === id ? 'page' : undefined}
                 className={
                   'shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors sm:px-4 ' +
@@ -105,8 +117,25 @@ export function PanelIngeniero() {
       </header>
 
       <main>
-        {pestana === 'encargos' ? (
-          <EncargosIngenieria onNuevos={setNuevos} />
+        {pestana === 'hoy' ? (
+          <HoyPanel
+            onEncargos={abrirEncargos}
+            onInvitaciones={() => setPestana('invitaciones')}
+            onComentarios={() => setPestana('comentarios')}
+            onNuevos={setNuevos}
+          />
+        ) : pestana === 'encargos' ? (
+          <EncargosIngenieria
+            key={irEncargos.vez}
+            onNuevos={setNuevos}
+            inicial={{
+              abrir: irEncargos.destino.abrir,
+              filtros: {
+                ...(irEncargos.destino.buscar ? { busqueda: irEncargos.destino.buscar } : {}),
+                ...(irEncargos.destino.soloNuevos ? { estado: 'recibido' as const, soloReales: true } : {}),
+              },
+            }}
+          />
         ) : pestana === 'invitaciones' ? (
           <InvitacionesPanel />
         ) : pestana === 'comentarios' ? (

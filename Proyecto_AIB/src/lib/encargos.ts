@@ -30,6 +30,8 @@ export interface EncargoFila {
   semanas: number | null;
   tieneMaqueta: boolean;
   estado: EstadoEncargo;
+  /** Hecho por un ingeniero con su cuenta o desde una invitación de prueba. */
+  esPrueba: boolean;
 }
 
 export interface FiltrosEncargos {
@@ -38,13 +40,15 @@ export interface FiltrosEncargos {
   estado: EstadoEncargo | '';
   /** '' = todos; 'software' = filas anteriores a los módulos, sin tipo. */
   servicio: TipoServicio | 'software' | '';
+  /** Sin las pruebas del ingeniero. */
+  soloReales: boolean;
 }
 
-export const SIN_FILTROS: FiltrosEncargos = { busqueda: '', estado: '', servicio: '' };
+export const SIN_FILTROS: FiltrosEncargos = { busqueda: '', estado: '', servicio: '', soloReales: false };
 
 const COLUMNAS =
   'id, created_at, servicio, tipo_servicio, empresa, objetivo, presupuesto, cliente, plantilla, ' +
-  'respuestas, tiene_documentacion, semanas, tiene_maqueta, estado';
+  'respuestas, tiene_documentacion, semanas, tiene_maqueta, estado, es_prueba';
 
 interface FilaVista {
   id: string;
@@ -61,6 +65,7 @@ interface FilaVista {
   semanas: unknown;
   tiene_maqueta: boolean | null;
   estado: EstadoEncargo;
+  es_prueba: boolean | null;
 }
 
 function filaDe(f: FilaVista): EncargoFila {
@@ -79,6 +84,7 @@ function filaDe(f: FilaVista): EncargoFila {
     semanas: typeof f.semanas === 'number' ? f.semanas : null,
     tieneMaqueta: f.tiene_maqueta === true,
     estado: f.estado,
+    esPrueba: f.es_prueba === true,
   };
 }
 
@@ -113,6 +119,7 @@ export async function listarEncargos(
   if (filtros.estado) consulta = consulta.eq('estado', filtros.estado);
   if (filtros.servicio === 'software') consulta = consulta.is('tipo_servicio', null);
   else if (filtros.servicio) consulta = consulta.eq('tipo_servicio', filtros.servicio);
+  if (filtros.soloReales) consulta = consulta.eq('es_prueba', false);
   const busqueda = normalizarBusqueda(filtros.busqueda);
   if (busqueda) consulta = consulta.ilike('busqueda', `%${busqueda}%`);
 
@@ -124,11 +131,14 @@ export async function listarEncargos(
   return { filas: ((data ?? []) as unknown as FilaVista[]).map(filaDe), total: count ?? 0 };
 }
 
-/** Cuántos encargos hay en total y cuántos siguen en "Recibido" (nuevos por revisar). */
+/**
+ * Cuántos encargos hay en total y cuántos de clientes reales siguen en
+ * "Recibido" (nuevos por revisar): las pruebas no cuentan como trabajo pendiente.
+ */
 export async function contarEncargos(): Promise<{ total: number; nuevos: number } | null> {
   const [todos, nuevos] = await Promise.all([
     supabase.from('encargos').select('id', { count: 'exact', head: true }),
-    supabase.from('encargos').select('id', { count: 'exact', head: true }).eq('estado', 'recibido'),
+    supabase.from('encargos').select('id', { count: 'exact', head: true }).eq('estado', 'recibido').eq('es_prueba', false),
   ]);
   if (todos.error || nuevos.error) {
     console.error('[AIB+] No se pudieron contar los encargos:', (todos.error ?? nuevos.error)?.message);

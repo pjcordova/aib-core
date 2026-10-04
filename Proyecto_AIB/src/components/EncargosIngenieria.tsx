@@ -45,18 +45,25 @@ interface Lista {
   fallo: boolean;
 }
 
-const hayFiltro = (f: FiltrosEncargos) => Boolean(f.estado || f.servicio || f.busqueda.trim());
+const hayFiltro = (f: FiltrosEncargos) => Boolean(f.estado || f.servicio || f.soloReales || f.busqueda.trim());
 
-export function EncargosIngenieria({ onNuevos }: { onNuevos?: (cantidad: number) => void } = {}) {
-  const [filtros, setFiltros] = useState<FiltrosEncargos>(SIN_FILTROS);
+export function EncargosIngenieria({
+  onNuevos,
+  inicial,
+}: {
+  onNuevos?: (cantidad: number) => void;
+  /** Para llegar desde ABI con un filtro puesto o un encargo ya abierto. */
+  inicial?: { filtros?: Partial<FiltrosEncargos>; abrir?: string };
+} = {}) {
+  const [filtros, setFiltros] = useState<FiltrosEncargos>(() => ({ ...SIN_FILTROS, ...inicial?.filtros }));
   /** Lo que hay en la caja de búsqueda; pasa a `filtros` cuando se deja de escribir. */
-  const [texto, setTexto] = useState('');
+  const [texto, setTexto] = useState(inicial?.filtros?.busqueda ?? '');
   const [lista, setLista] = useState<Lista | null>(null);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [falloMas, setFalloMas] = useState(false);
   const [conteo, setConteo] = useState<{ total: number; nuevos: number } | null>(null);
   const [versionConteo, setVersionConteo] = useState(0);
-  const [abierto, setAbierto] = useState<string | null>(null);
+  const [abierto, setAbierto] = useState<string | null>(inicial?.abrir ?? null);
   const [seguimiento, setSeguimiento] = useState<Map<string, CambioEstado[]>>(new Map());
   const [detalles, setDetalles] = useState<Map<string, ProyectoCompleto>>(new Map());
 
@@ -172,59 +179,69 @@ export function EncargosIngenieria({ onNuevos }: { onNuevos?: (cantidad: number)
       </header>
 
       {/* ------------------------------------------------- búsqueda y filtros */}
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row" role="search">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Buscar encargos</span>
-          <svg
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-subtle"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+      <div className="mb-5 space-y-2" role="search">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Buscar encargos</span>
+            <svg
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-subtle"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              type="search"
+              value={texto}
+              onChange={(e) => setTexto(e.target.value.slice(0, 60))}
+              placeholder="Buscar por negocio o cliente"
+              className="field !pl-10"
+            />
+          </label>
+          <select
+            value={filtros.estado}
+            onChange={(e) => cambiarFiltro({ estado: e.target.value as EstadoEncargo | '' })}
+            aria-label="Filtrar por etapa"
+            className="field sm:!w-56 sm:shrink-0"
           >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
+            <option value="">Todas las etapas</option>
+            {ETAPAS.map((e) => (
+              <option key={e.valor} value={e.valor}>
+                {e.valor === 'recibido' ? 'Nuevos por revisar' : e.valor === 'publicada' ? 'Publicada o entregada' : e.etiqueta}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filtros.servicio}
+            onChange={(e) => cambiarFiltro({ servicio: e.target.value as FiltrosEncargos['servicio'] })}
+            aria-label="Filtrar por servicio"
+            className="field sm:!w-56 sm:shrink-0"
+          >
+            <option value="">Todos los servicios</option>
+            {SERVICIOS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre}
+              </option>
+            ))}
+            <option value="software">Software (anteriores)</option>
+          </select>
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm text-ink-muted">
           <input
-            type="search"
-            value={texto}
-            onChange={(e) => setTexto(e.target.value.slice(0, 60))}
-            placeholder="Buscar por negocio, servicio o cliente"
-            className="field !pl-10"
+            type="checkbox"
+            checked={filtros.soloReales}
+            onChange={(e) => cambiarFiltro({ soloReales: e.target.checked })}
           />
+          Ocultar mis pruebas
         </label>
-        <select
-          value={filtros.estado}
-          onChange={(e) => cambiarFiltro({ estado: e.target.value as EstadoEncargo | '' })}
-          aria-label="Filtrar por etapa"
-          className="field sm:!w-48"
-        >
-          <option value="">Todas las etapas</option>
-          {ETAPAS.map((e) => (
-            <option key={e.valor} value={e.valor}>
-              {e.valor === 'recibido' ? 'Nuevos por revisar' : e.valor === 'publicada' ? 'Publicada o entregada' : e.etiqueta}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filtros.servicio}
-          onChange={(e) => cambiarFiltro({ servicio: e.target.value as FiltrosEncargos['servicio'] })}
-          aria-label="Filtrar por servicio"
-          className="field sm:!w-44"
-        >
-          <option value="">Todos los servicios</option>
-          {SERVICIOS.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.nombre}
-            </option>
-          ))}
-          <option value="software">Software (anteriores)</option>
-        </select>
       </div>
 
       {/* --------------------------------------------------------------- lista */}
@@ -264,6 +281,11 @@ export function EncargosIngenieria({ onNuevos }: { onNuevos?: (cantidad: number)
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate font-semibold text-ink">{f.servicio}</h3>
                       <EtiquetaServicio tipo={f.tipoServicio} />
+                      {f.esPrueba && (
+                        <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-subtle">
+                          Prueba
+                        </span>
+                      )}
                       <ChipEstado cambios={seguimiento.get(f.id) ?? []} tipo={f.tipoServicio} />
                       {f.plantilla && (
                         <span className="rounded-full border border-accent/30 px-2 py-0.5 text-[11px] text-accent">

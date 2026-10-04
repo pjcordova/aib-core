@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreview';
@@ -18,6 +18,7 @@ import {
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
 import { miInvitacion, registrarInicioInvitacion } from './lib/invitaciones';
+import { leerModoCliente, salirModoCliente } from './lib/modoCliente';
 import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
@@ -28,6 +29,11 @@ type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 export default function Home() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
+  // El ingeniero solo ve esta pantalla si pidió «Probar como cliente» en su panel.
+  const location = useLocation();
+  const [modoCliente] = useState(
+    () => leerModoCliente() || (location.state as { comoCliente?: boolean } | null)?.comoCliente === true
+  );
   const [tipo, setTipo] = useState<TipoServicio | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [iniciado, setIniciado] = useState(false);
@@ -93,6 +99,20 @@ export default function Home() {
 
   if (!session) {
     return <LoginRegistro onAuthSuccess={() => {}} />;
+  }
+
+  // Esperar al rol evita que el ingeniero vea un instante la pantalla del cliente.
+  if (!esInvitado && perfil.cargando) {
+    return (
+      <div className="grid min-h-screen place-items-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+      </div>
+    );
+  }
+
+  // Su portada es el panel, con ABI.
+  if (!esInvitado && perfil.rol === 'ingeniero' && !modoCliente) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (esInvitado && invitacion === undefined) {
@@ -187,7 +207,7 @@ export default function Home() {
                 </button>
               )}
               {perfil.rol === 'ingeniero' && (
-                <Link to="/dashboard" className="btn btn-ghost">
+                <Link to="/dashboard" onClick={salirModoCliente} className="btn btn-ghost">
                   <span className="sm:hidden">Panel</span>
                   <span className="hidden sm:inline">Panel del ingeniero</span>
                 </Link>
