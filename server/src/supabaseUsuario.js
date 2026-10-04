@@ -15,6 +15,7 @@ const { config } = require('./config');
  * @param {object} [opciones]
  * @param {[string, string][]} [opciones.params] Filtros y columnas, en el formato de PostgREST.
  * @param {object} [opciones.cuerpo] Si se pasa, la llamada es un POST con este JSON.
+ * @returns El JSON de la respuesta, o null si vino vacía (un insert sin devolver filas).
  */
 async function consultarComo(token, ruta, { params = [], cuerpo } = {}) {
   const url = new URL(`${config.supabaseUrl}/rest/v1/${ruta}`);
@@ -26,6 +27,8 @@ async function consultarComo(token, ruta, { params = [], cuerpo } = {}) {
       apikey: config.supabaseAnonKey,
       Authorization: `Bearer ${token}`,
       ...(cuerpo === undefined ? {} : { 'Content-Type': 'application/json' }),
+      // En un insert no hace falta que devuelva la fila; en una función, sí su resultado.
+      ...(cuerpo !== undefined && !ruta.startsWith('rpc/') ? { Prefer: 'return=minimal' } : {}),
     },
     ...(cuerpo === undefined ? {} : { body: JSON.stringify(cuerpo) }),
     signal: AbortSignal.timeout(10_000),
@@ -34,7 +37,8 @@ async function consultarComo(token, ruta, { params = [], cuerpo } = {}) {
   if (!respuesta.ok) {
     throw new Error(`Supabase respondió ${respuesta.status}: ${(await respuesta.text()).slice(0, 200)}`);
   }
-  return respuesta.json();
+  const texto = await respuesta.text();
+  return texto ? JSON.parse(texto) : null;
 }
 
 module.exports = { consultarComo };

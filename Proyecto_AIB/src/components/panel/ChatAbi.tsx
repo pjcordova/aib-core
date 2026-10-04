@@ -1,17 +1,33 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ApiError, preguntarAbi, type AccionAbi } from '../../lib/api';
-import { guardarAjustes, guardarConversacion, leerAjustes, leerConversacion, type AjustesAbi, type MensajeAbi } from '../../lib/abi';
+import {
+  guardarAjustes,
+  guardarConversacion,
+  guardarRecuerdo,
+  leerAjustes,
+  leerConversacion,
+  listarRecuerdos,
+  olvidarRecuerdo,
+  usoDeLaSemana,
+  type AjustesAbi,
+  type MensajeAbi,
+  type Recuerdo,
+  type ResultadoAccion,
+} from '../../lib/abi';
+import { cambiarEstado, etiquetaEtapa } from '../../lib/seguimiento';
+import { crearInvitacion, mensajeInvitacion, urlInvitacion } from '../../lib/invitaciones';
 import { AvatarAbi } from './AvatarAbi';
 
 // ---------------------------------------------------------------------------
 // Pregúntale a ABI
 // ---------------------------------------------------------------------------
-// El chat con ABI dentro de «Hoy». ABI lee los datos del ingeniero y le deja
-// los mensajes listos; los botones de WhatsApp solo abren el chat con el texto
-// escrito: enviar lo decide él.
+// El chat con ABI dentro de «Hoy». ABI lee los datos del ingeniero y propone:
+// mensajes de WhatsApp, cambios de etapa, invitaciones y cosas que recordar.
+// Cada propuesta es una tarjeta con su botón y la hace el ingeniero, con sus
+// propios permisos. Los botones de WhatsApp solo abren el chat con el texto.
 // ---------------------------------------------------------------------------
 
-export function ChatAbi({ sugerencias }: { sugerencias: string[] }) {
+export function ChatAbi({ sugerencias, onCambio }: { sugerencias: string[]; onCambio?: () => void }) {
   const [mensajes, setMensajes] = useState<MensajeAbi[]>(leerConversacion);
   const [texto, setTexto] = useState('');
   const [pensando, setPensando] = useState(false);
@@ -44,6 +60,11 @@ export function ChatAbi({ sugerencias }: { sugerencias: string[] }) {
       setPensando(false);
     }
   };
+
+  const marcarResultado = (mensaje: number, accion: number, resultado: ResultadoAccion) =>
+    setMensajes((previos) =>
+      previos.map((m, i) => (i === mensaje ? { ...m, resultados: { ...m.resultados, [accion]: resultado } } : m))
+    );
 
   return (
     <div className="card mb-8 p-4 sm:p-5">
@@ -104,7 +125,17 @@ export function ChatAbi({ sugerencias }: { sugerencias: string[] }) {
                 <AvatarAbi tamano={28} />
                 <div className="min-w-0 flex-1 space-y-3">
                   <TextoAbi texto={m.texto} />
-                  {m.acciones?.map((a, j) => <BorradorWhatsapp key={j} accion={a} />)}
+                  {m.acciones?.map((a, j) => (
+                    <TarjetaAccion
+                      key={j}
+                      accion={a}
+                      resultado={m.resultados?.[j]}
+                      onResultado={(r) => {
+                        marcarResultado(i, j, r);
+                        if (r.estado === 'hecha' && a.tipo !== 'recuerdo') onCambio?.();
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             )
@@ -159,8 +190,200 @@ export function ChatAbi({ sugerencias }: { sugerencias: string[] }) {
   );
 }
 
+/** La tarjeta de cada propuesta de ABI, según lo que propone. */
+function TarjetaAccion({
+  accion,
+  resultado,
+  onResultado,
+}: {
+  accion: AccionAbi;
+  resultado: ResultadoAccion | undefined;
+  onResultado: (resultado: ResultadoAccion) => void;
+}) {
+  switch (accion.tipo) {
+    case 'whatsapp':
+      return <BorradorWhatsapp accion={accion} />;
+    case 'etapa':
+      return (
+        <Propuesta
+          titulo={`Cambiar etapa · ${accion.para}`}
+          textoConfirmar="Confirmar"
+          resultado={resultado}
+          onResultado={onResultado}
+          hacer={async () => {
+            const { cambio, error } = await cambiarEstado(accion.encargoId, accion.etapa, accion.nota);
+            return cambio ? { estado: 'hecha' } : (error ?? 'No se pudo cambiar la etapa.');
+          }}
+          hecho={<>Listo: ahora está en «{etiquetaEtapa(accion.etapa)}».</>}
+        >
+          <p className="text-sm text-ink">
+            {etiquetaEtapa(accion.etapaActual)} → <strong>{etiquetaEtapa(accion.etapa)}</strong>
+          </p>
+          {accion.nota && (
+            <p className="mt-1 text-sm text-ink-muted">
+              Nota para el cliente: «{accion.nota}»
+            </p>
+          )}
+        </Propuesta>
+      );
+    case 'invitacion':
+      return (
+        <Propuesta
+          titulo={`Crear invitación${accion.esPrueba ? ' de prueba' : ''}`}
+          textoConfirmar="Crear invitación"
+          resultado={resultado}
+          onResultado={onResultado}
+          hacer={async () => {
+            const { token, error } = await crearInvitacion(accion.negocio, accion.esPrueba);
+            return token ? { estado: 'hecha', enlace: token } : (error ?? 'No se pudo crear la invitación.');
+          }}
+          hecho={
+            resultado?.estado === 'hecha' && resultado.enlace ? (
+              <EnlaceCreado negocio={accion.negocio} token={resultado.enlace} />
+            ) : (
+              <>Invitación creada.</>
+            )
+          }
+        >
+          <p className="text-sm text-ink">{accion.negocio}</p>
+        </Propuesta>
+      );
+    case 'recuerdo':
+      return (
+        <Propuesta
+          titulo="¿Lo recuerdo?"
+          textoConfirmar="Recordar"
+          resultado={resultado}
+          onResultado={onResultado}
+          hacer={async () => ((await guardarRecuerdo(accion.texto)) ? { estado: 'hecha' } : 'No se pudo guardar.')}
+          hecho={<>Lo recordaré. Puedes verlo u olvidarlo en Ajustes.</>}
+        >
+          <p className="text-sm text-ink">«{accion.texto}»</p>
+        </Propuesta>
+      );
+  }
+}
+
+/**
+ * Una propuesta pendiente: se ve qué pasará y no ocurre nada hasta que el
+ * ingeniero pulsa el botón. `hacer` devuelve el resultado o un mensaje de error.
+ */
+function Propuesta({
+  titulo,
+  textoConfirmar,
+  resultado,
+  onResultado,
+  hacer,
+  hecho,
+  children,
+}: {
+  titulo: string;
+  textoConfirmar: string;
+  resultado: ResultadoAccion | undefined;
+  onResultado: (resultado: ResultadoAccion) => void;
+  hacer: () => Promise<ResultadoAccion | string>;
+  hecho: ReactNode;
+  children: ReactNode;
+}) {
+  const [trabajando, setTrabajando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirmar = async () => {
+    setTrabajando(true);
+    setError(null);
+    const r = await hacer();
+    setTrabajando(false);
+    if (typeof r === 'string') setError(r);
+    else onResultado(r);
+  };
+
+  return (
+    <div
+      className={
+        'rounded-xl border p-3 ' +
+        (resultado?.estado === 'hecha' ? 'border-positive/30 bg-positive/5' : 'border-accent/30 bg-accent/5')
+      }
+    >
+      <p
+        className={
+          'text-[11px] font-semibold tracking-wide uppercase ' +
+          (resultado?.estado === 'hecha' ? 'text-positive' : 'text-accent')
+        }
+      >
+        {titulo}
+      </p>
+      <div className="mt-1.5">{children}</div>
+      {resultado?.estado === 'hecha' ? (
+        <div className="mt-2 text-sm text-positive">✓ {hecho}</div>
+      ) : resultado?.estado === 'descartada' ? (
+        <p className="mt-2 text-xs text-ink-subtle">Descartado.</p>
+      ) : (
+        <>
+          {error && (
+            <p role="alert" className="mt-2 text-sm text-negative">
+              {error}
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void confirmar()}
+              disabled={trabajando}
+              className="btn btn-primary !px-3 !py-1.5 text-xs"
+            >
+              {trabajando ? 'Un momento…' : textoConfirmar}
+            </button>
+            <button
+              type="button"
+              onClick={() => onResultado({ estado: 'descartada' })}
+              disabled={trabajando}
+              className="btn btn-ghost !px-3 !py-1.5 text-xs"
+            >
+              Descartar
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** La invitación recién creada desde ABI, lista para mandarla. */
+function EnlaceCreado({ negocio, token }: { negocio: string; token: string }) {
+  const [copiado, setCopiado] = useState(false);
+  const url = urlInvitacion(token);
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      setCopiado(false);
+    }
+  };
+  return (
+    <span className="block">
+      Invitación creada.
+      <span className="mt-1 block font-mono text-xs break-all text-ink-muted">{url}</span>
+      <span className="mt-2 flex flex-wrap gap-2">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(mensajeInvitacion({ negocio, token }))}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary !px-3 !py-1.5 text-xs"
+        >
+          Enviar por WhatsApp
+        </a>
+        <button type="button" onClick={() => void copiar()} className="btn btn-ghost !px-3 !py-1.5 text-xs">
+          {copiado ? '✓ Copiado' : 'Copiar enlace'}
+        </button>
+      </span>
+    </span>
+  );
+}
+
 /** Un borrador de WhatsApp: se abre con el texto escrito y el ingeniero decide si lo envía. */
-function BorradorWhatsapp({ accion }: { accion: AccionAbi }) {
+function BorradorWhatsapp({ accion }: { accion: Extract<AccionAbi, { tipo: 'whatsapp' }> }) {
   const [copiado, setCopiado] = useState(false);
   const copiar = async () => {
     try {
@@ -189,18 +412,29 @@ function BorradorWhatsapp({ accion }: { accion: AccionAbi }) {
 
 function AjustesAbiForm({ onListo }: { onListo: () => void }) {
   const [ajustes, setAjustes] = useState<AjustesAbi | null>(null);
+  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const [uso, setUso] = useState<{ preguntas: number; costoUsd: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
-    void leerAjustes().then((a) => {
-      if (vigente) setAjustes(a);
+    void Promise.all([leerAjustes(), listarRecuerdos(), usoDeLaSemana()]).then(([a, r, u]) => {
+      if (!vigente) return;
+      setAjustes(a);
+      setRecuerdos(r);
+      setUso(u);
     });
     return () => {
       vigente = false;
     };
   }, []);
+
+  const olvidar = async (id: number) => {
+    setError(null);
+    if (await olvidarRecuerdo(id)) setRecuerdos((previos) => previos.filter((r) => r.id !== id));
+    else setError('No se pudo olvidar. Vuelve a intentarlo.');
+  };
 
   if (!ajustes) return <p className="mb-4 text-sm text-ink-subtle">Cargando ajustes…</p>;
 
@@ -245,6 +479,38 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
           cliente elija el horario.
         </span>
       </label>
+      <div>
+        <p className="mb-1.5 text-sm text-ink-muted">Lo que ABI recuerda</p>
+        {recuerdos.length === 0 ? (
+          <p className="text-[11px] text-ink-subtle">
+            Nada todavía. Dile «recuerda que…» y te propondrá guardarlo.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {recuerdos.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-start justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm text-ink"
+              >
+                <span className="min-w-0 break-words">{r.texto}</span>
+                <button
+                  type="button"
+                  onClick={() => void olvidar(r.id)}
+                  className="shrink-0 text-xs text-ink-subtle hover:text-negative"
+                >
+                  Olvidar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {uso && (
+        <p className="text-[11px] text-ink-subtle">
+          Últimos 7 días: {uso.preguntas} {uso.preguntas === 1 ? 'pregunta' : 'preguntas'} a ABI · unos{' '}
+          {uso.costoUsd.toFixed(2)} USD (estimado con los tokens que usó)
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-negative">
           {error}
@@ -324,12 +590,15 @@ function TextoAbi({ texto }: { texto: string }) {
   return <div className="space-y-2 text-sm break-words text-ink-muted [&_strong]:text-ink">{bloques}</div>;
 }
 
+/** **negritas** y *cursivas*; el resto, texto tal cual. */
 function conNegritas(texto: string): ReactNode[] {
-  return texto.split(/(\*\*[^*]+\*\*)/g).map((parte, i) =>
-    parte.startsWith('**') && parte.endsWith('**') && parte.length > 4 ? (
-      <strong key={i}>{parte.slice(2, -2)}</strong>
-    ) : (
-      parte
-    )
-  );
+  return texto.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((parte, i) => {
+    if (parte.startsWith('**') && parte.endsWith('**') && parte.length > 4) {
+      return <strong key={i}>{parte.slice(2, -2)}</strong>;
+    }
+    if (parte.startsWith('*') && parte.endsWith('*') && parte.length > 2) {
+      return <em key={i}>{parte.slice(1, -1)}</em>;
+    }
+    return parte;
+  });
 }

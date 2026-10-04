@@ -45,6 +45,8 @@ export function HoyPanel({
   onNuevos?: (cantidad: number) => void;
 }) {
   const [resumen, setResumen] = useState<ResumenHoy | null>(null);
+  // Sube cuando ABI cambia algo (una etapa, una invitación): se vuelve a leer.
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let vigente = true;
@@ -54,7 +56,7 @@ export function HoyPanel({
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [version]);
 
   useEffect(() => {
     if (resumen) onNuevos?.(resumen.totalEsperando);
@@ -115,7 +117,7 @@ export function HoyPanel({
         </p>
       )}
 
-      <ChatAbi sugerencias={sugerencias} />
+      <ChatAbi sugerencias={sugerencias} onCambio={() => setVersion((v) => v + 1)} />
 
       <div className="space-y-8">
         {/* ------------------------------------------------ esperan respuesta */}

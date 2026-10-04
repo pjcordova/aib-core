@@ -2,7 +2,7 @@
 -- AIB+ — Panel del ingeniero
 -- ============================================================================
 -- Lo que usa el panel del ingeniero: la vista `encargos` (pestaña Encargos y
--- página «Hoy» de ABI) y los ajustes de ABI.
+-- página «Hoy» de ABI) y lo de ABI: ajustes, memoria y registro.
 --
 -- Ejecutar después de supabase_seguimiento.sql y supabase_invitaciones.sql
 -- (usa seguimiento_encargos, perfiles e invitaciones). Se puede ejecutar más
@@ -97,3 +97,76 @@ CREATE POLICY "ajustes: el ingeniero cambia los suyos"
 
 REVOKE ALL ON public.ajustes_ingeniero FROM anon;
 GRANT SELECT, INSERT, UPDATE ON public.ajustes_ingeniero TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Memoria de ABI
+-- ----------------------------------------------------------------------------
+-- Preferencias que el ingeniero le pide a ABI que recuerde ("nunca cobro menos
+-- de S/ 1,200"). ABI las propone y solo se guardan si el ingeniero confirma;
+-- las ve y las borra desde los ajustes. ABI las lee en cada pregunta.
+CREATE TABLE IF NOT EXISTS public.abi_memoria (
+  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id    UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+  texto      TEXT NOT NULL CHECK (char_length(texto) BETWEEN 1 AND 300),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS abi_memoria_usuario_idx ON public.abi_memoria (user_id, created_at);
+
+ALTER TABLE public.abi_memoria ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "memoria: el ingeniero ve la suya" ON public.abi_memoria;
+CREATE POLICY "memoria: el ingeniero ve la suya"
+  ON public.abi_memoria FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+DROP POLICY IF EXISTS "memoria: el ingeniero añade a la suya" ON public.abi_memoria;
+CREATE POLICY "memoria: el ingeniero añade a la suya"
+  ON public.abi_memoria FOR INSERT TO authenticated
+  WITH CHECK (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+DROP POLICY IF EXISTS "memoria: el ingeniero borra de la suya" ON public.abi_memoria;
+CREATE POLICY "memoria: el ingeniero borra de la suya"
+  ON public.abi_memoria FOR DELETE TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+REVOKE ALL ON public.abi_memoria FROM anon;
+GRANT SELECT, INSERT, DELETE ON public.abi_memoria TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Registro de ABI
+-- ----------------------------------------------------------------------------
+-- Una fila por pregunta: qué consultó, cómo terminó, cuántos tokens usó y su
+-- coste estimado. Lo escribe el servidor con la sesión del ingeniero; nadie
+-- lo edita ni lo borra, para que sirva de auditoría.
+CREATE TABLE IF NOT EXISTS public.abi_registro (
+  id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id               UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+  pregunta              TEXT NOT NULL CHECK (char_length(pregunta) <= 300),
+  herramientas          TEXT[] NOT NULL DEFAULT '{}',
+  resultado             TEXT NOT NULL CHECK (resultado IN ('ok', 'rechazo', 'truncado', 'demasiadas_vueltas', 'error')),
+  tokens_entrada        INTEGER NOT NULL DEFAULT 0,
+  tokens_cache_escritos INTEGER NOT NULL DEFAULT 0,
+  tokens_cache_leidos   INTEGER NOT NULL DEFAULT 0,
+  tokens_salida         INTEGER NOT NULL DEFAULT 0,
+  costo_estimado_usd    NUMERIC(10, 5) NOT NULL DEFAULT 0,
+  milisegundos          INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS abi_registro_usuario_idx ON public.abi_registro (user_id, created_at);
+
+ALTER TABLE public.abi_registro ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "registro: el ingeniero ve el suyo" ON public.abi_registro;
+CREATE POLICY "registro: el ingeniero ve el suyo"
+  ON public.abi_registro FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+DROP POLICY IF EXISTS "registro: se anota lo del ingeniero" ON public.abi_registro;
+CREATE POLICY "registro: se anota lo del ingeniero"
+  ON public.abi_registro FOR INSERT TO authenticated
+  WITH CHECK (user_id = (SELECT auth.uid()) AND public.es_ingeniero());
+
+REVOKE ALL ON public.abi_registro FROM anon;
+GRANT SELECT, INSERT ON public.abi_registro TO authenticated;

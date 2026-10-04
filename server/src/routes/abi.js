@@ -46,26 +46,69 @@ function leerConversacion(cuerpo) {
   return limpia;
 }
 
-router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), mantenerConexion, async (req, res, next) => {
+/** Lee algo opcional para ABI: si falla, sigue sin ello en vez de no responder. */
+function leerOpcional(token, ruta, params, porDefecto) {
+  return consultarComo(token, ruta, { params }).catch((error) => {
+    console.warn(`[AIB+] ABI sin ${ruta}:`, error.message);
+    return porDefecto;
+  });
+}
+
+/**
+ * Anota la pregunta en abi_registro, con la sesión del ingeniero. Si falla no
+ * se pierde la respuesta: solo queda la línea en los logs del servidor.
+ */
+async function anotar(token, pregunta, r) {
   try {
-    const conversacion = leerConversacion(req.body);
-    if (!conversacion) {
-      return res.status(400).json({ success: false, error: 'Escríbele algo a ABI.' });
-    }
-
-    // Su nombre y su enlace de agenda; si no hay ajustes, ABI se las arregla.
-    const ajustes = await consultarComo(req.tokenUsuario, 'ajustes_ingeniero', {
-      params: [['select', 'nombre,enlace_agenda']],
-    })
-      .then((filas) => filas[0] ?? null)
-      .catch((error) => {
-        console.warn('[AIB+] ABI sin ajustes:', error.message);
-        return null;
-      });
-
-    const { texto, acciones, uso } = await conversarConAbi({ token: req.tokenUsuario, conversacion, ajustes });
-    return res.json({ success: true, respuesta: texto, acciones, usage: uso });
+    await consultarComo(token, 'abi_registro', {
+      cuerpo: {
+        pregunta: pregunta.slice(0, 300),
+        herramientas: r.herramientas ?? [],
+        resultado: r.resultado,
+        tokens_entrada: r.uso?.input_tokens ?? 0,
+        tokens_cache_escritos: r.uso?.cache_creation_input_tokens ?? 0,
+        tokens_cache_leidos: r.uso?.cache_read_input_tokens ?? 0,
+        tokens_salida: r.uso?.output_tokens ?? 0,
+        costo_estimado_usd: Number((r.costoUsd ?? 0).toFixed(5)),
+        milisegundos: r.milisegundos ?? 0,
+      },
+    });
   } catch (error) {
+    console.warn('[AIB+] No se pudo anotar la pregunta a ABI:', error.message);
+  }
+}
+
+router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), mantenerConexion, async (req, res, next) => {
+  const conversacion = leerConversacion(req.body);
+  if (!conversacion) {
+    return res.status(400).json({ success: false, error: 'Escríbele algo a ABI.' });
+  }
+  const pregunta = conversacion.at(-1).texto;
+  const inicio = Date.now();
+
+  try {
+    // Su nombre, su enlace de agenda y lo que le pidió recordar.
+    const [ajustes, recuerdos] = await Promise.all([
+      leerOpcional(req.tokenUsuario, 'ajustes_ingeniero', [['select', 'nombre,enlace_agenda']], []).then(
+        (filas) => filas[0] ?? null
+      ),
+      leerOpcional(
+        req.tokenUsuario,
+        'abi_memoria',
+        [
+          ['select', 'texto'],
+          ['order', 'created_at.asc'],
+          ['limit', '40'],
+        ],
+        []
+      ).then((filas) => filas.map((f) => f.texto)),
+    ]);
+
+    const r = await conversarConAbi({ token: req.tokenUsuario, conversacion, ajustes, recuerdos });
+    await anotar(req.tokenUsuario, pregunta, r);
+    return res.json({ success: true, respuesta: r.texto, acciones: r.acciones });
+  } catch (error) {
+    await anotar(req.tokenUsuario, pregunta, { resultado: 'error', milisegundos: Date.now() - inicio });
     return next(error);
   }
 });

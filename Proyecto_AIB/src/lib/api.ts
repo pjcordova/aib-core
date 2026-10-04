@@ -10,6 +10,7 @@
 
 import type { ProductOwnerResponse, QAHistory } from '../Types/productOwner';
 import { supabase } from './supabase';
+import type { EstadoEncargo } from './seguimiento';
 
 // En desarrollo el backend vive en otro puerto. En producción (Vercel) la API
 // se sirve desde el mismo origen que la web, así que una base vacía produce
@@ -246,21 +247,66 @@ export async function rellenarPlantilla<T>(
   return { textos: data.textos, usage: data.usage };
 }
 
-/** Lo que ABI deja listo para que el ingeniero lo confirme. De momento, un WhatsApp. */
-export interface AccionAbi {
-  tipo: 'whatsapp';
-  /** A quién va: el cliente o el negocio. */
-  para: string;
-  mensaje: string;
-  /** Enlace wa.me con el texto ya escrito. Abrirlo no envía nada. */
-  url: string;
+/**
+ * Lo que ABI propone. Nada de esto está hecho todavía: el panel lo enseña
+ * como una tarjeta y lo hace el ingeniero con su botón (y con sus permisos).
+ */
+export type AccionAbi =
+  | {
+      tipo: 'whatsapp';
+      /** A quién va: el cliente o el negocio. */
+      para: string;
+      mensaje: string;
+      /** Enlace wa.me con el texto ya escrito. Abrirlo no envía nada. */
+      url: string;
+    }
+  | {
+      tipo: 'etapa';
+      encargoId: string;
+      para: string;
+      etapaActual: EstadoEncargo;
+      etapa: EstadoEncargo;
+      /** Nota para el cliente; vacía si no hace falta. */
+      nota: string;
+    }
+  | { tipo: 'invitacion'; negocio: string; esPrueba: boolean }
+  | { tipo: 'recuerdo'; texto: string };
+
+const ETAPAS_VALIDAS: EstadoEncargo[] = ['recibido', 'en_revision', 'propuesta_enviada', 'en_desarrollo', 'publicada'];
+const ID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** Solo se aceptan acciones con la forma esperada: lo que no encaja, se descarta. */
+function esAccionValida(a: unknown): a is AccionAbi {
+  const x = a as Record<string, unknown> | null;
+  if (!x || typeof x !== 'object') return false;
+  const texto = (v: unknown, max: number) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+  switch (x.tipo) {
+    case 'whatsapp':
+      return texto(x.para, 200) && texto(x.mensaje, 1500) && typeof x.url === 'string' && x.url.startsWith('https://wa.me/');
+    case 'etapa':
+      return (
+        typeof x.encargoId === 'string' &&
+        ID_VALIDO.test(x.encargoId) &&
+        texto(x.para, 200) &&
+        ETAPAS_VALIDAS.includes(x.etapa as EstadoEncargo) &&
+        ETAPAS_VALIDAS.includes(x.etapaActual as EstadoEncargo) &&
+        typeof x.nota === 'string' &&
+        x.nota.length <= 280
+      );
+    case 'invitacion':
+      return texto(x.negocio, 80) && typeof x.esPrueba === 'boolean';
+    case 'recuerdo':
+      return texto(x.texto, 300);
+    default:
+      return false;
+  }
 }
 
-/** Le pasa la conversación a ABI y devuelve su respuesta y los borradores que preparó. */
+/** Le pasa la conversación a ABI y devuelve su respuesta y lo que propone. */
 export async function preguntarAbi(
   conversacion: { rol: 'usuario' | 'abi'; texto: string }[]
 ): Promise<{ respuesta: string; acciones: AccionAbi[] }> {
-  const data = await post<{ success: boolean; respuesta?: string; acciones?: AccionAbi[]; error?: string }>(
+  const data = await post<{ success: boolean; respuesta?: string; acciones?: unknown[]; error?: string }>(
     '/api/abi',
     { conversacion },
     TIMEOUT_MS.abi
@@ -268,8 +314,5 @@ export async function preguntarAbi(
   if (!data.success || typeof data.respuesta !== 'string') {
     throw new ApiError(data.error ?? 'ABI no pudo responder. Vuelve a intentarlo.', 502, true);
   }
-  const acciones = (data.acciones ?? []).filter(
-    (a) => a?.tipo === 'whatsapp' && typeof a.url === 'string' && a.url.startsWith('https://wa.me/')
-  );
-  return { respuesta: data.respuesta, acciones };
+  return { respuesta: data.respuesta, acciones: (data.acciones ?? []).filter(esAccionValida) };
 }
