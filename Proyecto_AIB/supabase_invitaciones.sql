@@ -143,6 +143,60 @@ REVOKE ALL ON FUNCTION public.cambiar_invitacion(UUID, BOOLEAN, BOOLEAN) FROM PU
 GRANT EXECUTE ON FUNCTION public.crear_invitacion(TEXT, BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cambiar_invitacion(UUID, BOOLEAN, BOOLEAN) TO authenticated;
 
+-- Eliminar una invitación borra también los proyectos de su cliente, salvo
+-- los encargos aceptados de una invitación real: esos siguen en «Encargos»,
+-- protegidos como cualquier encargo aceptado. Los de una invitación de prueba
+-- se borran con todo lo demás; para borrar un encargo real hay que marcar
+-- antes la invitación como prueba, así nunca se pierde uno por un clic.
+-- Enlaces, seguimiento y avisos se van en cascada con cada proyecto; los
+-- comentarios se borran aquí porque su clave es SET NULL. Las fotos que el
+-- cliente subió quedan en Storage: SQL no puede borrar sus archivos.
+CREATE OR REPLACE FUNCTION public.eliminar_invitacion(p_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_inv         public.invitaciones%ROWTYPE;
+  v_borrados    INTEGER := 0;
+  v_conservados INTEGER := 0;
+BEGIN
+  IF NOT public.es_ingeniero() THEN
+    RAISE EXCEPTION 'Solo el ingeniero elimina invitaciones' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_inv FROM public.invitaciones
+  WHERE id = p_id AND ingeniero_id = auth.uid()
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('estado', 'no_existe');
+  END IF;
+
+  IF v_inv.cliente_id IS NOT NULL THEN
+    DELETE FROM public.comentarios c
+    USING public.proyectos p
+    WHERE c.proyecto_id = p.id
+      AND p.user_id = v_inv.cliente_id
+      AND (v_inv.es_prueba OR p.payload->>'aceptado' IS DISTINCT FROM 'true');
+
+    DELETE FROM public.proyectos
+    WHERE user_id = v_inv.cliente_id
+      AND (v_inv.es_prueba OR payload->>'aceptado' IS DISTINCT FROM 'true');
+    GET DIAGNOSTICS v_borrados = ROW_COUNT;
+
+    SELECT count(*) INTO v_conservados FROM public.proyectos WHERE user_id = v_inv.cliente_id;
+  END IF;
+
+  DELETE FROM public.invitaciones WHERE id = v_inv.id;
+
+  RETURN jsonb_build_object('estado', 'ok', 'borrados', v_borrados, 'conservados', v_conservados);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.eliminar_invitacion(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.eliminar_invitacion(UUID) TO authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 4. El cliente entra con el enlace
 -- ----------------------------------------------------------------------------

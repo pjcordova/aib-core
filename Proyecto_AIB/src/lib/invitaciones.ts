@@ -116,6 +116,21 @@ export async function cambiarInvitacion(
   return !error && data === true;
 }
 
+/**
+ * Elimina la invitación y los proyectos de su cliente. Los encargos aceptados
+ * de una invitación real se conservan (supabase_invitaciones.sql). Devuelve
+ * cuántos proyectos se borraron y cuántos se conservaron, o null si falló.
+ */
+export async function eliminarInvitacion(id: string): Promise<{ borrados: number; conservados: number } | null> {
+  const { data, error } = await supabase.rpc('eliminar_invitacion', { p_id: id });
+  const r = data as { estado?: string; borrados?: number; conservados?: number } | null;
+  if (error || r?.estado !== 'ok') {
+    console.error('[AIB+] No se pudo eliminar la invitación:', error?.message ?? r?.estado);
+    return null;
+  }
+  return { borrados: r.borrados ?? 0, conservados: r.conservados ?? 0 };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Cliente invitado                                                           */
 /* -------------------------------------------------------------------------- */

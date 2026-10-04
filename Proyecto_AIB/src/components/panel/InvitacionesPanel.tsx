@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   cambiarInvitacion,
   crearInvitacion,
+  eliminarInvitacion,
   ETAPAS_INVITACION,
   etapaDe,
   fechaDeEtapa,
@@ -34,6 +35,9 @@ export function InvitacionesPanel() {
   const [error, setError] = useState<string | null>(null);
   /** Código de la invitación recién creada, para destacarla. */
   const [recien, setRecien] = useState<string | null>(null);
+  /** Qué pasó al eliminar la última invitación. */
+  const [eliminada, setEliminada] = useState<{ texto: string; fallo: boolean } | null>(null);
+  const [borrando, setBorrando] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -69,6 +73,36 @@ export function InvitacionesPanel() {
       return;
     }
     if (await cambiarInvitacion(inv.id, cambios)) setVersion((v) => v + 1);
+  };
+
+  // Los encargos aceptados de una invitación real se conservan: para borrar
+  // uno hay que marcar antes la invitación como prueba.
+  const eliminar = async (inv: Invitacion) => {
+    const queSeBorra = inv.es_prueba
+      ? 'Se borra también todo lo que generó, incluido el encargo si lo aceptó.'
+      : inv.aceptada_en
+        ? 'Se borran sus maquetas sin aceptar; el encargo aceptado se queda en «Encargos». Deja de contar en el embudo.'
+        : 'Se borran también sus maquetas y deja de contar en el embudo.';
+    if (!window.confirm(`¿Eliminar la invitación de ${inv.negocio}? Su enlace dejará de funcionar. ${queSeBorra} No se puede deshacer.`)) {
+      return;
+    }
+    setBorrando(inv.id);
+    const r = await eliminarInvitacion(inv.id);
+    setBorrando(null);
+    if (!r) {
+      setEliminada({ texto: `No se pudo eliminar la invitación de ${inv.negocio}. Vuelve a intentarlo.`, fallo: true });
+      return;
+    }
+    const borrados = r.borrados === 1 ? '1 proyecto' : `${r.borrados} proyectos`;
+    setEliminada({
+      texto:
+        `Invitación de ${inv.negocio} eliminada` +
+        (r.borrados > 0 ? `, con ${borrados}.` : '.') +
+        (r.conservados > 0 ? ' Su encargo aceptado sigue en «Encargos».' : ''),
+      fallo: false,
+    });
+    if (recien === inv.token) setRecien(null);
+    setVersion((v) => v + 1);
   };
 
   if (cargando) return <p className="p-6 text-sm text-ink-subtle">Cargando invitaciones…</p>;
@@ -164,6 +198,14 @@ export function InvitacionesPanel() {
       )}
 
       {/* ------------------------------------------------------------ lista */}
+      {eliminada && (
+        <p
+          role={eliminada.fallo ? 'alert' : 'status'}
+          className={'mb-3 text-sm ' + (eliminada.fallo ? 'text-negative' : 'text-ink-muted')}
+        >
+          {eliminada.texto}
+        </p>
+      )}
       {invitaciones.length === 0 ? (
         <p className="text-sm text-ink-muted">Todavía no has creado invitaciones.</p>
       ) : (
@@ -228,6 +270,14 @@ export function InvitacionesPanel() {
                     className="btn btn-ghost !px-3 !py-1.5 text-xs"
                   >
                     {inv.es_prueba ? 'No es una prueba' : 'Marcar como prueba'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void eliminar(inv)}
+                    disabled={borrando === inv.id}
+                    className="btn btn-ghost !px-3 !py-1.5 text-xs text-negative hover:border-negative/50"
+                  >
+                    {borrando === inv.id ? 'Eliminando…' : 'Eliminar'}
                   </button>
                 </div>
               </li>
