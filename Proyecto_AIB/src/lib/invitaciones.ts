@@ -165,6 +165,12 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
   if (session && !session.user.is_anonymous) return { estado: 'con_cuenta' };
 
   if (!session) {
+    // Antes de abrir una sesión anónima se comprueba el enlace: uno mal copiado
+    // o inventado no debe dejar una sesión vacía en Supabase. Si la comprobación
+    // falla por red, se sigue como siempre y lo decide reclamar_invitacion.
+    const { data: valida, error: errorValida } = await supabase.rpc('invitacion_valida', { p_token: token });
+    if (!errorValida && valida === false) return { estado: 'no_existe' };
+
     const { error } = await supabase.auth.signInAnonymously();
     if (error) {
       console.error('[AIB+] No se pudo abrir la sesión de invitado:', error.message);

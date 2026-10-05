@@ -11,6 +11,7 @@ import {
   urlInvitacion,
   type Invitacion,
 } from '../../lib/invitaciones';
+import { EmbudoCliente } from './EmbudoCliente';
 
 // ---------------------------------------------------------------------------
 // Invitaciones
@@ -196,6 +197,8 @@ export function InvitacionesPanel() {
           <p className="mt-2 text-[11px] text-ink-subtle">No cuenta las invitaciones marcadas como prueba.</p>
         </div>
       )}
+
+      <EmbudoCliente />
 
       {/* ------------------------------------------------------------ lista */}
       {eliminada && (

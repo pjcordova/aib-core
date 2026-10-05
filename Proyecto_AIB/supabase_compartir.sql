@@ -86,13 +86,32 @@ GRANT EXECUTE ON FUNCTION public.compartir_proyecto(UUID) TO authenticated;
 -- Devuelve solo lo que hace falta para pintarla: la página (o el cuerpo que
 -- escribió la IA) y el nombre, el logo y los colores con que se monta. Nada
 -- del resto del proyecto. Si el código no existe, devuelve NULL.
+--
+-- Cada apertura suma una en `aperturas` (para medir si el enlace circula),
+-- salvo la del dueño de la maqueta o la del ingeniero, que no cuentan. Es una
+-- cuenta en bruto: recargar la página también suma.
+ALTER TABLE public.enlaces_compartidos ADD COLUMN IF NOT EXISTS aperturas INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.enlaces_compartidos ADD COLUMN IF NOT EXISTS ultima_apertura TIMESTAMPTZ;
+
 CREATE OR REPLACE FUNCTION public.maqueta_compartida(p_token TEXT)
 RETURNS JSONB
-LANGUAGE sql
-STABLE
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+  v_enlace    public.enlaces_compartidos%ROWTYPE;
+  v_resultado JSONB;
+BEGIN
+  IF p_token IS NULL OR p_token !~ '^[0-9a-f]{32}$' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT * INTO v_enlace FROM public.enlaces_compartidos WHERE token = p_token;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
   SELECT jsonb_build_object(
     'empresa',   p.payload->'ficha'->>'empresa',
     'logo',      p.payload->'ficha'->>'logo',
@@ -100,10 +119,19 @@ AS $$
     'documento', p.payload->>'documento',
     'html',      p.payload->>'html'
   )
-  FROM public.enlaces_compartidos e
-  JOIN public.proyectos p ON p.id = e.proyecto_id
-  WHERE p_token ~ '^[0-9a-f]{32}$'
-    AND e.token = p_token;
+  INTO v_resultado
+  FROM public.proyectos p
+  WHERE p.id = v_enlace.proyecto_id;
+
+  IF v_resultado IS NOT NULL
+     AND (auth.uid() IS NULL OR (auth.uid() <> v_enlace.user_id AND NOT public.es_ingeniero())) THEN
+    UPDATE public.enlaces_compartidos
+    SET aperturas = aperturas + 1, ultima_apertura = now()
+    WHERE token = p_token;
+  END IF;
+
+  RETURN v_resultado;
+END;
 $$;
 
 REVOKE ALL ON FUNCTION public.maqueta_compartida(TEXT) FROM PUBLIC;

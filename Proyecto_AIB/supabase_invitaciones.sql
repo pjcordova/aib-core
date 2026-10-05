@@ -197,6 +197,23 @@ $$;
 REVOKE ALL ON FUNCTION public.eliminar_invitacion(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.eliminar_invitacion(UUID) TO authenticated;
 
+-- ¿Existe y está activa? Se pregunta ANTES de abrir la sesión anónima: así un
+-- enlace mal copiado o inventado no deja una sesión vacía en Supabase. Los
+-- códigos tienen 128 bits al azar: no se pueden adivinar preguntando.
+CREATE OR REPLACE FUNCTION public.invitacion_valida(p_token TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT p_token ~ '^[0-9a-f]{32}$'
+     AND EXISTS (SELECT 1 FROM public.invitaciones WHERE token = p_token AND activa);
+$$;
+
+REVOKE ALL ON FUNCTION public.invitacion_valida(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.invitacion_valida(TEXT) TO anon, authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 4. El cliente entra con el enlace
 -- ----------------------------------------------------------------------------

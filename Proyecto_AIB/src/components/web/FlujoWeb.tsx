@@ -42,6 +42,7 @@ import { ContactoEncargo, type DatosEncargo } from '../ContactoEncargo';
 import { ErrorState } from '../ui/Primitives';
 import { MiniVista } from '../panel/MiniVista';
 import { WebPreview } from './WebPreview';
+import { nuevaSesionDeCuestionario, registrarProgreso } from '../../lib/embudo';
 
 type Fase = 'preguntas' | 'buscando' | 'eligiendo' | 'generando' | 'listo' | 'error';
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
@@ -107,6 +108,14 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
 
   const pregunta = PREGUNTAS_WEB[paso];
   const total = PREGUNTAS_WEB.length;
+
+  // Embudo (lib/embudo.ts): hasta dónde llega este intento. Solo el paso, nunca
+  // las respuestas.
+  const [sesion] = useState(nuevaSesionDeCuestionario);
+  useEffect(() => {
+    if (fase === 'preguntas') registrarProgreso(sesion, PREGUNTAS_WEB[paso].id);
+    if (fase === 'listo') registrarProgreso(sesion, 'maqueta');
+  }, [paso, fase, sesion]);
 
   const ficha = (): FichaWeb => ({
     empresa: empresa.trim(),
@@ -238,6 +247,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
 
   /** Tras la última pregunta: ¿hay plantillas del ingeniero que encajen? */
   const terminar = async () => {
+    registrarProgreso(sesion, 'fin-cuestionario');
     setFase('buscando');
     const f = ficha();
     const activas = await listarPlantillasActivas();
@@ -357,6 +367,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
     if (plantillaUsada) void registrarEvento(plantillaUsada.id, 'aceptada');
     setPidiendoContacto(false);
     setAceptacion('aceptado');
+    registrarProgreso(sesion, 'acepto');
     onGuardado?.();
   };
 
@@ -413,7 +424,10 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
               ? elegirPlantilla(ultimaElegida.current)
               : generarConIA())
           }
-          onAceptar={() => setPidiendoContacto(true)}
+          onAceptar={() => {
+            registrarProgreso(sesion, 'quiso-aceptar');
+            setPidiendoContacto(true);
+          }}
           onGuardarEdicion={guardarCambios}
           proyectoId={idGuardado}
         />

@@ -267,3 +267,112 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resumen_del_dia(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resumen_del_dia(TEXT) TO anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Embudo del cliente
+-- ----------------------------------------------------------------------------
+-- Hasta dónde llega cada intento del cuestionario web: una fila por intento
+-- (la crea el navegador con un id al azar al abrir el cuestionario) con el
+-- paso más lejano al que llegó. No guarda ninguna respuesta. Los pasos los
+-- define el panel (lib/embudo.ts): las 7 preguntas, terminar el cuestionario,
+-- ver la maqueta, pulsar «¡Me gusta, sigamos!» y aceptar. `orden` es su
+-- posición, así el paso más lejano es el de mayor orden.
+-- Los intentos del ingeniero y de las invitaciones de prueba se marcan como
+-- prueba al crearse y no cuentan.
+CREATE TABLE IF NOT EXISTS public.progreso_cuestionario (
+  sesion         UUID PRIMARY KEY,
+  user_id        UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  invitacion_id  UUID REFERENCES public.invitaciones(id) ON DELETE SET NULL,
+  es_prueba      BOOLEAN NOT NULL DEFAULT false,
+  paso           TEXT NOT NULL CHECK (paso ~ '^[a-z0-9_-]{1,40}$'),
+  orden          INTEGER NOT NULL CHECK (orden BETWEEN 0 AND 50),
+  empezado_en    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Sin políticas: solo se escribe con registrar_progreso y se lee con
+-- embudo_cliente.
+ALTER TABLE public.progreso_cuestionario ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.progreso_cuestionario FROM anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.registrar_progreso(p_sesion UUID, p_paso TEXT, p_orden INTEGER)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_inv    public.invitaciones%ROWTYPE;
+  v_prueba BOOLEAN;
+BEGIN
+  IF auth.uid() IS NULL OR p_sesion IS NULL OR p_paso IS NULL
+     OR p_paso !~ '^[a-z0-9_-]{1,40}$' OR p_orden IS NULL OR p_orden NOT BETWEEN 0 AND 50 THEN
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_inv FROM public.invitaciones WHERE cliente_id = auth.uid() LIMIT 1;
+  v_prueba := EXISTS (SELECT 1 FROM public.perfiles WHERE user_id = auth.uid() AND rol = 'ingeniero')
+              OR COALESCE(v_inv.es_prueba, false);
+
+  INSERT INTO public.progreso_cuestionario AS p (sesion, user_id, invitacion_id, es_prueba, paso, orden)
+  VALUES (p_sesion, auth.uid(), v_inv.id, v_prueba, p_paso, p_orden)
+  ON CONFLICT (sesion) DO UPDATE
+    SET paso = CASE WHEN EXCLUDED.orden > p.orden THEN EXCLUDED.paso ELSE p.paso END,
+        orden = GREATEST(p.orden, EXCLUDED.orden),
+        actualizado_en = now()
+    WHERE p.user_id = auth.uid();
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.registrar_progreso(UUID, TEXT, INTEGER) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.registrar_progreso(UUID, TEXT, INTEGER) TO authenticated;
+
+-- Lo que ve el ingeniero: cuántos intentos reales llegaron a cada paso y
+-- cómo circulan los enlaces compartidos de clientes reales.
+CREATE OR REPLACE FUNCTION public.embudo_cliente()
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.es_ingeniero() THEN
+    RAISE EXCEPTION 'Solo el ingeniero ve el embudo' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'desde', (SELECT min(empezado_en) FROM public.progreso_cuestionario),
+    'intentos', (SELECT count(*) FROM public.progreso_cuestionario WHERE NOT es_prueba),
+    'por_orden', (
+      SELECT COALESCE(jsonb_object_agg(orden, n), '{}'::jsonb) FROM (
+        SELECT orden, count(*) AS n FROM public.progreso_cuestionario WHERE NOT es_prueba GROUP BY orden
+      ) x
+    ),
+    'enlaces', (
+      SELECT jsonb_build_object(
+        'creados', count(*),
+        'abiertos', count(*) FILTER (WHERE e.aperturas > 0),
+        'aperturas', COALESCE(sum(e.aperturas), 0),
+        'lista', COALESCE(
+          jsonb_agg(
+            jsonb_build_object('negocio', e.empresa, 'aperturas', e.aperturas, 'ultima', e.ultima_apertura)
+            ORDER BY e.aperturas DESC, e.created_at DESC
+          ) FILTER (WHERE e.aperturas > 0),
+          '[]'::jsonb
+        )
+      )
+      FROM (
+        SELECT ec.aperturas, ec.ultima_apertura, ec.created_at, p.payload->'ficha'->>'empresa' AS empresa
+        FROM public.enlaces_compartidos ec
+        JOIN public.proyectos p ON p.id = ec.proyecto_id
+        WHERE NOT EXISTS (SELECT 1 FROM public.perfiles pf WHERE pf.user_id = ec.user_id AND pf.rol = 'ingeniero')
+          AND NOT EXISTS (SELECT 1 FROM public.invitaciones i WHERE i.cliente_id = ec.user_id AND i.es_prueba)
+      ) e
+    )
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.embudo_cliente() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.embudo_cliente() TO authenticated;
