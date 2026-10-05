@@ -16,6 +16,7 @@ import { sanearDocumento } from './edicion';
 import { PREFIJO_FOTOS } from './fotos';
 import { colorSeguro } from './plantillas';
 import { PALETAS, type FichaWeb } from './servicios';
+import { conAnimaciones } from './animaciones';
 
 /** Dirección pública de un enlace. */
 export function urlDeEnlace(token: string): string {
@@ -108,7 +109,7 @@ export async function leerMaquetaCompartida(token: string): Promise<MaquetaCompa
   }
   if (!documento) return null;
 
-  return { empresa, documento: documentoPublico(documento) };
+  return { empresa, documento: documentoPublico(conAnimaciones(documento)) };
 }
 
 /**

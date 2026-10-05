@@ -42,7 +42,7 @@ Ejecuta estos scripts, en este orden, en el SQL Editor de Supabase:
 
 1. `Proyecto_AIB/supabase_rls_setup.sql` — la tabla `proyectos` y sus políticas de Row Level Security, que garantizan que cada cliente solo vea sus filas.
 2. `Proyecto_AIB/supabase_roles_plantillas.sql` — los roles (cliente o ingeniero), el catálogo de plantillas y sus contadores.
-3. `Proyecto_AIB/supabase_cuota_ia.sql` — el tope diario de gasto en IA por usuario y en total. Sin él, el servidor rechaza todas las llamadas a la IA. Los límites se cambian en la tabla `limites_ia` (en céntimos de dólar).
+3. `Proyecto_AIB/supabase_cuota_ia.sql` — el tope diario de gasto en IA por usuario y en total. Sin él, el servidor rechaza todas las llamadas a la IA. Los límites se cambian en la tabla `limites_ia` (en céntimos de dólar). Si una llamada a la IA falla, el servidor devuelve lo reservado antes de responder (`devolver_cuota_ia`, como mucho 3 veces al día por usuario).
 4. `Proyecto_AIB/supabase_fotos.sql` — el bucket `fotos` de Storage, donde el cliente sube las fotos de su maqueta: cada usuario solo escribe en su carpeta, solo imágenes y de hasta 2 MB.
 5. `Proyecto_AIB/supabase_compartir.sql` — los enlaces para compartir la maqueta (`/ver/<código>`). Sin sesión solo se puede leer la maqueta de un código válido, nada más del proyecto.
 6. `Proyecto_AIB/supabase_seguimiento.sql` — el seguimiento de los encargos (Recibido → En revisión → Propuesta enviada → En desarrollo → Publicada). Solo el ingeniero añade etapas; el cliente ve las de sus proyectos y no puede cambiarlas.

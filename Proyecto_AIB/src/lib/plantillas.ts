@@ -14,6 +14,7 @@
 import Mustache from 'mustache';
 import { ajustar, escapar, ID_PALETA, textoLegible } from './marca';
 import type { FichaWeb, Paleta } from './servicios';
+import { conAnimaciones } from './animaciones';
 
 /** Tipos de negocio con los que se empareja una plantilla. */
 export type CategoriaNegocio =
@@ -163,7 +164,7 @@ export function renderizarPlantilla<T>(
   // daría un oscuro parecido pero no el que él eligió.
   const estilosCliente = ficha.paleta ? estilosDePaleta(plantilla as PlantillaBase, ficha.paleta) : '';
 
-  return `<!doctype html>
+  return conAnimaciones(`<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -176,7 +177,7 @@ ${estilosCliente ? `<style id="${ID_PALETA}">${estilosCliente}</style>` : ''}
 <body>
 ${cuerpo}
 </body>
-</html>`;
+</html>`);
 }
 
 /** Secciones que pidió el cliente y la plantilla no sabe mostrar. */

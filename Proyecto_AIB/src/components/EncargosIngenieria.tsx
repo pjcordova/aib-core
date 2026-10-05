@@ -24,6 +24,7 @@ import {
   type FiltrosEncargos,
 } from '../lib/encargos';
 import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
+import { conAnimaciones } from '../lib/animaciones';
 
 // ---------------------------------------------------------------------------
 // Encargos aceptados
@@ -754,7 +755,8 @@ function descargarMaqueta(encargo: ProyectoCompleto): boolean {
   // Las maquetas de plantilla se guardan ya completas; las generadas por IA,
   // solo el cuerpo, y se montan aquí.
   const documento =
-    encargo.documento ?? (encargo.html ? construirDocumento(encargo.html, encargo.ficha) : null);
+    (encargo.documento ? conAnimaciones(encargo.documento) : null) ??
+    (encargo.html ? construirDocumento(encargo.html, encargo.ficha) : null);
   if (!documento) return false;
   const url = URL.createObjectURL(new Blob([documento], { type: 'text/html;charset=utf-8' }));
   const enlace = document.createElement('a');

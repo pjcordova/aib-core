@@ -8,7 +8,7 @@ import {
 } from '../lib/api';
 import { guardarProyecto, enviarEncargo } from '../lib/proyectos';
 import { ContactoEncargo, type DatosEncargo } from './ContactoEncargo';
-import { PrototypePreview } from './PrototypePreview';
+import { PrototypePreview } from './PrototypePreviewDiferido';
 import { ErrorState, ProgressTrail, QuestionSkeleton } from './ui/Primitives';
 
 interface Props {

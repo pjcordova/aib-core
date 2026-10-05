@@ -412,3 +412,55 @@ $$;
 
 REVOKE ALL ON FUNCTION public.reservar_cuota_ia(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reservar_cuota_ia(TEXT) TO authenticated;
+
+-- Devuelve lo reservado cuando la llamada a la IA falla (el servidor la llama
+-- antes de responder con el error): que un fallo nuestro no le gaste el tope
+-- al cliente. Pasó con la primera invitación real. Como cualquiera con sesión
+-- podría llamarla sin que algo falle, tiene dos topes: como mucho 3
+-- devoluciones al día y nunca más de lo que gastó ese día.
+CREATE OR REPLACE FUNCTION public.devolver_cuota_ia(p_tipo TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  hoy DATE := (now() AT TIME ZONE 'America/Lima')::date;
+  coste INTEGER;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN 'sin_sesion';
+  END IF;
+
+  -- Los mismos costes que reservar_cuota_ia.
+  coste := CASE p_tipo
+    WHEN 'preguntas' THEN 1
+    WHEN 'plantilla' THEN 3
+    WHEN 'preview-web' THEN 6
+    WHEN 'documentacion' THEN 6
+    WHEN 'prototipo' THEN 25
+    WHEN 'abi' THEN 5
+  END;
+  IF coste IS NULL THEN
+    RETURN 'tipo_desconocido';
+  END IF;
+
+  UPDATE public.uso_ia
+  SET centimos = centimos - coste,
+      devoluciones = devoluciones + 1
+  WHERE user_id = auth.uid() AND dia = hoy AND devoluciones < 3 AND centimos >= coste;
+  IF NOT FOUND THEN
+    RETURN 'sin_devolucion';
+  END IF;
+
+  IF public.es_anonimo() THEN
+    UPDATE public.invitaciones
+    SET centimos_ia = GREATEST(centimos_ia - coste, 0)
+    WHERE cliente_id = auth.uid() AND activa;
+  END IF;
+  RETURN 'ok';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.devolver_cuota_ia(TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.devolver_cuota_ia(TEXT) TO authenticated;

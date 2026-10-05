@@ -29,6 +29,29 @@ const MENSAJES = {
  * Si no se puede comprobar la cuota, se deniega: fallar abierto aquí sería
  * volver a dejar el saldo sin protección.
  */
+/**
+ * Devuelve lo reservado para `tipo` (devolver_cuota_ia, con tope de 3 al día).
+ * Nunca falla hacia fuera: si no se puede, solo queda en los logs.
+ */
+async function devolverCuota(token, tipo) {
+  try {
+    const respuesta = await fetch(`${config.supabaseUrl}/rest/v1/rpc/devolver_cuota_ia`, {
+      method: 'POST',
+      headers: {
+        apikey: config.supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_tipo: tipo }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    const estado = respuesta.ok ? await respuesta.json() : `HTTP ${respuesta.status}`;
+    if (estado !== 'ok') console.warn(`[AIB+] No se devolvió la cuota de ${tipo}: ${estado}`);
+  } catch (error) {
+    console.warn(`[AIB+] No se pudo devolver la cuota de ${tipo}:`, error.message);
+  }
+}
+
 function cobrarCuota(tipo) {
   return async (req, res, next) => {
     try {
@@ -48,7 +71,22 @@ function cobrarCuota(tipo) {
       }
 
       const estado = await respuesta.json();
-      if (estado === 'ok') return next();
+      if (estado === 'ok') {
+        // Si la llamada acaba en error, se devuelve lo reservado ANTES de
+        // responder: en Vercel lo que se hace después de responder puede no
+        // llegar a ejecutarse. Con mantenerConexion, ese middleware lo llama
+        // en su propio res.json; sin él, lo hace este envoltorio.
+        res.locals.devolverCuota = () => devolverCuota(req.tokenUsuario, tipo);
+        const jsonOriginal = res.json.bind(res);
+        res.json = (cuerpo) => {
+          const devolver = res.statusCode >= 400 ? res.locals.devolverCuota : null;
+          res.locals.devolverCuota = null;
+          if (!devolver) return jsonOriginal(cuerpo);
+          void devolver().finally(() => jsonOriginal(cuerpo));
+          return res;
+        };
+        return next();
+      }
 
       if (estado === 'limite_global') {
         console.error('[AIB+] ⚠ TOPE DIARIO GLOBAL DE IA ALCANZADO. Se sube en la tabla limites_ia.');

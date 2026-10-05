@@ -46,7 +46,14 @@ function mantenerConexion(req, res, next) {
     res.locals.estadoReal = estado;
     const final =
       estado >= 400 && cuerpo && typeof cuerpo === 'object' ? { ...cuerpo, success: false, status: estado } : cuerpo;
-    res.end(JSON.stringify(final));
+    const terminar = () => res.end(JSON.stringify(final));
+
+    // Si falló, primero se devuelve la cuota reservada (cuota.js) y luego se
+    // cierra la respuesta: así no se pierde si la función se congela al responder.
+    const devolver = estado >= 400 ? res.locals.devolverCuota : null;
+    res.locals.devolverCuota = null;
+    if (typeof devolver === 'function') void devolver().finally(terminar);
+    else terminar();
     return res;
   };
 

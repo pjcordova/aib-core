@@ -15,6 +15,7 @@ import { construirDocumento } from '../../lib/marca';
 import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
 import { CompartirMaqueta } from './CompartirMaqueta';
 import { ComentarioMaqueta } from './ComentarioMaqueta';
+import { conAnimaciones } from '../../lib/animaciones';
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
@@ -90,7 +91,8 @@ export function WebPreview({
   const huecoPendiente = useRef<number | null>(null);
 
   const documento = useMemo(
-    () => documentoListo ?? construirDocumento(cuerpo, ficha),
+    // Las maquetas guardadas antes de las animaciones las reciben al mostrarse.
+    () => (documentoListo ? conAnimaciones(documentoListo) : construirDocumento(cuerpo, ficha)),
     [documentoListo, cuerpo, ficha]
   );
 

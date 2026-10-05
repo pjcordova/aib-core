@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS public.uso_ia (
   PRIMARY KEY (user_id, dia)
 );
 
+-- Cuántas veces se le devolvió hoy lo reservado por una llamada que falló
+-- (devolver_cuota_ia, en supabase_invitaciones.sql).
+ALTER TABLE public.uso_ia ADD COLUMN IF NOT EXISTS devoluciones INTEGER NOT NULL DEFAULT 0;
+
 ALTER TABLE public.uso_ia ENABLE ROW LEVEL SECURITY;
 
 -- Cada uno puede ver su propio gasto (para enseñarle cuánto le queda).

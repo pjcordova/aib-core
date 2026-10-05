@@ -20,6 +20,19 @@
       ],
       "cwd": "Proyecto_AIB",
       "port": 3000
+    },
+    {
+      "name": "aib-web-build",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "cwd": "Proyecto_AIB",
+      "port": 4173
     }
   ]
 }

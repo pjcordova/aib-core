@@ -16,16 +16,9 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
   },
-  build: {
-    rollupOptions: {
-      output: {
-        // Las librerias de exportacion pesan ~1.4MB juntas y solo se usan en el
-        // informe tecnico. Aisladas en su propio chunk no lastran el arranque.
-        manualChunks: {
-          export: ['xlsx', 'jspdf'],
-          charts: ['chart.js', 'react-chartjs-2'],
-        },
-      },
-    },
-  },
+  // Sin manualChunks: forzar un chunk "export" (xlsx, jspdf) y otro "charts"
+  // arrastraba dependencias compartidas, como React, dentro de ellos, y la
+  // página de entrada acababa precargándolos (más de 800 KB que el cliente no
+  // usa). Lo pesado ya se importa bajo demanda (main.tsx y
+  // PrototypePreviewDiferido.tsx) y Vite lo separa solo.
 })

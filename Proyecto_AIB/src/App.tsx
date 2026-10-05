@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
-import { PrototypePreview } from './components/PrototypePreview';
+import { PrototypePreview } from './components/PrototypePreviewDiferido';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
