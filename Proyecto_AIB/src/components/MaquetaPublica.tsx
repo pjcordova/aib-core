@@ -115,7 +115,7 @@ export function MaquetaPublica() {
                 onClick={() => setVista(v)}
                 className={
                   'rounded-md px-3 py-1 text-xs font-medium transition-colors ' +
-                  (vista === v ? 'bg-accent text-surface-deep' : 'text-ink-muted hover:text-ink')
+                  (vista === v ? 'bg-accent text-white' : 'text-ink-muted hover:text-ink')
                 }
               >
                 {texto}
@@ -126,7 +126,7 @@ export function MaquetaPublica() {
           <Link to="/" className="flex items-center gap-2 text-xs text-ink-muted transition-colors hover:text-ink">
             <Logo size={20} />
             <span>
-              Hecha con AIB<span className="text-accent">+</span>
+              Hecha con AIB<span className="text-accent-alt">+</span>
               <span className="hidden sm:inline"> · Crea la tuya →</span>
             </span>
           </Link>

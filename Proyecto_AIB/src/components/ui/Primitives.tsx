@@ -17,11 +17,11 @@ export function Logo({ size = 32 }: { size?: number }) {
       <defs>
         <linearGradient id="aib-logo-gradient" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--color-accent)" />
-          <stop offset="100%" stopColor="var(--color-accent-alt)" />
+          <stop offset="100%" stopColor="var(--color-accent-strong)" />
         </linearGradient>
       </defs>
       <path d="M16 3 L27 16 L16 29 L5 16 Z" fill="url(#aib-logo-gradient)" />
-      <path d="M16 9 L22 16 L16 23 L10 16 Z" fill="var(--color-surface-base)" opacity="0.55" />
+      <path d="M16 9 L22 16 L16 23 L10 16 Z" fill="var(--color-accent-alt)" />
     </svg>
   );
 }
@@ -31,8 +31,8 @@ export function Wordmark({ subtitle }: { subtitle?: string }) {
     <div className="flex shrink-0 items-center gap-3">
       <Logo size={30} />
       <div className="leading-tight">
-        <div className="text-lg font-bold tracking-tight text-ink">
-          AIB<span className="text-accent">+</span>
+        <div className="font-display text-xl font-semibold tracking-tight text-ink">
+          AIB<span className="text-accent-alt">+</span>
         </div>
         {/* En móvil el subtítulo se partía en tres líneas y descuadraba la
             cabecera: ahí la marca sola ya identifica el producto. */}

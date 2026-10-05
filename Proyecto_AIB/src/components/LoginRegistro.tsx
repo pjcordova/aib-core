@@ -71,8 +71,8 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
         <div className="card animate-fade-up p-8">
           <div className="mb-7 flex flex-col items-center text-center">
             <Logo size={40} />
-            <h1 className="mt-3 text-2xl font-bold tracking-tight">
-              AIB<span className="text-accent">+</span>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+              AIB<span className="text-accent-alt">+</span>
             </h1>
             <p className="mt-1 text-xs tracking-wide text-ink-subtle">
               Motor de Proyecto Autónomo
@@ -89,7 +89,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
                 className={
                   'flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ' +
                   (mode === m
-                    ? 'bg-accent text-surface-deep shadow-sm'
+                    ? 'bg-accent text-white shadow-sm'
                     : 'text-ink-muted hover:text-ink')
                 }
               >

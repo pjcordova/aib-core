@@ -7,42 +7,50 @@
    declaran en @theme, así que Tailwind genera las utilidades (bg-surface-raised,
    text-accent, border-line…) y a la vez quedan disponibles como variables CSS
    para los pocos sitios que necesitan CSS plano.
+
+   Paleta «Azul noche y champán»: fondo marfil, azul casi negro para el texto
+   y lo que se pulsa, y champán solo en los detalles (el + de AIB+, el avance).
+   Los títulos van en serif. Lo premium sale de usar poco color, no de mucho.
    ========================================================================== */
 
 @theme {
-  /* Superficies, de más profunda a más elevada */
-  --color-surface-deep: #080d1a;
-  --color-surface-base: #0f172a;
-  --color-surface-raised: #16203a;
-  --color-surface-overlay: #1e293b;
+  /* Superficies: el fondo es marfil; lo que se eleva (tarjetas, campos), blanco */
+  --color-surface-deep: #efede6;
+  --color-surface-base: #f7f6f2;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #efece5;
 
   /* Bordes */
-  --color-line: #253251;
-  --color-line-strong: #33436d;
+  --color-line: #e4e1d8;
+  --color-line-strong: #d2cec2;
 
   /* Texto */
-  --color-ink: #f1f5f9;
-  --color-ink-muted: #94a3b8;
-  --color-ink-subtle: #64748b;
+  --color-ink: #0e1a2b;
+  --color-ink-muted: #525b69;
+  --color-ink-subtle: #6a7180;
 
-  /* Acentos de marca */
-  --color-accent: #38bdf8;
-  --color-accent-strong: #0ea5e9;
-  --color-accent-alt: #818cf8;
+  /* Marca: azul noche para lo que se pulsa, champán para el acento. El azul
+     de los botones es apenas más claro que el texto para que los enlaces se
+     distingan. El champán no sirve para texto sobre blanco (poco contraste):
+     solo para detalles. */
+  --color-accent: #1a2d4d;
+  --color-accent-strong: #0e1a2b;
+  --color-accent-alt: #c4a26a;
 
-  /* Semánticos */
-  --color-positive: #4ade80;
-  --color-negative: #f87171;
-  --color-caution: #fbbf24;
+  /* Semánticos, oscurecidos para leerse sobre fondo claro */
+  --color-positive: #1e8a52;
+  --color-negative: #d23f3f;
+  --color-caution: #b26a00;
 
   /* Tipografía */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Elevación */
-  --shadow-card: 0 4px 24px -4px rgb(0 0 0 / 0.5);
-  --shadow-lifted: 0 20px 50px -12px rgb(0 0 0 / 0.65);
-  --shadow-glow: 0 0 0 1px rgb(56 189 248 / 0.25), 0 8px 32px -8px rgb(56 189 248 / 0.35);
+  --shadow-card: 0 1px 2px rgb(14 26 43 / 0.04), 0 6px 20px -8px rgb(14 26 43 / 0.1);
+  --shadow-lifted: 0 20px 50px -12px rgb(14 26 43 / 0.18);
+  --shadow-glow: 0 0 0 1px rgb(26 45 77 / 0.15), 0 8px 24px -8px rgb(26 45 77 / 0.35);
 
   /* Movimiento */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
@@ -58,7 +66,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
     scroll-behavior: smooth;
   }
 
@@ -66,8 +74,8 @@
     margin: 0;
     min-height: 100vh;
     background:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgb(56 189 248 / 0.10), transparent),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgb(129 140 248 / 0.07), transparent),
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgb(196 162 106 / 0.1), transparent),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgb(26 45 77 / 0.04), transparent),
       var(--color-surface-base);
     background-attachment: fixed;
     color: var(--color-ink);
@@ -83,6 +91,17 @@
     text-wrap: balance;
   }
 
+  /* Los títulos grandes en serif; h4 y los rótulos pequeños siguen en Inter,
+     que se lee mejor a tamaños chicos. */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  :is(h1, h2, h3).uppercase {
+    font-family: var(--font-sans);
+  }
+
   /* El foco visible es accesibilidad, no decoración: nunca lo quitamos, solo
      lo hacemos coherente con la marca. */
   :focus-visible {
@@ -92,7 +111,7 @@
   }
 
   ::selection {
-    background: rgb(56 189 248 / 0.3);
+    background: rgb(196 162 106 / 0.3);
     color: var(--color-ink);
   }
 
@@ -119,7 +138,7 @@
 
 @layer components {
   .card {
-    background: color-mix(in oklab, var(--color-surface-raised) 85%, transparent);
+    background: var(--color-surface-raised);
     border: 1px solid var(--color-line);
     border-radius: 1rem;
     box-shadow: var(--shadow-card);
@@ -146,11 +165,11 @@
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-alt));
-    color: #0b1120;
+    background: var(--color-accent);
+    color: #ffffff;
   }
   .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.1);
+    background: var(--color-accent-strong);
     transform: translateY(-1px);
     box-shadow: var(--shadow-glow);
   }
@@ -173,8 +192,8 @@
     width: 100%;
     padding: 0.75rem 0.9375rem;
     border-radius: 0.625rem;
-    background: color-mix(in oklab, var(--color-surface-deep) 60%, transparent);
-    border: 1px solid var(--color-line);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-line-strong);
     color: var(--color-ink);
     font-size: 0.9375rem;
     font-family: inherit;
@@ -186,7 +205,7 @@
   .field:focus {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgb(56 189 248 / 0.15);
+    box-shadow: 0 0 0 3px rgb(26 45 77 / 0.12);
   }
 }
 
@@ -219,7 +238,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
     animation: aib-shimmer 1.6s infinite;
   }
 

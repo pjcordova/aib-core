@@ -94,7 +94,7 @@ export const PrototypePreview = ({
                 className={
                   'rounded-md px-3 py-1.5 text-sm font-medium transition-colors ' +
                   (vista === v
-                    ? 'bg-accent text-surface-deep'
+                    ? 'bg-accent text-white'
                     : 'text-ink-muted hover:text-ink')
                 }
               >

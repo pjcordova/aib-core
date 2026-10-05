@@ -667,7 +667,7 @@ function Progreso({ actual, total }: { actual: number; total: number }) {
             key={i}
             className={
               'h-1.5 flex-1 rounded-full transition-colors duration-500 ' +
-              (i < actual ? 'bg-accent' : 'bg-line')
+              (i < actual ? 'bg-accent-alt' : 'bg-line')
             }
           />
         ))}

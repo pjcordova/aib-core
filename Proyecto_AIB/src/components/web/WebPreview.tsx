@@ -253,7 +253,7 @@ export function WebPreview({
                 disabled={editando && v === 'codigo'}
                 className={
                   'rounded-md px-3 py-1.5 text-sm font-medium transition-colors ' +
-                  (vista === v ? 'bg-accent text-surface-deep' : 'text-ink-muted hover:text-ink')
+                  (vista === v ? 'bg-accent text-white' : 'text-ink-muted hover:text-ink')
                 }
               >
                 {texto}

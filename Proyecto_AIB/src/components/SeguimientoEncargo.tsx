@@ -58,7 +58,7 @@ export function LineaDeTiempo({ cambios, aceptadoEn, tipo }: PropsLinea) {
                   className={
                     'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ' +
                     (esActual
-                      ? 'bg-accent text-surface-deep ring-4 ring-accent/20'
+                      ? 'bg-accent text-white ring-4 ring-accent/20'
                       : alcanzada
                         ? 'bg-accent/20 text-accent'
                         : 'border border-line text-ink-subtle')
