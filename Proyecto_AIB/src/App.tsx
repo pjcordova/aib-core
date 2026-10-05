@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreviewDiferido';
@@ -19,7 +19,7 @@ import {
   type ProyectoCompleto,
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
-import { miInvitacion, registrarInicioInvitacion } from './lib/invitaciones';
+import { miInvitacion, registrarInicioInvitacion, type MiInvitacion } from './lib/invitaciones';
 import { leerModoCliente, salirModoCliente } from './lib/modoCliente';
 import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
@@ -37,8 +37,21 @@ export default function Home() {
     () => leerModoCliente() || (location.state as { comoCliente?: boolean } | null)?.comoCliente === true
   );
   // Sin sesión se ve la portada; el login aparece al pulsar «Ingresar» o «Pruébalo gratis».
-  const [acceso, setAcceso] = useState<'login' | 'registro' | null>(null);
-  const [tipo, setTipo] = useState<TipoServicio | null>(null);
+  // «Crear cuenta gratis» desde /probar llega con { acceso: 'registro' }; quien
+  // acaba de empezar una prueba sin cuenta, con { directo: true }.
+  const [acceso, setAcceso] = useState<'login' | 'registro' | null>(() => {
+    const estado = location.state as { acceso?: unknown } | null;
+    return estado?.acceso === 'registro' || estado?.acceso === 'login' ? estado.acceso : null;
+  });
+  const [tipo, setTipo] = useState<TipoServicio | null>(() =>
+    (location.state as { directo?: boolean } | null)?.directo === true ? 'web' : null
+  );
+  // Lo que trae la navegación se usa una sola vez: si se quedara en el
+  // historial, al recargar volvería a saltarse la bienvenida.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (location.state) navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
   const [descripcion, setDescripcion] = useState('');
   const [iniciado, setIniciado] = useState(false);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
@@ -80,7 +93,7 @@ export default function Home() {
   // Cliente que entró con el enlace de un ingeniero: sesión anónima, sin
   // cuenta. Solo ve el módulo web, con la bienvenida de su invitación.
   const esInvitado = session?.user.is_anonymous === true;
-  const [invitacion, setInvitacion] = useState<{ negocio: string; activa: boolean } | null | undefined>(undefined);
+  const [invitacion, setInvitacion] = useState<MiInvitacion | null | undefined>(undefined);
   useEffect(() => {
     if (!esInvitado) return;
     let vigente = true;
@@ -280,7 +293,7 @@ export default function Home() {
           ) : tipo === 'web' ? (
             <FlujoWeb
               onGuardado={refrescarLista}
-              empresaInicial={esInvitado ? invitacion?.negocio : undefined}
+              empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
             />
           ) : servicio && iniciado ? (
@@ -295,7 +308,8 @@ export default function Home() {
             />
           ) : esInvitado ? (
             <BienvenidaInvitado
-              negocio={invitacion?.negocio ?? ''}
+              negocio={invitacion?.negocio ?? null}
+              desdePortada={invitacion?.origen === 'portada'}
               onEmpezar={() => setTipo('web')}
               cargandoProyecto={cargandoProyecto}
               onAbrir={abrirProyecto}
@@ -367,12 +381,15 @@ export default function Home() {
 /** Portada del cliente que entró con una invitación: directo a su web. */
 function BienvenidaInvitado({
   negocio,
+  desdePortada,
   onEmpezar,
   cargandoProyecto,
   onAbrir,
   versionLista,
 }: {
-  negocio: string;
+  negocio: string | null;
+  /** Llegó por «Pruébalo gratis», no con un enlace del ingeniero. */
+  desdePortada: boolean;
   onEmpezar: () => void;
   cargandoProyecto: boolean;
   onAbrir: (id: string) => void;
@@ -380,17 +397,23 @@ function BienvenidaInvitado({
 }) {
   return (
     <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
-      <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">Tu invitación</p>
-      <h1 className="text-4xl font-bold text-balance sm:text-5xl">Hola, {negocio} 👋</h1>
+      <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
+        {desdePortada ? 'Tu prueba gratis' : 'Tu invitación'}
+      </p>
+      <h1 className="text-4xl font-bold text-balance sm:text-5xl">{negocio ? `Hola, ${negocio} 👋` : 'Hola 👋'}</h1>
       <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-        Te invitaron a ver cómo se vería tu página web. Responde unas preguntas rápidas, casi todas con
-        un clic, y en un minuto verás una primera versión con tu nombre y tus colores. No necesitas crear
-        cuenta ni pagar nada.
+        {desdePortada ? 'Mira cómo se vería tu página web.' : 'Te invitaron a ver cómo se vería tu página web.'}{' '}
+        Responde unas preguntas rápidas, casi todas con un clic, y en un minuto verás una primera versión con
+        tu nombre y tus colores. No necesitas crear cuenta ni pagar nada.
       </p>
       <button type="button" onClick={onEmpezar} className="btn btn-primary mt-8 px-8 py-3 text-base">
         Empezar
       </button>
-      <p className="mt-4 text-xs text-ink-subtle">Puedes volver cuando quieras con el mismo enlace.</p>
+      <p className="mt-4 text-xs text-ink-subtle">
+        {desdePortada
+          ? 'Puedes volver cuando quieras desde este mismo navegador.'
+          : 'Puedes volver cuando quieras con el mismo enlace.'}
+      </p>
 
       {cargandoProyecto ? (
         <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>

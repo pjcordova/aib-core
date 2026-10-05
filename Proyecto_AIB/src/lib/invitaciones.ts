@@ -28,6 +28,8 @@ export interface Invitacion {
   /** Primer proyecto guardado: se guarda justo al enseñarle su maqueta. */
   maqueta_en: string | null;
   aceptada_en: string | null;
+  /** 'portada': alguien que pulsó «Pruébalo gratis», sin invitación del ingeniero. */
+  origen: 'ingeniero' | 'portada';
 }
 
 export type EtapaInvitacion = 'enviada' | 'abierta' | 'empezo' | 'maqueta' | 'acepto';
@@ -191,17 +193,74 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
   return { estado: 'error' };
 }
 
-/** La invitación del cliente con sesión anónima. null si no tiene. */
-export async function miInvitacion(): Promise<{ negocio: string; activa: boolean } | null> {
-  const { data, error } = await supabase.rpc('mi_invitacion');
-  if (error || !data) return null;
-  const inv = data as { negocio?: unknown; activa?: unknown };
-  return typeof inv.negocio === 'string' ? { negocio: inv.negocio, activa: inv.activa === true } : null;
+export interface MiInvitacion {
+  /** null: llegó desde la portada y todavía no dijo cómo se llama su negocio. */
+  negocio: string | null;
+  activa: boolean;
+  origen: 'ingeniero' | 'portada';
 }
 
-/** El cliente pasó la primera pregunta. Estadística: si falla, no pasa nada. */
-export function registrarInicioInvitacion(): void {
-  void supabase.rpc('registrar_inicio_invitacion').then(({ error }) => {
+/** La invitación del cliente con sesión anónima. null si no tiene. */
+export async function miInvitacion(): Promise<MiInvitacion | null> {
+  const { data, error } = await supabase.rpc('mi_invitacion');
+  if (error || !data) return null;
+  const inv = data as { negocio?: unknown; activa?: unknown; origen?: unknown };
+  const origen = inv.origen === 'portada' ? 'portada' : 'ingeniero';
+  if (typeof inv.negocio !== 'string' && origen !== 'portada') return null;
+  return {
+    negocio: typeof inv.negocio === 'string' ? inv.negocio : null,
+    activa: inv.activa === true,
+    origen,
+  };
+}
+
+/**
+ * El cliente pasó la primera pregunta. Si llegó desde la portada, su prueba
+ * toma el nombre del negocio. Estadística: si falla, no pasa nada.
+ */
+export function registrarInicioInvitacion(negocio?: string): void {
+  void supabase.rpc('registrar_inicio_invitacion', { p_negocio: negocio?.trim() || null }).then(({ error }) => {
     if (error) console.warn('[AIB+] No se pudo registrar el inicio:', error.message);
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Probar sin cuenta desde la portada                                         */
+/* -------------------------------------------------------------------------- */
+
+export type ResultadoPrueba = 'ok' | 'lleno' | 'con_cuenta' | 'error';
+
+/**
+ * «Pruébalo gratis»: abre una sesión anónima con su propia invitación, igual
+ * que si el ingeniero le hubiera mandado un enlace. Hay un máximo de pruebas
+ * por día (supabase_invitaciones.sql, sección 8); se consulta antes de abrir
+ * la sesión para no dejar sesiones vacías.
+ */
+export async function empezarSinCuenta(): Promise<ResultadoPrueba> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session && !session.user.is_anonymous) return 'con_cuenta';
+
+  let abrioSesion = false;
+  if (!session) {
+    const { data: cupo, error: errorCupo } = await supabase.rpc('hay_cupo_prueba_libre');
+    if (!errorCupo && cupo === false) return 'lleno';
+
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      console.error('[AIB+] No se pudo abrir la sesión de prueba:', error.message);
+      return 'error';
+    }
+    abrioSesion = true;
+  }
+
+  const { data, error } = await supabase.rpc('empezar_prueba_libre');
+  const estado = (data as { estado?: string } | null)?.estado;
+  if (!error && estado === 'ok') return 'ok';
+
+  // Sin prueba, la sesión recién abierta no sirve para nada: se cierra.
+  if (abrioSesion) await supabase.auth.signOut();
+  if (error) console.error('[AIB+] No se pudo empezar la prueba:', error.message);
+  return estado === 'lleno' ? 'lleno' : 'error';
 }

@@ -118,7 +118,11 @@ export function InvitacionesPanel() {
     );
   }
 
-  const reales = invitaciones.filter((i) => !i.es_prueba);
+  // Las de la portada no son invitaciones enviadas: van en su propio resumen.
+  const reales = invitaciones.filter((i) => !i.es_prueba && i.origen !== 'portada');
+  const dePortada = invitaciones.filter((i) => !i.es_prueba && i.origen === 'portada');
+  // Quien pulsó «Pruébalo gratis» y se fue sin escribir nada no llega a la lista.
+  const visibles = invitaciones.filter((i) => i.origen !== 'portada' || i.empezada_en !== null);
   const nueva = invitaciones.find((i) => i.token === recien);
 
   return (
@@ -199,6 +203,21 @@ export function InvitacionesPanel() {
         </div>
       )}
 
+      {dePortada.length > 0 && (
+        <div className="mb-6 rounded-xl border border-line p-4">
+          <h3 className="text-xs font-semibold tracking-wide text-accent uppercase">Desde la portada, sin invitación</h3>
+          <p className="mt-1 text-sm text-ink tabular-nums">
+            {dePortada.length} {dePortada.length === 1 ? 'pulsó' : 'pulsaron'} «Pruébalo gratis» ·{' '}
+            {dePortada.filter((i) => i.empezada_en).length} empezaron ·{' '}
+            {dePortada.filter((i) => i.maqueta_en).length} vieron su maqueta ·{' '}
+            {dePortada.filter((i) => i.aceptada_en).length} aceptaron
+          </p>
+          <p className="mt-1 text-[11px] text-ink-subtle">
+            Llegaron solos a la portada. Si aceptan, el encargo te llega con su contacto como cualquier otro.
+          </p>
+        </div>
+      )}
+
       <EmbudoCliente />
       <PruebaPrecioPanel />
 
@@ -211,11 +230,11 @@ export function InvitacionesPanel() {
           {eliminada.texto}
         </p>
       )}
-      {invitaciones.length === 0 ? (
+      {visibles.length === 0 ? (
         <p className="text-sm text-ink-muted">Todavía no has creado invitaciones.</p>
       ) : (
         <ul className="space-y-3">
-          {invitaciones.map((inv) => {
+          {visibles.map((inv) => {
             const etapa = etapaDe(inv);
             const indice = indiceEtapa(inv);
             const fecha = fechaDeEtapa(inv, etapa);
@@ -228,6 +247,11 @@ export function InvitacionesPanel() {
                       {inv.es_prueba && (
                         <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-subtle">
                           Prueba
+                        </span>
+                      )}
+                      {inv.origen === 'portada' && (
+                        <span className="rounded-full border border-accent-alt/60 px-2 py-0.5 text-[11px] text-ink-muted">
+                          Desde la portada
                         </span>
                       )}
                       {!inv.activa && (
@@ -261,7 +285,8 @@ export function InvitacionesPanel() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {inv.activa && <AccionesEnlace invitacion={inv} />}
+                  {/* A quien llegó desde la portada no hay enlace que mandarle. */}
+                  {inv.activa && inv.origen !== 'portada' && <AccionesEnlace invitacion={inv} />}
                   <button
                     type="button"
                     onClick={() => void cambiar(inv, { activa: !inv.activa })}

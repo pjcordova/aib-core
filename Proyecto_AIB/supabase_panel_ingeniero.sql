@@ -239,13 +239,15 @@ BEGIN
                  ELSE 'no abrió el enlace'
                END AS donde
         FROM public.invitaciones_resumen i
-        WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL
+        -- Las pruebas desde la portada no: no hay a quién escribirle.
+        WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL AND i.origen = 'ingeniero'
         ORDER BY i.created_at DESC
         LIMIT 3
       ) x
     ),
     'total_invitaciones_a_medias', (
-      SELECT count(*) FROM public.invitaciones_resumen i WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL
+      SELECT count(*) FROM public.invitaciones_resumen i
+      WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL AND i.origen = 'ingeniero'
     ),
     'encargos_nuevos_24h', (
       SELECT count(*) FROM public.encargos e

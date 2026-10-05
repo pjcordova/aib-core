@@ -8,6 +8,7 @@
 // compartir y un ingeniero que la construye si la acepta.
 // ---------------------------------------------------------------------------
 
+import { useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 
 type Acceso = 'login' | 'registro';
@@ -44,6 +45,9 @@ const INCLUYE = [
 ];
 
 export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
+  const navigate = useNavigate();
+  // Sin cuenta: /probar abre una sesión de prueba y lleva al cuestionario.
+  const probar = () => navigate('/probar');
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
@@ -68,11 +72,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
               tu nombre, tu logo y tus colores. Si te gusta, un ingeniero la hace realidad contigo.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              <button
-                type="button"
-                onClick={() => onAcceso('registro')}
-                className="btn btn-primary w-full px-8 py-3 text-base sm:w-auto"
-              >
+              <button type="button" onClick={probar} className="btn btn-primary w-full px-8 py-3 text-base sm:w-auto">
                 Pruébalo gratis
               </button>
               <button
@@ -83,7 +83,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
                 Ya tengo cuenta
               </button>
             </div>
-            <p className="mt-4 text-xs text-ink-subtle">Sin tarjeta: solo tu correo.</p>
+            <p className="mt-4 text-xs text-ink-subtle">Sin crear cuenta ni tarjeta.</p>
           </div>
 
           <CelularDeEjemplo />
@@ -148,7 +148,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
             <p className="mx-auto mt-3 max-w-lg text-white/75">Mírala hoy, decide después.</p>
             <button
               type="button"
-              onClick={() => onAcceso('registro')}
+              onClick={probar}
               className="btn mt-8 bg-accent-alt px-8 py-3 text-base text-ink hover:brightness-105"
             >
               Pruébalo gratis

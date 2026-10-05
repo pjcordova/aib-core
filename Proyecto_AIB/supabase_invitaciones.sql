@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS public.invitaciones (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 'ingeniero': la creó el ingeniero para un negocio. 'portada': alguien pulsó
+-- «Pruébalo gratis» en la portada; se crea sola (ver sección 8).
+ALTER TABLE public.invitaciones ADD COLUMN IF NOT EXISTS origen TEXT NOT NULL DEFAULT 'ingeniero'
+  CHECK (origen IN ('ingeniero', 'portada'));
+
 -- Una sesión anónima pertenece a una sola invitación.
 CREATE UNIQUE INDEX IF NOT EXISTS invitaciones_cliente_unico
   ON public.invitaciones (cliente_id) WHERE cliente_id IS NOT NULL;
@@ -265,6 +270,8 @@ END;
 $$;
 
 -- La invitación de quien llama, para darle la bienvenida. NULL si no tiene.
+-- Quien llegó desde la portada aún no dio el nombre de su negocio hasta que
+-- empieza: entonces negocio va NULL.
 CREATE OR REPLACE FUNCTION public.mi_invitacion()
 RETURNS JSONB
 LANGUAGE sql
@@ -272,29 +279,40 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT jsonb_build_object('negocio', negocio, 'activa', activa)
+  SELECT jsonb_build_object(
+    'negocio', CASE WHEN origen = 'portada' AND empezada_en IS NULL THEN NULL ELSE negocio END,
+    'activa', activa,
+    'origen', origen
+  )
   FROM public.invitaciones
   WHERE cliente_id = auth.uid();
 $$;
 
--- El cliente pasó la primera pregunta: para el embudo del ingeniero.
-CREATE OR REPLACE FUNCTION public.registrar_inicio_invitacion()
+-- El cliente pasó la primera pregunta: para el embudo del ingeniero. Si llegó
+-- desde la portada, su invitación toma el nombre del negocio que escribió.
+DROP FUNCTION IF EXISTS public.registrar_inicio_invitacion();
+CREATE OR REPLACE FUNCTION public.registrar_inicio_invitacion(p_negocio TEXT DEFAULT NULL)
 RETURNS VOID
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
   UPDATE public.invitaciones
-  SET empezada_en = COALESCE(empezada_en, now())
+  SET empezada_en = COALESCE(empezada_en, now()),
+      negocio = CASE
+        WHEN origen = 'portada' AND char_length(btrim(COALESCE(p_negocio, ''))) BETWEEN 1 AND 80
+          THEN btrim(p_negocio)
+        ELSE negocio
+      END
   WHERE cliente_id = auth.uid() AND activa;
 $$;
 
 REVOKE ALL ON FUNCTION public.reclamar_invitacion(TEXT) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.mi_invitacion() FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.registrar_inicio_invitacion() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.registrar_inicio_invitacion(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reclamar_invitacion(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.mi_invitacion() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.registrar_inicio_invitacion() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.registrar_inicio_invitacion(TEXT) TO authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 5. Embudo por invitación (lo consulta el ingeniero)
@@ -318,7 +336,8 @@ SELECT
   (SELECT min(p.created_at) FROM public.proyectos p WHERE p.user_id = i.cliente_id) AS maqueta_en,
   (SELECT min((p.payload->>'aceptado_en')::timestamptz)
      FROM public.proyectos p
-     WHERE p.user_id = i.cliente_id AND p.payload->>'aceptado' = 'true') AS aceptada_en
+     WHERE p.user_id = i.cliente_id AND p.payload->>'aceptado' = 'true') AS aceptada_en,
+  i.origen
 FROM public.invitaciones i;
 
 GRANT SELECT ON public.invitaciones_resumen TO authenticated;
@@ -481,3 +500,78 @@ $$;
 
 REVOKE ALL ON FUNCTION public.devolver_cuota_ia(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.devolver_cuota_ia(TEXT) TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 8. Probar sin cuenta desde la portada
+-- ----------------------------------------------------------------------------
+-- «Pruébalo gratis» en la portada abre una sesión anónima y crea para ella una
+-- invitación con origen 'portada', ya abierta. Así hereda todo lo de arriba:
+-- puede crear su proyecto, subir fotos y gastar IA hasta el tope de una
+-- invitación, y el ingeniero la ve en su panel. El nombre del negocio llega al
+-- pasar la primera pregunta (registrar_inicio_invitacion).
+--
+-- Como cualquiera puede abrir sesiones anónimas, hay un máximo de pruebas por
+-- día (hora de Lima) en limites_ia.pruebas_libres_dia. Encima sigue el tope
+-- global de gasto diario de IA.
+ALTER TABLE public.limites_ia ADD COLUMN IF NOT EXISTS pruebas_libres_dia INTEGER NOT NULL DEFAULT 10
+  CHECK (pruebas_libres_dia >= 0);
+
+-- Se pregunta ANTES de abrir la sesión anónima, para no dejar sesiones vacías
+-- cuando ya no quedan pruebas por hoy.
+CREATE OR REPLACE FUNCTION public.hay_cupo_prueba_libre()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.perfiles WHERE rol = 'ingeniero')
+     AND (
+       SELECT count(*) FROM public.invitaciones
+       WHERE origen = 'portada'
+         AND created_at >= (date_trunc('day', now() AT TIME ZONE 'America/Lima') AT TIME ZONE 'America/Lima')
+     ) < COALESCE((SELECT pruebas_libres_dia FROM public.limites_ia WHERE id), 0);
+$$;
+
+REVOKE ALL ON FUNCTION public.hay_cupo_prueba_libre() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.hay_cupo_prueba_libre() TO anon, authenticated;
+
+-- Devuelve {estado}: 'ok' (también si esta sesión ya tenía su invitación),
+-- 'lleno' (no quedan pruebas por hoy) o 'no_anonimo'.
+CREATE OR REPLACE FUNCTION public.empezar_prueba_libre()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_usuario   UUID := auth.uid();
+  v_ingeniero UUID;
+BEGIN
+  IF v_usuario IS NULL OR NOT public.es_anonimo() THEN
+    RETURN jsonb_build_object('estado', 'no_anonimo');
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.invitaciones WHERE cliente_id = v_usuario) THEN
+    RETURN jsonb_build_object('estado', 'ok');
+  END IF;
+
+  -- Una a la vez, para que dos clics simultáneos no pasen del máximo diario.
+  PERFORM pg_advisory_xact_lock(hashtext('aib-prueba-libre'));
+  IF NOT public.hay_cupo_prueba_libre() THEN
+    RETURN jsonb_build_object('estado', 'lleno');
+  END IF;
+
+  -- Con un solo ingeniero, es suya. Con varios, la del primero (hasta que
+  -- haya reparto).
+  SELECT user_id INTO v_ingeniero FROM public.perfiles WHERE rol = 'ingeniero' ORDER BY created_at LIMIT 1;
+
+  INSERT INTO public.invitaciones (ingeniero_id, negocio, origen, cliente_id, abierta_en, ultima_visita)
+  VALUES (v_ingeniero, 'Sin nombre todavía', 'portada', v_usuario, now(), now());
+
+  RETURN jsonb_build_object('estado', 'ok');
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.empezar_prueba_libre() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.empezar_prueba_libre() TO authenticated;

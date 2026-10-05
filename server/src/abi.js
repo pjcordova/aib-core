@@ -304,12 +304,13 @@ const ejecutores = {
 
   async listar_invitaciones({ solo_pendientes }, { token }) {
     const params = [
-      ['select', 'id,token,negocio,es_prueba,activa,created_at,abierta_en,empezada_en,maqueta_en,aceptada_en,ultima_visita'],
+      ['select', 'id,token,negocio,es_prueba,activa,created_at,abierta_en,empezada_en,maqueta_en,aceptada_en,ultima_visita,origen'],
       ['order', 'created_at.desc'],
       ['limit', '30'],
     ];
     if (solo_pendientes) {
-      params.push(['activa', 'eq.true'], ['es_prueba', 'eq.false'], ['aceptada_en', 'is.null']);
+      // Las pruebas desde la portada no tienen enlace ni a quién escribirle.
+      params.push(['activa', 'eq.true'], ['es_prueba', 'eq.false'], ['aceptada_en', 'is.null'], ['origen', 'eq.ingeniero']);
     }
     const filas = await consultarComo(token, 'invitaciones_resumen', { params });
     return filas.map((i) => ({
@@ -317,12 +318,13 @@ const ejecutores = {
       negocio: i.negocio,
       es_prueba: i.es_prueba,
       activa: i.activa,
+      origen: i.origen === 'portada' ? 'llegó solo desde la portada («Pruébalo gratis»)' : 'invitación tuya',
       donde_se_quedo: etapaInvitacion(i),
       creada: fechaLima(i.created_at),
       ultima_actividad: fechaLima(
         [i.created_at, i.abierta_en, i.empezada_en, i.ultima_visita, i.maqueta_en].filter(Boolean).sort().at(-1)
       ),
-      enlace: `${config.appUrl}/i/${i.token}`,
+      ...(i.origen === 'portada' ? {} : { enlace: `${config.appUrl}/i/${i.token}` }),
     }));
   },
 

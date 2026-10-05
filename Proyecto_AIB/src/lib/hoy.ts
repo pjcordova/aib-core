@@ -97,6 +97,8 @@ export async function cargarHoy(): Promise<ResumenHoy> {
       .select('*', { count: 'exact' })
       .eq('activa', true)
       .eq('es_prueba', false)
+      // Las pruebas desde la portada no tienen a quién escribirle.
+      .eq('origen', 'ingeniero')
       .is('aceptada_en', null)
       .order('created_at', { ascending: false })
       .limit(MOSTRAR),
@@ -104,6 +106,7 @@ export async function cargarHoy(): Promise<ResumenHoy> {
       .from('invitaciones_resumen')
       .select('created_at, abierta_en, aceptada_en')
       .eq('es_prueba', false)
+      .eq('origen', 'ingeniero')
       .or(`created_at.gte."${hace}",abierta_en.gte."${hace}",aceptada_en.gte."${hace}"`),
     supabase
       .from('comentarios')

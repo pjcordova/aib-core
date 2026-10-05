@@ -54,8 +54,8 @@ interface Props {
   onGuardado?: () => void;
   /** Nombre del negocio ya conocido (cliente invitado): se rellena, editable. */
   empresaInicial?: string;
-  /** El cliente pasó la primera pregunta. Se avisa una vez. */
-  onEmpezar?: () => void;
+  /** El cliente pasó la primera pregunta. Se avisa una vez, con el nombre de su negocio. */
+  onEmpezar?: (empresa: string) => void;
 }
 
 const MAX_EMPRESA = 80;
@@ -141,7 +141,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
   const avanzar = () => {
     if (paso === 0 && !empezado.current) {
       empezado.current = true;
-      onEmpezar?.();
+      onEmpezar?.(empresa.trim());
     }
     if (paso < total - 1) setPaso(paso + 1);
   };

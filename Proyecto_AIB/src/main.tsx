@@ -9,6 +9,7 @@ import './index.css';
 import App from './App';
 import { MaquetaPublica } from './components/MaquetaPublica';
 import { EntradaInvitacion } from './components/EntradaInvitacion';
+import { EmpezarPrueba } from './components/EmpezarPrueba';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -39,6 +40,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/ver/:token" element={<MaquetaPublica />} />
             {/* Invitación del ingeniero: el cliente entra sin crear cuenta. */}
             <Route path="/i/:token" element={<EntradaInvitacion />} />
+            {/* «Pruébalo gratis» en la portada: sin cuenta, como una invitación. */}
+            <Route path="/probar" element={<EmpezarPrueba />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}
             <Route path="/dashboard/legado" element={<DashboardIngeniero />} />
             {/* Cualquier otra ruta vuelve al inicio en vez de dejar la página en blanco. */}
