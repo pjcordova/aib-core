@@ -324,7 +324,9 @@ export default function Home() {
                 ))}
               </div>
 
-              {cargandoProyecto ? (
+              {/* Al ingeniero que prueba como cliente la lista solo le mostraba sus
+                  pruebas: lo suyo lo ve en el panel. */}
+              {perfil.rol === 'ingeniero' ? null : cargandoProyecto ? (
                 <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>
               ) : (
                 <ProyectosGuardados onAbrir={abrirProyecto} recargar={versionLista} />
