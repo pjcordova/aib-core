@@ -5,14 +5,16 @@ import {
   cssDePaleta,
   documentoEditable,
   MENSAJE_EDICION,
+  MENSAJE_HUECOS,
   MENSAJE_PALETA,
   MENSAJE_PEDIR_FOTO,
+  MENSAJE_PEDIR_HUECOS,
   MENSAJE_PONER_FOTO,
   sanearDocumento,
 } from '../../lib/edicion';
 import { subirFoto } from '../../lib/fotos';
 import { construirDocumento } from '../../lib/marca';
-import { PALETAS, type FichaWeb, type Paleta } from '../../lib/servicios';
+import { PALETAS, solesEnteros, type FichaWeb, type Paleta } from '../../lib/servicios';
 import { CompartirMaqueta } from './CompartirMaqueta';
 import { ComentarioMaqueta } from './ComentarioMaqueta';
 import { conAnimaciones } from '../../lib/animaciones';
@@ -50,6 +52,8 @@ interface Props {
    * repite el aviso de aceptado, que diría algo distinto de la etapa real.
    */
   conSeguimiento?: boolean;
+  /** Precio de la prueba de precio que le tocó al cliente, si hay una activa. */
+  precio?: number | null;
 }
 
 /**
@@ -71,6 +75,7 @@ export function WebPreview({
   onGuardarEdicion,
   proyectoId,
   conSeguimiento = false,
+  precio = null,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
@@ -89,6 +94,12 @@ export function WebPreview({
   const selectorFoto = useRef<HTMLInputElement>(null);
   /** Hueco de la maqueta que espera la foto que se está eligiendo. */
   const huecoPendiente = useRef<number | null>(null);
+  // Varias fotos de una vez: esperan a que la maqueta diga qué huecos tiene
+  // libres y se colocan en orden, la primera en la portada.
+  const selectorVarias = useRef<HTMLInputElement>(null);
+  const fotosEnCola = useRef<File[]>([]);
+  const [progresoFotos, setProgresoFotos] = useState<string | null>(null);
+  const [avisoFotos, setAvisoFotos] = useState('');
 
   const documento = useMemo(
     // Las maquetas guardadas antes de las animaciones las reciben al mostrarse.
@@ -129,15 +140,61 @@ export function WebPreview({
   // La maqueta avisa de cada cambio. Solo se atiende a nuestro propio iframe.
   useEffect(() => {
     if (!editando) return;
+
+    const colocarFotos = async (destinos: number[]) => {
+      const archivos = fotosEnCola.current.slice(0, destinos.length);
+      const sobran = fotosEnCola.current.length - archivos.length;
+      fotosEnCola.current = [];
+      if (archivos.length === 0) {
+        setAvisoFotos('Esta maqueta no tiene espacios para fotos.');
+        return;
+      }
+      setEstadoFoto('subiendo');
+      setErrorFoto('');
+      setAvisoFotos('');
+      let puestas = 0;
+      for (const [i, archivo] of archivos.entries()) {
+        setProgresoFotos(`Subiendo foto ${i + 1} de ${archivos.length}…`);
+        try {
+          const url = await subirFoto(archivo);
+          marco.current?.contentWindow?.postMessage({ tipo: MENSAJE_PONER_FOTO, hueco: destinos[i], url }, '*');
+          puestas++;
+        } catch (e) {
+          setErrorFoto(e instanceof Error ? e.message : 'No pudimos subir una de las fotos.');
+        }
+      }
+      setProgresoFotos(null);
+      setEstadoFoto(puestas === archivos.length ? 'inactivo' : 'fallo');
+      if (puestas > 0) {
+        setAvisoFotos(
+          `Listo: pusimos ${puestas === 1 ? 'tu foto' : `tus ${puestas} fotos`}` +
+            (sobran > 0 ? ` (la maqueta tiene ${destinos.length} espacios, así que usamos las primeras)` : '') +
+            '. Revisa cómo quedó y toca «Guardar cambios». Para cambiar una, tócala.'
+        );
+      }
+    };
+
     const alRecibir = (e: MessageEvent) => {
       if (e.source !== marco.current?.contentWindow) return;
-      const datos = e.data as { tipo?: unknown; html?: unknown; hueco?: unknown } | null;
+      const datos = e.data as {
+        tipo?: unknown;
+        html?: unknown;
+        hueco?: unknown;
+        todos?: unknown;
+        vacios?: unknown;
+      } | null;
       if (datos?.tipo === MENSAJE_EDICION && typeof datos.html === 'string' && datos.html.length < 5_000_000) {
         setBorrador(datos.html);
       }
       if (datos?.tipo === MENSAJE_PEDIR_FOTO && Number.isInteger(datos.hueco)) {
         huecoPendiente.current = datos.hueco as number;
         selectorFoto.current?.click();
+      }
+      if (datos?.tipo === MENSAJE_HUECOS && fotosEnCola.current.length > 0) {
+        const enteros = (v: unknown) => (Array.isArray(v) ? v.filter((n): n is number => Number.isInteger(n)) : []);
+        const vacios = enteros(datos.vacios);
+        // Si ya estaban todos con foto, se reemplazan desde la portada.
+        void colocarFotos(vacios.length > 0 ? vacios : enteros(datos.todos));
       }
     };
     window.addEventListener('message', alRecibir);
@@ -182,9 +239,25 @@ export function WebPreview({
     }
   };
 
+  const pedirHuecos = () => marco.current?.contentWindow?.postMessage({ tipo: MENSAJE_PEDIR_HUECOS }, '*');
+
+  /**
+   * Fotos elegidas de una vez. Si no se estaba editando, se entra: la maqueta
+   * se recarga con el editor y, al cargar, dice qué huecos tiene.
+   */
+  const alElegirVarias = (lista: FileList | null) => {
+    const archivos = [...(lista ?? [])];
+    if (archivos.length === 0) return;
+    fotosEnCola.current = archivos;
+    setAvisoFotos('');
+    if (editando) pedirHuecos();
+    else empezarEdicion();
+  };
+
   const cancelarEdicion = () => {
     setEditando(false);
     setBorrador(null);
+    setAvisoFotos('');
   };
 
   const guardarEdicion = async () => {
@@ -199,6 +272,7 @@ export function WebPreview({
     setEstadoEdicion('inactivo');
     setEditando(false);
     setBorrador(null);
+    setAvisoFotos('');
     setSeEdito(true);
   };
 
@@ -227,9 +301,18 @@ export function WebPreview({
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
             {puedeEditar
-              ? 'Es una primera idea: con «Editar» cambias los textos, los colores y pones tus propias fotos.'
+              ? 'Es una primera idea: pon tus fotos y, con «Editar», cambia los textos y los colores.'
               : 'Es una primera idea para validar el estilo. Los textos y fotos finales los afinas con el ingeniero.'}
           </p>
+          {precio !== null && onAceptar && !aceptado && (
+            <p className="mt-2 text-sm">
+              <span className="font-semibold text-ink">Tu web, desde {solesEnteros(precio)}</span>
+              <span className="text-ink-subtle">
+                {' '}
+                · Precio referencial: el ingeniero te confirma el final según lo que necesites.
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -291,6 +374,16 @@ export function WebPreview({
                 </button>
               )}
               {puedeEditar && (
+                <button
+                  type="button"
+                  onClick={() => selectorVarias.current?.click()}
+                  disabled={aceptacion === 'procesando'}
+                  className="btn btn-ghost"
+                >
+                  📷 Pon tus fotos
+                </button>
+              )}
+              {puedeEditar && (
                 <button type="button" onClick={empezarEdicion} disabled={aceptacion === 'procesando'} className="btn btn-ghost">
                   ✏️ Editar
                 </button>
@@ -326,6 +419,22 @@ export function WebPreview({
         </div>
       </div>
 
+      {puedeEditar && (
+        <input
+          ref={selectorVarias}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          multiple
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(e) => {
+            alElegirVarias(e.target.files);
+            e.target.value = '';
+          }}
+        />
+      )}
+
       {aceptacion === 'fallo' && (
         <p role="alert" className="mb-4 rounded-lg border border-negative/30 bg-negative/10 px-4 py-2.5 text-sm text-negative">
           No pudimos enviar tu proyecto al ingeniero. Vuelve a intentarlo en un momento.
@@ -347,7 +456,15 @@ export function WebPreview({
         <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
           <p className="text-sm text-ink">
             <strong>Modo edición.</strong> Toca un texto para cambiarlo, o una imagen
-            (borde naranja) para poner tu foto.
+            (borde naranja) para poner tu foto.{' '}
+            <button
+              type="button"
+              onClick={() => selectorVarias.current?.click()}
+              disabled={estadoFoto === 'subiendo'}
+              className="font-medium text-accent underline underline-offset-2 hover:text-accent-strong"
+            >
+              Subir varias de una vez
+            </button>
           </p>
           <input
             ref={selectorFoto}
@@ -363,7 +480,12 @@ export function WebPreview({
           />
           {estadoFoto === 'subiendo' && (
             <p className="mt-2 text-sm text-ink-muted" role="status">
-              Subiendo tu foto…
+              {progresoFotos ?? 'Subiendo tu foto…'}
+            </p>
+          )}
+          {avisoFotos && estadoFoto !== 'subiendo' && (
+            <p className="mt-2 text-sm text-positive" role="status">
+              {avisoFotos}
             </p>
           )}
           {estadoFoto === 'fallo' && (
@@ -434,6 +556,7 @@ export function WebPreview({
               ref={marco}
               title={`Maqueta web de ${ficha.empresa}`}
               srcDoc={documentoEnPantalla}
+              onLoad={editando ? pedirHuecos : undefined}
               sandbox="allow-scripts"
               className={
                 'h-[720px] border-0 bg-white transition-[width] duration-300 ' +

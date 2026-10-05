@@ -4,6 +4,8 @@ import LoginRegistro from './components/LoginRegistro';
 import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreviewDiferido';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
+import { Portada } from './components/Portada';
+import { conPrecioMostrado, miPrecio } from './lib/pruebaPrecio';
 import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
 import { WebPreview } from './components/web/WebPreview';
@@ -34,6 +36,8 @@ export default function Home() {
   const [modoCliente] = useState(
     () => leerModoCliente() || (location.state as { comoCliente?: boolean } | null)?.comoCliente === true
   );
+  // Sin sesión se ve la portada; el login aparece al pulsar «Ingresar» o «Pruébalo gratis».
+  const [acceso, setAcceso] = useState<'login' | 'registro' | null>(null);
   const [tipo, setTipo] = useState<TipoServicio | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [iniciado, setIniciado] = useState(false);
@@ -42,6 +46,8 @@ export default function Home() {
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [cargandoProyecto, setCargandoProyecto] = useState(false);
+  // Prueba de precio en una maqueta reabierta que aún no se aceptó.
+  const [precioAbierto, setPrecioAbierto] = useState<number | null>(null);
   // Se incrementa al guardar un proyecto para que la lista se recargue.
   const [versionLista, setVersionLista] = useState(0);
 
@@ -60,7 +66,9 @@ export default function Home() {
   const abrirProyecto = useCallback(async (id: string) => {
     setCargandoProyecto(true);
     const proyecto = await cargarProyecto(id);
+    const precio = proyecto && proyecto.tipoServicio === 'web' && !proyecto.aceptado ? await miPrecio() : null;
     setCargandoProyecto(false);
+    setPrecioAbierto(precio);
     if (proyecto) {
       setAceptacionAbierto(proyecto.aceptado ? 'aceptado' : 'inactivo');
       setPidiendoContacto(false);
@@ -98,7 +106,10 @@ export default function Home() {
   }
 
   if (!session) {
-    return <LoginRegistro onAuthSuccess={() => {}} />;
+    if (!acceso) return <Portada onAcceso={setAcceso} />;
+    return (
+      <LoginRegistro key={acceso} onAuthSuccess={() => {}} modoInicial={acceso} onVolver={() => setAcceso(null)} />
+    );
   }
 
   // Esperar al rol evita que el ingeniero vea un instante la pantalla del cliente.
@@ -147,7 +158,7 @@ export default function Home() {
     setErrorEnvio(null);
     const { ok } = await enviarEncargo(abierto.id, {
       servicio: abierto.servicio,
-      historial: abierto.historial,
+      historial: conPrecioMostrado(abierto.historial, precioAbierto),
       ...datos,
     });
     if (!ok) {
@@ -192,7 +203,7 @@ export default function Home() {
       <header className="sticky top-0 z-20 border-b border-line bg-surface-base/80 backdrop-blur-xl">
         <Shell>
           <div className="flex items-center justify-between gap-4 py-1">
-            <Wordmark subtitle="Motor de Proyecto Autónomo" />
+            <Wordmark subtitle="La web de tu negocio" />
             <div className="flex items-center gap-3">
               {(tipo || abierto) && (
                 <button type="button" onClick={reiniciar} className="btn btn-ghost">
@@ -252,6 +263,7 @@ export default function Home() {
                   onGuardarEdicion={guardarCambiosAbierto}
                   proyectoId={abierto.id}
                   conSeguimiento={abierto.aceptado}
+                  precio={precioAbierto}
                 />
               ) : (
                 <PrototypePreview

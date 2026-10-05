@@ -23,6 +23,16 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
+    {
+      "source": "/i/:token",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|SkypeUriPreview|Pinterestbot|redditbot|Iframely|Embedly).*" }],
+      "destination": "/api"
+    },
+    {
+      "source": "/ver/:token",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|SkypeUriPreview|Pinterestbot|redditbot|Iframely|Embedly).*" }],
+      "destination": "/api"
+    },
     { "source": "/((?!api|health|assets|favicon).*)", "destination": "/index.html" }
   ]
 }

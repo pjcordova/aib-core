@@ -11,14 +11,18 @@ import { Logo } from './ui/Primitives';
 // comparten paleta, tipografía y foco por construcción.
 // ---------------------------------------------------------------------------
 
-interface LoginRegistroProps {
-  onAuthSuccess: () => void;
-}
-
 type AuthMode = 'login' | 'registro';
 
-const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
-  const [mode, setMode] = useState<AuthMode>('login');
+interface LoginRegistroProps {
+  onAuthSuccess: () => void;
+  /** Con qué pestaña se abre: «Pruébalo gratis» en la portada abre el registro. */
+  modoInicial?: AuthMode;
+  /** Vuelve a la portada. */
+  onVolver?: () => void;
+}
+
+const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicial = 'login', onVolver }) => {
+  const [mode, setMode] = useState<AuthMode>(modoInicial);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,7 +79,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
               AIB<span className="text-accent-alt">+</span>
             </h1>
             <p className="mt-1 text-xs tracking-wide text-ink-subtle">
-              Motor de Proyecto Autónomo
+              {mode === 'registro' ? 'Crea tu cuenta y mira tu web en un minuto' : 'La web de tu negocio'}
             </p>
           </div>
 
@@ -93,7 +97,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
                     : 'text-ink-muted hover:text-ink')
                 }
               >
-                {m === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                {m === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
               </button>
             ))}
           </div>
@@ -165,6 +169,15 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess }) => {
           </form>
         </div>
 
+        {onVolver && (
+          <button
+            type="button"
+            onClick={onVolver}
+            className="mx-auto mt-5 block text-sm text-ink-muted transition-colors hover:text-ink"
+          >
+            ← Volver
+          </button>
+        )}
         <p className="mt-6 text-center text-xs text-ink-subtle">
           Cordova Solutions © {new Date().getFullYear()}
         </p>

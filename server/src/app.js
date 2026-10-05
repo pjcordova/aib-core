@@ -19,6 +19,7 @@ const plantillasRoutes = require('./routes/plantillas');
 const avisosRoutes = require('./routes/avisos');
 const abiRoutes = require('./routes/abi');
 const resumenDiarioRoutes = require('./routes/resumenDiario');
+const vistaPreviaRoutes = require('./routes/vistaPrevia');
 
 const app = express();
 
@@ -81,6 +82,10 @@ app.use('/api', plantillasRoutes);
 app.use('/api', avisosRoutes);
 app.use('/api', abiRoutes);
 app.use('/api', resumenDiarioRoutes);
+
+// Fuera de /api: Vercel manda aquí los robots de WhatsApp y compañía cuando
+// piden /i/<código> o /ver/<código> (ver vercel.json).
+app.use(vistaPreviaRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada.' });

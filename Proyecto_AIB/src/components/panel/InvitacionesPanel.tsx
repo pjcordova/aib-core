@@ -12,6 +12,7 @@ import {
   type Invitacion,
 } from '../../lib/invitaciones';
 import { EmbudoCliente } from './EmbudoCliente';
+import { PruebaPrecioPanel } from './PruebaPrecioPanel';
 
 // ---------------------------------------------------------------------------
 // Invitaciones
@@ -199,6 +200,7 @@ export function InvitacionesPanel() {
       )}
 
       <EmbudoCliente />
+      <PruebaPrecioPanel />
 
       {/* ------------------------------------------------------------ lista */}
       {eliminada && (

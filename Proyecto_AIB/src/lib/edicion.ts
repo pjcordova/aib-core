@@ -25,6 +25,10 @@ export const MENSAJE_PALETA = 'aib-paleta';
 export const MENSAJE_PEDIR_FOTO = 'aib-pedir-foto';
 /** La foto ya está subida: el iframe la coloca en su hueco. */
 export const MENSAJE_PONER_FOTO = 'aib-poner-foto';
+/** La app pregunta qué huecos hay; el iframe responde con MENSAJE_HUECOS. */
+export const MENSAJE_PEDIR_HUECOS = 'aib-pedir-huecos';
+/** Todos los huecos en orden de la página y los que aún no tienen foto. */
+export const MENSAJE_HUECOS = 'aib-huecos';
 
 /** id del bloque <style> que acompaña a las fotos del cliente. */
 const ID_FOTOS = 'fotos-cliente';
@@ -149,6 +153,15 @@ function guionEditor(origenApp: string, prefijoFotos: string): string {
     if (e.data.tipo === '${MENSAJE_PALETA}') {
       bloqueDeEstilos('${ID_PALETA}').textContent = String(e.data.css);
       enviar();
+    }
+
+    if (e.data.tipo === '${MENSAJE_PEDIR_HUECOS}') {
+      const huecos = [...document.querySelectorAll('[data-aib-hueco]')];
+      parent.postMessage({
+        tipo: '${MENSAJE_HUECOS}',
+        todos: huecos.map((h) => Number(h.getAttribute('data-aib-hueco'))),
+        vacios: huecos.filter((h) => !h.hasAttribute('data-aib-con-foto')).map((h) => Number(h.getAttribute('data-aib-hueco'))),
+      }, ORIGEN);
     }
 
     if (e.data.tipo === '${MENSAJE_PONER_FOTO}') {

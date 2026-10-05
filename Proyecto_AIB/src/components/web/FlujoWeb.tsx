@@ -43,6 +43,7 @@ import { ErrorState } from '../ui/Primitives';
 import { MiniVista } from '../panel/MiniVista';
 import { WebPreview } from './WebPreview';
 import { nuevaSesionDeCuestionario, registrarProgreso } from '../../lib/embudo';
+import { conPrecioMostrado, miPrecio } from '../../lib/pruebaPrecio';
 
 type Fase = 'preguntas' | 'buscando' | 'eligiendo' | 'generando' | 'listo' | 'error';
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
@@ -74,6 +75,8 @@ const MIN_RUBRO = 10;
 export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
   const [paso, setPaso] = useState(0);
   const [fase, setFase] = useState<Fase>('preguntas');
+  // Prueba de precio: el precio que le tocó a este cliente (null si no hay).
+  const [precioPrueba, setPrecioPrueba] = useState<number | null>(null);
 
   // Respuestas
   const [empresa, setEmpresa] = useState(empresaInicial ?? '');
@@ -230,7 +233,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
     }
     const { id, error: errorGuardado } = await guardarProyecto({
       servicio: servicioDe(f),
-      historial: historialDe(f, plantilla),
+      historial: conPrecioMostrado(historialDe(f, plantilla), precioPrueba),
       tipoServicio: 'web',
       ...cambios,
       ficha: f,
@@ -250,7 +253,8 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
     registrarProgreso(sesion, 'fin-cuestionario');
     setFase('buscando');
     const f = ficha();
-    const activas = await listarPlantillasActivas();
+    const [activas, precio] = await Promise.all([listarPlantillasActivas(), miPrecio()]);
+    setPrecioPrueba(precio);
     const mejores = emparejar(activas, {
       categoria,
       estilo,
@@ -355,7 +359,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
     setErrorEnvio(null);
     const { ok, error: errorAceptar } = await enviarEncargo(proyectoId.current, {
       servicio: servicioDe(f),
-      historial: historialDe(f, plantillaUsada),
+      historial: conPrecioMostrado(historialDe(f, plantillaUsada), precioPrueba),
       ...datos,
     });
     if (!ok) {
@@ -399,6 +403,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
         ficha={ficha()}
         onElegir={(c) => void elegirPlantilla(c)}
         onAMedida={() => void generarConIA()}
+        conPrecios={precioPrueba === null}
       />
     );
   }
@@ -429,6 +434,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
             setPidiendoContacto(true);
           }}
           onGuardarEdicion={guardarCambios}
+          precio={precioPrueba}
           proyectoId={idGuardado}
         />
         {pidiendoContacto && (
@@ -522,7 +528,10 @@ function EleccionPlantilla({
   ficha,
   onElegir,
   onAMedida,
+  conPrecios,
 }: {
+  /** Con una prueba de precio activa, el precio solo se ve junto a la maqueta. */
+  conPrecios: boolean;
   candidatas: PlantillaDelCatalogo[];
   ficha: FichaWeb;
   onElegir: (c: PlantillaDelCatalogo) => void;
@@ -550,7 +559,7 @@ function EleccionPlantilla({
               <p className="font-semibold text-ink">{c.fila.nombre}</p>
               <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>
               <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />
-              {c.fila.precio_desde !== null && (
+              {conPrecios && c.fila.precio_desde !== null && (
                 <PrecioOrientativo precio={c.fila.precio_desde} presupuesto={ficha.presupuesto} />
               )}
               <button type="button" onClick={() => onElegir(c)} className="btn btn-primary mt-4 w-full">
