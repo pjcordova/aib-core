@@ -105,6 +105,11 @@ const config = {
   // Dirección pública de la app, para el enlace del correo cuando la petición
   // no trae un origen reconocible.
   appUrl: sinBarraFinal(process.env.APP_URL?.trim() || 'https://aib-core.vercel.app'),
+
+  // Clave con la que el cron de Vercel llama al resumen de cada mañana de ABI
+  // (Vercel la manda sola si existe CRON_SECRET). Su huella está en la tabla
+  // claves_sistema. Sin ella, el resumen no se envía.
+  cronSecret: process.env.CRON_SECRET?.trim() || null,
 };
 
 module.exports = { config };

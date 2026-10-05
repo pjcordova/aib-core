@@ -8,6 +8,12 @@
       "maxDuration": 300
     }
   },
+  "crons": [
+    {
+      "path": "/api/abi/resumen-diario",
+      "schedule": "0 13 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/ver/(.*)",

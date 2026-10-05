@@ -170,3 +170,100 @@ CREATE POLICY "registro: se anota lo del ingeniero"
 
 REVOKE ALL ON public.abi_registro FROM anon;
 GRANT SELECT, INSERT ON public.abi_registro TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Resumen de cada mañana
+-- ----------------------------------------------------------------------------
+-- A las 8:00 el cron de Vercel le pide a ABI el resumen y el servidor se lo
+-- manda al ingeniero por WhatsApp. A esa hora no hay sesión de nadie, así que
+-- la función exige una clave: el servidor manda la suya (CRON_SECRET) y aquí
+-- solo se guarda su huella SHA-256, en una tabla que nadie lee por la API.
+-- Para poner o cambiar la clave:
+--   INSERT INTO public.claves_sistema (nombre, huella)
+--   VALUES ('resumen_diario', encode(sha256(convert_to('<CRON_SECRET>', 'UTF8')), 'hex'))
+--   ON CONFLICT (nombre) DO UPDATE SET huella = EXCLUDED.huella;
+ALTER TABLE public.ajustes_ingeniero ADD COLUMN IF NOT EXISTS resumen_diario BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS public.claves_sistema (
+  nombre TEXT PRIMARY KEY,
+  huella TEXT NOT NULL CHECK (huella ~ '^[0-9a-f]{64}$')
+);
+ALTER TABLE public.claves_sistema ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.claves_sistema FROM anon, authenticated;
+
+-- Solo clientes reales (sin las pruebas del ingeniero). De momento hay un
+-- ingeniero: el resumen es el suyo y va al WhatsApp de AVISOS_WHATSAPP.
+CREATE OR REPLACE FUNCTION public.resumen_del_dia(p_clave TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_huella    TEXT;
+  v_ingeniero UUID;
+  v_ajustes   public.ajustes_ingeniero%ROWTYPE;
+  v_ayer      TIMESTAMPTZ := now() - interval '1 day';
+BEGIN
+  SELECT huella INTO v_huella FROM public.claves_sistema WHERE nombre = 'resumen_diario';
+  IF v_huella IS NULL OR p_clave IS NULL OR encode(sha256(convert_to(p_clave, 'UTF8')), 'hex') <> v_huella THEN
+    RETURN jsonb_build_object('estado', 'clave_invalida');
+  END IF;
+
+  SELECT user_id INTO v_ingeniero FROM public.perfiles WHERE rol = 'ingeniero' ORDER BY created_at LIMIT 1;
+  SELECT * INTO v_ajustes FROM public.ajustes_ingeniero WHERE user_id = v_ingeniero;
+
+  RETURN jsonb_build_object(
+    'estado', 'ok',
+    'activo', COALESCE(v_ajustes.resumen_diario, true),
+    'nombre', v_ajustes.nombre,
+    'esperando', (
+      SELECT COALESCE(jsonb_agg(x ORDER BY x.desde), '[]'::jsonb) FROM (
+        SELECT COALESCE(e.empresa, e.cliente, e.servicio) AS negocio,
+               COALESCE(e.aceptado_en::timestamptz, e.created_at) AS desde
+        FROM public.encargos e
+        WHERE e.estado = 'recibido' AND NOT e.es_prueba
+        ORDER BY 2
+        LIMIT 5
+      ) x
+    ),
+    'total_esperando', (SELECT count(*) FROM public.encargos e WHERE e.estado = 'recibido' AND NOT e.es_prueba),
+    'invitaciones_a_medias', (
+      SELECT COALESCE(jsonb_agg(x), '[]'::jsonb) FROM (
+        SELECT i.negocio,
+               CASE
+                 WHEN i.maqueta_en IS NOT NULL THEN 'vio su web, no aceptó'
+                 WHEN i.empezada_en IS NOT NULL THEN 'empezó, no llegó a ver su web'
+                 WHEN i.abierta_en IS NOT NULL THEN 'abrió el enlace, no empezó'
+                 ELSE 'no abrió el enlace'
+               END AS donde
+        FROM public.invitaciones_resumen i
+        WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL
+        ORDER BY i.created_at DESC
+        LIMIT 3
+      ) x
+    ),
+    'total_invitaciones_a_medias', (
+      SELECT count(*) FROM public.invitaciones_resumen i WHERE i.activa AND NOT i.es_prueba AND i.aceptada_en IS NULL
+    ),
+    'encargos_nuevos_24h', (
+      SELECT count(*) FROM public.encargos e
+      WHERE NOT e.es_prueba AND COALESCE(e.aceptado_en::timestamptz, e.created_at) > v_ayer
+    ),
+    'comentarios_24h', (
+      SELECT COALESCE(jsonb_agg(x), '[]'::jsonb) FROM (
+        SELECT p.payload->'ficha'->>'empresa' AS negocio, c.reaccion, left(c.texto, 120) AS texto
+        FROM public.comentarios c
+        LEFT JOIN public.proyectos p ON p.id = c.proyecto_id
+        WHERE c.created_at > v_ayer
+        ORDER BY c.created_at DESC
+        LIMIT 3
+      ) x
+    )
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.resumen_del_dia(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resumen_del_dia(TEXT) TO anon, authenticated;

@@ -25,6 +25,8 @@ export interface MensajeAbi {
 export interface AjustesAbi {
   nombre: string;
   enlaceAgenda: string;
+  /** El resumen de cada mañana por WhatsApp (server/src/routes/resumenDiario.js). */
+  resumenDiario: boolean;
 }
 
 const CLAVE = 'abi-conversacion';
@@ -55,9 +57,14 @@ export function guardarConversacion(mensajes: MensajeAbi[]): void {
 }
 
 export async function leerAjustes(): Promise<AjustesAbi> {
-  const { data, error } = await supabase.from('ajustes_ingeniero').select('nombre, enlace_agenda').maybeSingle();
+  const { data, error } = await supabase.from('ajustes_ingeniero').select('nombre, enlace_agenda, resumen_diario').maybeSingle();
   if (error) console.warn('[AIB+] No se pudieron leer los ajustes de ABI:', error.message);
-  return { nombre: data?.nombre ?? '', enlaceAgenda: data?.enlace_agenda ?? '' };
+  return {
+    nombre: data?.nombre ?? '',
+    enlaceAgenda: data?.enlace_agenda ?? '',
+    // Sin fila de ajustes, el resumen está activo (como en la base de datos).
+    resumenDiario: data?.resumen_diario ?? true,
+  };
 }
 
 /** Devuelve un mensaje de error para mostrar, o null si se guardó. */
@@ -77,6 +84,7 @@ export async function guardarAjustes(ajustes: AjustesAbi): Promise<string | null
     user_id: session.user.id,
     nombre,
     enlace_agenda: enlace,
+    resumen_diario: ajustes.resumenDiario,
     updated_at: new Date().toISOString(),
   });
   if (error) {

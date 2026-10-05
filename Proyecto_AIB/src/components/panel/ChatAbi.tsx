@@ -479,6 +479,20 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
           cliente elija el horario.
         </span>
       </label>
+      <label className="flex items-start gap-2 text-sm text-ink-muted">
+        <input
+          type="checkbox"
+          checked={ajustes.resumenDiario}
+          onChange={(e) => setAjustes({ ...ajustes, resumenDiario: e.target.checked })}
+          className="mt-1"
+        />
+        <span>
+          Mandarme cada mañana (8:00) un resumen por WhatsApp con lo pendiente
+          <span className="block text-[11px] text-ink-subtle">
+            Si no hay nada pendiente, ABI no te escribe.
+          </span>
+        </span>
+      </label>
       <div>
         <p className="mb-1.5 text-sm text-ink-muted">Lo que ABI recuerda</p>
         {recuerdos.length === 0 ? (
