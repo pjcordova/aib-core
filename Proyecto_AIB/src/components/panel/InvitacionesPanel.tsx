@@ -13,6 +13,7 @@ import {
 } from '../../lib/invitaciones';
 import { EmbudoCliente } from './EmbudoCliente';
 import { PruebaPrecioPanel } from './PruebaPrecioPanel';
+import { EmbudoPortadaPanel } from './EmbudoPortadaPanel';
 
 // ---------------------------------------------------------------------------
 // Invitaciones
@@ -120,7 +121,6 @@ export function InvitacionesPanel() {
 
   // Las de la portada no son invitaciones enviadas: van en su propio resumen.
   const reales = invitaciones.filter((i) => !i.es_prueba && i.origen !== 'portada');
-  const dePortada = invitaciones.filter((i) => !i.es_prueba && i.origen === 'portada');
   // Quien pulsó «Pruébalo gratis» y se fue sin escribir nada no llega a la lista.
   const visibles = invitaciones.filter((i) => i.origen !== 'portada' || i.empezada_en !== null);
   const nueva = invitaciones.find((i) => i.token === recien);
@@ -203,20 +203,7 @@ export function InvitacionesPanel() {
         </div>
       )}
 
-      {dePortada.length > 0 && (
-        <div className="mb-6 rounded-xl border border-line p-4">
-          <h3 className="text-xs font-semibold tracking-wide text-accent uppercase">Desde la portada, sin invitación</h3>
-          <p className="mt-1 text-sm text-ink tabular-nums">
-            {dePortada.length} {dePortada.length === 1 ? 'pulsó' : 'pulsaron'} «Pruébalo gratis» ·{' '}
-            {dePortada.filter((i) => i.empezada_en).length} empezaron ·{' '}
-            {dePortada.filter((i) => i.maqueta_en).length} vieron su maqueta ·{' '}
-            {dePortada.filter((i) => i.aceptada_en).length} aceptaron
-          </p>
-          <p className="mt-1 text-[11px] text-ink-subtle">
-            Llegaron solos a la portada. Si aceptan, el encargo te llega con su contacto como cualquier otro.
-          </p>
-        </div>
-      )}
+      <EmbudoPortadaPanel />
 
       <EmbudoCliente />
       <PruebaPrecioPanel />

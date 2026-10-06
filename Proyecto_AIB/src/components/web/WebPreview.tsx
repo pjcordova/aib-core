@@ -18,12 +18,19 @@ import { PALETAS, solesEnteros, type FichaWeb, type Paleta } from '../../lib/ser
 import { CompartirMaqueta } from './CompartirMaqueta';
 import { ComentarioMaqueta } from './ComentarioMaqueta';
 import { conAnimaciones } from '../../lib/animaciones';
+import { registrarInteres } from '../../lib/medicionPortada';
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 type Vista = 'escritorio' | 'movil' | 'codigo';
 type EstadoEdicion = 'inactivo' | 'guardando' | 'fallo';
 type EstadoFoto = 'inactivo' | 'subiendo' | 'fallo';
+
+const VISTAS = [
+  ['escritorio', 'Escritorio'],
+  ['movil', 'Móvil'],
+  ['codigo', 'Código'],
+] as const;
 
 interface Props {
   /** Cuerpo generado por IA; se monta con construirDocumento. */
@@ -80,6 +87,8 @@ export function WebPreview({
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
+  // «Prefiero publicarla yo»: todavía no existe; se mide si alguien lo quiere.
+  const [publicarYo, setPublicarYo] = useState(false);
 
   // Edición en vivo
   const [editando, setEditando] = useState(false);
@@ -127,6 +136,9 @@ export function WebPreview({
   };
 
   const aceptado = aceptacion === 'aceptado';
+  // El cliente (quien puede aceptar) no descarga ni ve el código: publicarla
+  // la hace el ingeniero. El ingeniero los sigue teniendo en su panel.
+  const esCliente = !!onAceptar;
   const puedeEditar = !!onGuardarEdicion && !aceptado;
   const puedeCompartir = !!proyectoId && guardado === 'guardado';
 
@@ -321,13 +333,7 @@ export function WebPreview({
             role="tablist"
             aria-label="Cambiar vista"
           >
-            {(
-              [
-                ['escritorio', 'Escritorio'],
-                ['movil', 'Móvil'],
-                ['codigo', 'Código'],
-              ] as const
-            ).map(([v, texto]) => (
+            {VISTAS.filter(([v]) => !esCliente || v !== 'codigo').map(([v, texto]) => (
               <button
                 key={v}
                 role="tab"
@@ -360,9 +366,11 @@ export function WebPreview({
             </>
           ) : (
             <>
-              <button type="button" onClick={descargar} className="btn btn-ghost">
-                Descargar
-              </button>
+              {!esCliente && (
+                <button type="button" onClick={descargar} className="btn btn-ghost">
+                  Descargar
+                </button>
+              )}
               {puedeCompartir && (
                 <button
                   type="button"
@@ -401,6 +409,19 @@ export function WebPreview({
               {onAceptar && !aceptado && (
                 <button
                   type="button"
+                  onClick={() => {
+                    registrarInteres('publicar-yo');
+                    setPublicarYo(true);
+                  }}
+                  disabled={aceptacion === 'procesando'}
+                  className="btn btn-ghost"
+                >
+                  Prefiero publicarla yo
+                </button>
+              )}
+              {onAceptar && !aceptado && (
+                <button
+                  type="button"
                   onClick={onAceptar}
                   disabled={aceptacion === 'procesando' || guardado !== 'guardado'}
                   title={guardado !== 'guardado' ? 'Se habilita cuando la maqueta queda guardada' : undefined}
@@ -433,6 +454,23 @@ export function WebPreview({
             e.target.value = '';
           }}
         />
+      )}
+
+      {publicarYo && !aceptado && (
+        <div role="status" className="mb-4 rounded-xl border border-accent-alt/50 bg-accent-alt/10 px-4 py-3 text-sm text-ink">
+          <p>
+            <strong>¡Gracias por decírnoslo!</strong> Todavía no se puede publicar por cuenta propia: estamos viendo cómo
+            ofrecerlo. Por ahora, un ingeniero te la deja publicada y funcionando. Pulsa «¡Me gusta, sigamos!» y lo
+            conversas con él, sin compromiso.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPublicarYo(false)}
+            className="mt-2 text-xs text-ink-muted underline underline-offset-2 hover:text-ink"
+          >
+            Entendido
+          </button>
+        </div>
       )}
 
       {aceptacion === 'fallo' && (

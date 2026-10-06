@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
+import { canalDeLaVisita } from './medicionPortada';
 
 /* -------------------------------------------------------------------------- */
 /* Ingeniero                                                                  */
@@ -255,7 +256,8 @@ export async function empezarSinCuenta(): Promise<ResultadoPrueba> {
     abrioSesion = true;
   }
 
-  const { data, error } = await supabase.rpc('empezar_prueba_libre');
+  // El canal por el que llegó a la portada (?c=), para saber cuál trae clientes.
+  const { data, error } = await supabase.rpc('empezar_prueba_libre', { p_canal: canalDeLaVisita() });
   const estado = (data as { estado?: string } | null)?.estado;
   if (!error && estado === 'ok') return 'ok';
 

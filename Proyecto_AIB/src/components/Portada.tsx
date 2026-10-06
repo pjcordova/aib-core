@@ -13,6 +13,7 @@ import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
 import { PLANTILLAS_BASE } from '../plantillas';
 import { renderizarPlantilla, type PlantillaBase } from '../lib/plantillas';
+import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
 
 type Acceso = 'login' | 'registro';
 
@@ -93,6 +94,12 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
   const navigate = useNavigate();
   // Sin cuenta: /probar abre una sesión de prueba y lleva al cuestionario.
   const probar = () => navigate('/probar');
+
+  // Medición del marketplace: la visita y su canal (?c=), sin datos personales.
+  useEffect(() => {
+    canalDeLaVisita();
+    registrarVisitaPortada();
+  }, []);
 
   // En el celular, el botón queda fijo abajo en cuanto el de la portada se
   // pierde de vista.

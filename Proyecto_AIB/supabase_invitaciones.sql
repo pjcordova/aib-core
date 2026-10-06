@@ -536,9 +536,15 @@ $$;
 REVOKE ALL ON FUNCTION public.hay_cupo_prueba_libre() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.hay_cupo_prueba_libre() TO anon, authenticated;
 
+-- Por qué canal llegó (el ?c= del enlace: instagram, maps…), para medir
+-- qué canal trae clientes. NULL si llegó sin canal.
+ALTER TABLE public.invitaciones ADD COLUMN IF NOT EXISTS canal TEXT
+  CHECK (canal IS NULL OR canal ~ '^[a-z0-9_-]{1,30}$');
+
 -- Devuelve {estado}: 'ok' (también si esta sesión ya tenía su invitación),
 -- 'lleno' (no quedan pruebas por hoy) o 'no_anonimo'.
-CREATE OR REPLACE FUNCTION public.empezar_prueba_libre()
+DROP FUNCTION IF EXISTS public.empezar_prueba_libre();
+CREATE OR REPLACE FUNCTION public.empezar_prueba_libre(p_canal TEXT DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -547,7 +553,12 @@ AS $$
 DECLARE
   v_usuario   UUID := auth.uid();
   v_ingeniero UUID;
+  v_canal     TEXT := lower(btrim(COALESCE(p_canal, '')));
 BEGIN
+  IF v_canal !~ '^[a-z0-9_-]{1,30}$' THEN
+    v_canal := NULL;
+  END IF;
+
   IF v_usuario IS NULL OR NOT public.es_anonimo() THEN
     RETURN jsonb_build_object('estado', 'no_anonimo');
   END IF;
@@ -566,12 +577,12 @@ BEGIN
   -- haya reparto).
   SELECT user_id INTO v_ingeniero FROM public.perfiles WHERE rol = 'ingeniero' ORDER BY created_at LIMIT 1;
 
-  INSERT INTO public.invitaciones (ingeniero_id, negocio, origen, cliente_id, abierta_en, ultima_visita)
-  VALUES (v_ingeniero, 'Sin nombre todavía', 'portada', v_usuario, now(), now());
+  INSERT INTO public.invitaciones (ingeniero_id, negocio, origen, cliente_id, abierta_en, ultima_visita, canal)
+  VALUES (v_ingeniero, 'Sin nombre todavía', 'portada', v_usuario, now(), now(), v_canal);
 
   RETURN jsonb_build_object('estado', 'ok');
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.empezar_prueba_libre() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.empezar_prueba_libre() TO authenticated;
+REVOKE ALL ON FUNCTION public.empezar_prueba_libre(TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.empezar_prueba_libre(TEXT) TO authenticated;
