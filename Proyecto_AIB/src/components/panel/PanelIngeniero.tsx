@@ -9,9 +9,10 @@ import { InvitacionesPanel } from './InvitacionesPanel';
 import { ComentariosPanel } from './ComentariosPanel';
 import { HoyPanel, type IrAEncargos } from './HoyPanel';
 import { IngenierosPanel } from './IngenierosPanel';
+import { CobrosPanel } from './CobrosPanel';
 import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros';
+type Pestana = 'hoy' | 'encargos' | 'cobros' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -84,6 +85,7 @@ export function PanelIngeniero() {
               [
                 ['hoy', 'Hoy con ABI', 'Hoy'],
                 ['encargos', 'Encargos', 'Encargos'],
+                ['cobros', 'Cobros', 'Cobros'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
                 // El catálogo que ven los clientes es el del administrador.
@@ -140,6 +142,11 @@ export function PanelIngeniero() {
                 ...(irEncargos.destino.soloNuevos ? { estado: 'recibido' as const, soloReales: true } : {}),
               },
             }}
+          />
+        ) : pestana === 'cobros' ? (
+          <CobrosPanel
+            esAdmin={perfil.esAdmin}
+            onAbrirEncargo={(id, negocio) => abrirEncargos({ abrir: id, buscar: negocio ?? undefined })}
           />
         ) : pestana === 'invitaciones' ? (
           <InvitacionesPanel esAdmin={perfil.esAdmin} />

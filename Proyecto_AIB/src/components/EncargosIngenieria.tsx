@@ -25,6 +25,7 @@ import {
 } from '../lib/encargos';
 import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 import { conAnimaciones } from '../lib/animaciones';
+import { CobroEncargo } from './panel/CobroEncargo';
 
 // ---------------------------------------------------------------------------
 // Encargos aceptados
@@ -415,6 +416,7 @@ function DetalleEncargo({
   return (
     <div className="animate-fade-up border-t border-line p-5 pt-6">
       <DatosCliente encargo={detalle} />
+      <CobroEncargo proyectoId={detalle.id} />
       <EditorSeguimiento encargo={detalle} cambios={cambios} onCambio={onCambio} />
       {!doc ? (
         <SinDocumentacion
