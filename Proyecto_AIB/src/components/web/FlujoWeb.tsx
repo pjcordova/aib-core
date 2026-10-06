@@ -576,6 +576,7 @@ function EleccionPlantilla({
               documento={renderizarPlantilla(c.base, c.base.ejemplo, ficha)}
               titulo={`Diseño ${c.fila.nombre}`}
               alto={260}
+              inmediata
             />
             <div className="p-4">
               <p className="font-semibold text-ink">{c.fila.nombre}</p>

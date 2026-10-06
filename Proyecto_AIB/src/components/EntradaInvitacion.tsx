@@ -33,7 +33,7 @@ export function EntradaInvitacion() {
     let vigente = true;
     void entrarUnaVez(token).then((r) => {
       if (!vigente) return;
-      if (r.estado === 'ok') navigate('/', { replace: true });
+      if (r.estado === 'ok') navigate('/mi-web', { replace: true });
       else setResultado(r);
     });
     return () => {

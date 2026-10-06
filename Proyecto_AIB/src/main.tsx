@@ -37,7 +37,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Suspense fallback={cargando}>
           <Routes>
-            <Route path="/" element={<App />} />
+            {/* La portada; con cuenta, la app. Cada ruta con su propia instancia. */}
+            <Route path="/" element={<App key="inicio" />} />
+            {/* La prueba sin cuenta y la invitación de un ingeniero. */}
+            <Route path="/mi-web" element={<App key="mi-web" />} />
             <Route path="/dashboard" element={<PanelIngeniero />} />
             {/* Maqueta compartida por un cliente: pública, sin sesión. */}
             <Route path="/ver/:token" element={<MaquetaPublica />} />

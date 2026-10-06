@@ -72,15 +72,17 @@ export function UnirseEquipo() {
 
   return (
     <div className="min-h-screen">
-      <header className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <Link to="/" aria-label="Ir a la portada de AIB+">
-          <Wordmark />
-        </Link>
-        {conCuenta && (
-          <button type="button" onClick={signOut} className="btn btn-ghost">
-            Salir
-          </button>
-        )}
+      <header className="cabecera-marca sticky top-0 z-20">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <Link to="/" aria-label="Ir a la portada de AIB+">
+            <Wordmark />
+          </Link>
+          {conCuenta && (
+            <button type="button" onClick={signOut} className="btn btn-ghost">
+              Salir
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="mx-auto max-w-md px-4 pt-10 pb-20">

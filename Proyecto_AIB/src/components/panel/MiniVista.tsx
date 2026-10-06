@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface Props {
   documento: string;
@@ -7,6 +7,25 @@ interface Props {
   anchoPagina?: number;
   /** Alto de la miniatura en píxeles. */
   alto?: number;
+  /**
+   * Cargarla ya, sin esperar a que el navegador decida que está a la vista.
+   * Para las que se ven nada más llegar (portada, diseños a elegir): algunos
+   * navegadores de celular no llegaban a cargar las diferidas dentro de una
+   * caja reducida, y se quedaban en blanco.
+   */
+  inmediata?: boolean;
+}
+
+/**
+ * Las fuentes de Google no frenan el dibujo de la miniatura: se pinta con la
+ * letra del sistema y cambia a la suya al llegar. Antes, con una conexión
+ * lenta, la miniatura se quedaba en blanco hasta que llegaban.
+ */
+function sinEsperarFuentes(documento: string): string {
+  return documento.replace(
+    /<link rel="stylesheet" href="(https:\/\/fonts\.googleapis\.com\/[^"]+)">/g,
+    `<link rel="stylesheet" href="$1" media="print" onload="this.media='all'">`
+  );
 }
 
 /**
@@ -14,9 +33,10 @@ interface Props {
  * iframe y la reduce hasta caber en su tarjeta. No hace falta guardar capturas:
  * si la plantilla cambia, la miniatura cambia con ella.
  */
-export function MiniVista({ documento, titulo, anchoPagina = 1280, alto = 200 }: Props) {
+export function MiniVista({ documento, titulo, anchoPagina = 1280, alto = 200, inmediata = false }: Props) {
   const caja = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(0.25);
+  const pagina = useMemo(() => sinEsperarFuentes(documento), [documento]);
 
   useEffect(() => {
     const el = caja.current;
@@ -32,9 +52,9 @@ export function MiniVista({ documento, titulo, anchoPagina = 1280, alto = 200 }:
     <div ref={caja} className="relative overflow-hidden bg-white" style={{ height: alto }}>
       <iframe
         title={titulo}
-        srcDoc={documento}
+        srcDoc={pagina}
         sandbox="allow-scripts"
-        loading="lazy"
+        loading={inmediata ? 'eager' : 'lazy'}
         tabIndex={-1}
         aria-hidden="true"
         className="pointer-events-none absolute top-0 left-0 origin-top-left border-0"

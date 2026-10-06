@@ -111,11 +111,16 @@ export default function Home() {
 
   // Quien está en una prueba sin cuenta (sesión anónima) y en realidad tiene
   // cuenta (el ingeniero, por ejemplo): se cierra la prueba y se abre el login.
-  const ingresarConCuenta = async (avisar: boolean) => {
+  const ingresarConCuenta = async (avisar: boolean, modo: 'login' | 'registro' = 'login') => {
     if (avisar && !window.confirm('Saldrás de esta prueba sin cuenta. ¿Ingresar con tu cuenta?')) return;
-    setAcceso('login');
+    setAcceso(modo);
     await signOut();
   };
+
+  // La página principal (/) es siempre la portada, salvo para quien entró con
+  // su cuenta. La prueba sin cuenta y la invitación de un ingeniero viven en
+  // /mi-web, con un botón para volver a la portada.
+  const enMiWeb = location.pathname === '/mi-web';
 
   // Mientras Supabase resuelve la sesión no decidimos nada: si pintáramos el
   // login aquí, un usuario ya autenticado vería un parpadeo en cada recarga.
@@ -131,11 +136,19 @@ export default function Home() {
   }
 
   if (!session) {
+    if (enMiWeb) return <Navigate to="/" replace />;
     if (!acceso) return <Portada onAcceso={setAcceso} />;
     return (
       <LoginRegistro key={acceso} onAuthSuccess={() => {}} modoInicial={acceso} onVolver={() => setAcceso(null)} />
     );
   }
+
+  if (esInvitado && !enMiWeb) {
+    return (
+      <Portada onAcceso={(modo) => void ingresarConCuenta(true, modo)} continuar={() => navigate('/mi-web')} />
+    );
+  }
+  if (!esInvitado && enMiWeb) return <Navigate to="/" replace />;
 
   // Esperar al rol evita que el ingeniero vea un instante la pantalla del cliente.
   if (!esInvitado && perfil.cargando) {
@@ -232,15 +245,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-line bg-surface-base/80 backdrop-blur-xl">
+      <header className="cabecera-marca sticky top-0 z-20">
         <Shell>
           <div className="flex items-center justify-between gap-4 py-1">
-            <Wordmark subtitle="La web de tu negocio" />
+            {esInvitado ? (
+              <Link to="/" aria-label="Ir a la página principal de AIB+">
+                <Wordmark subtitle="La web de tu negocio" />
+              </Link>
+            ) : (
+              <Wordmark subtitle="La web de tu negocio" />
+            )}
             <div className="flex items-center gap-3">
               {(tipo || abierto) && (
                 <button type="button" onClick={reiniciar} className="btn btn-ghost">
                   {esInvitado ? (
-                    'Volver al inicio'
+                    'Mis diseños'
                   ) : (
                     <>
                       <span className="sm:hidden">Nuevo</span>
@@ -257,6 +276,12 @@ export default function Home() {
               )}
               {/* El invitado no tiene cuenta: si saliera, perdería su sesión
                   hasta volver a abrir el enlace. Por eso «Ingresar» pregunta antes. */}
+              {esInvitado && (
+                <Link to="/" className="btn btn-ghost">
+                  <span className="sm:hidden">Inicio</span>
+                  <span className="hidden sm:inline">Página principal</span>
+                </Link>
+              )}
               {esInvitado && (
                 <button
                   type="button"

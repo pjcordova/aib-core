@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
 import { miPerfilIngeniero, type EstadoIngeniero, type MiPerfil } from '../../lib/ingenieros';
 import LoginRegistro from '../LoginRegistro';
 import { Wordmark } from '../ui/Primitives';
 import { FormularioPerfil } from './FormularioPerfil';
+import { PiePagina } from '../ui/PiePagina';
 import { PLANES, preciosPlanes } from '../../lib/planes';
 import { solesEnteros } from '../../lib/servicios';
 
@@ -73,19 +74,21 @@ export function UneteIngeniero() {
 
   return (
     <div className="min-h-screen">
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <Link to="/" aria-label="Ir a la portada de AIB+">
-          <Wordmark />
-        </Link>
-        {conCuenta ? (
-          <button type="button" onClick={signOut} className="btn btn-ghost">
-            Salir
-          </button>
-        ) : (
-          <button type="button" onClick={() => setAcceso('login')} className="btn btn-ghost">
-            Ingresar
-          </button>
-        )}
+      <header className="cabecera-marca sticky top-0 z-20">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <Link to="/" aria-label="Ir a la portada de AIB+">
+            <Wordmark />
+          </Link>
+          {conCuenta ? (
+            <button type="button" onClick={signOut} className="btn btn-ghost">
+              Salir
+            </button>
+          ) : (
+            <button type="button" onClick={() => setAcceso('login')} className="btn btn-ghost">
+              Ingresar
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-12 px-4 pt-8 pb-20 sm:px-6 lg:grid-cols-[1fr_1.1fr]">
@@ -181,6 +184,7 @@ export function UneteIngeniero() {
       </main>
 
       <PlanesIngeniero />
+      <PiePagina />
     </div>
   );
 }
@@ -188,6 +192,7 @@ export function UneteIngeniero() {
 /** Los tres planes, con los precios que puso el administrador. */
 function PlanesIngeniero() {
   const [precios, setPrecios] = useState<{ pro: number; negocio: number } | null>(null);
+  const { hash } = useLocation();
 
   useEffect(() => {
     let vigente = true;
@@ -199,10 +204,16 @@ function PlanesIngeniero() {
     };
   }, []);
 
+  // Desde «Planes» en el pie (/ingenieros#planes): la sección llega después
+  // de los precios, así que se baja a ella cuando ya está.
+  useEffect(() => {
+    if (precios && hash === '#planes') document.getElementById('planes')?.scrollIntoView({ behavior: 'smooth' });
+  }, [precios, hash]);
+
   if (!precios) return null;
 
   return (
-    <section id="planes" className="border-t border-line bg-surface-raised/60">
+    <section id="planes" className="scroll-mt-24 border-t border-line bg-surface-raised/60">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="text-center text-3xl sm:text-4xl">Planes para ingenieros</h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-ink-muted">

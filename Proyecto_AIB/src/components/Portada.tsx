@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
 import { PLANTILLAS_BASE } from '../plantillas';
@@ -16,6 +16,7 @@ import { renderizarPlantilla, type PlantillaBase } from '../lib/plantillas';
 import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
 import { ingenierosDisponibles, type IngenieroPublico } from '../lib/ingenieros';
 import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
+import { PiePagina } from './ui/PiePagina';
 
 type Acceso = 'login' | 'registro';
 
@@ -97,16 +98,27 @@ function documentoDeEjemplo(id: string): string | null {
   });
 }
 
-export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
+export function Portada({
+  onAcceso,
+  continuar,
+}: {
+  onAcceso: (modo: Acceso) => void;
+  /** Quien ya tiene una prueba o una invitación abierta: vuelve a su web. */
+  continuar?: () => void;
+}) {
   const navigate = useNavigate();
   // Sin cuenta: /probar abre una sesión de prueba y lleva al cuestionario.
-  const probar = () => navigate('/probar');
+  // Con una prueba ya abierta, se sigue con esa.
+  const probar = () => (continuar ? continuar() : navigate('/probar'));
+  const medir = !continuar;
 
   // Medición del marketplace: la visita y su canal (?c=), sin datos personales.
+  // Quien vuelve desde su prueba ya contó al llegar.
   useEffect(() => {
+    if (!medir) return;
     canalDeLaVisita();
     registrarVisitaPortada();
-  }, []);
+  }, [medir]);
 
   // En el celular, el botón queda fijo abajo en cuanto el de la portada se
   // pierde de vista.
@@ -123,23 +135,35 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
   const celular = useMemo(() => documentoDeEjemplo('restaurante'), []);
 
   return (
-    <div className="min-h-screen pb-20 sm:pb-0">
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <Wordmark />
-        <nav className="flex items-center gap-6" aria-label="Secciones">
-          <a href="#como-funciona" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-            Cómo funciona
-          </a>
-          <a href="#ejemplos" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-            Ejemplos
-          </a>
-          <a href="#preguntas" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-            Preguntas
-          </a>
-          <button type="button" onClick={() => onAcceso('login')} className="btn btn-ghost">
-            Ingresar
-          </button>
-        </nav>
+    <div className="min-h-screen">
+      <header className="cabecera-marca sticky top-0 z-20">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <Wordmark />
+          <nav className="flex items-center gap-6" aria-label="Secciones">
+            <a href="#como-funciona" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
+              Cómo funciona
+            </a>
+            <a href="#ejemplos" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
+              Ejemplos
+            </a>
+            <a href="#preguntas" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
+              Preguntas
+            </a>
+            <button
+              type="button"
+              onClick={() => onAcceso('login')}
+              className={continuar ? 'text-sm text-ink-muted hover:text-ink' : 'btn btn-ghost'}
+            >
+              Ingresar
+            </button>
+            {continuar && (
+              <button type="button" onClick={continuar} className="btn btn-primary">
+                <span className="sm:hidden">Mi web</span>
+                <span className="hidden sm:inline">Continuar con mi web</span>
+              </button>
+            )}
+          </nav>
+        </div>
       </header>
 
       <main>
@@ -188,6 +212,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
                     titulo="Ejemplo de web para un restaurante, vista en el celular"
                     anchoPagina={390}
                     alto={540}
+                    inmediata
                   />
                 )}
               </div>
@@ -199,7 +224,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
         </section>
 
         {/* ------------------------------------------------- cómo funciona */}
-        <section id="como-funciona" className="scroll-mt-6 border-y border-line bg-surface-raised/60">
+        <section id="como-funciona" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
             <h2 className="text-center text-3xl sm:text-4xl">Así de simple</h2>
             <ol className="mt-10 grid gap-5 sm:grid-cols-3">
@@ -250,7 +275,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
         </section>
 
         {/* ------------------------------------------------------ preguntas */}
-        <section id="preguntas" className="scroll-mt-6 border-t border-line">
+        <section id="preguntas" className="scroll-mt-24 border-t border-line">
           <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
             <h2 className="text-center text-3xl sm:text-4xl">Preguntas frecuentes</h2>
             <div className="mt-10 divide-y divide-line border-y border-line">
@@ -288,19 +313,7 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
         </section>
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs text-ink-subtle sm:flex-row sm:px-6">
-          <span>Cordova Solutions © {new Date().getFullYear()}</span>
-          <span className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link to="/ingenieros" className="font-medium text-ink hover:text-accent">
-              ¿Eres ingeniero? Únete a AIB+
-            </Link>
-            <button type="button" onClick={() => onAcceso('login')} className="hover:text-ink">
-              Ingresar
-            </button>
-          </span>
-        </div>
-      </footer>
+      <PiePagina enPortada onIngresar={() => onAcceso('login')} espacioBotonFijo />
 
       {/* Botón fijo en el celular, cuando el de arriba ya no se ve */}
       <div
@@ -338,7 +351,7 @@ function Ejemplos() {
   }, []);
 
   return (
-    <section id="ejemplos" className="scroll-mt-6 mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section id="ejemplos" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <h2 className="text-center text-3xl sm:text-4xl">Diseños pensados para tu rubro</h2>
       <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
         Te mostramos los que mejor encajan con tu negocio y eliges el que más te guste. Estos son con negocios de
@@ -388,6 +401,7 @@ function Ejemplos() {
             titulo={`Ejemplo de web para ${ejemplo.rubro.toLowerCase()}`}
             anchoPagina={enEscritorio ? 1280 : 390}
             alto={enEscritorio ? 460 : 560}
+            inmediata
           />
         )}
       </div>
@@ -412,7 +426,7 @@ function Ingenieros() {
   if (lista.length === 0) return null;
 
   return (
-    <section id="ingenieros" className="scroll-mt-6 border-y border-line bg-surface-raised/60">
+    <section id="ingenieros" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="text-center text-3xl sm:text-4xl">Conoce a los ingenieros</h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">

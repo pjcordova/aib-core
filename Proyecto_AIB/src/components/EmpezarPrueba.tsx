@@ -31,7 +31,7 @@ export function EmpezarPrueba() {
     let vigente = true;
     void empezarUnaVez().then((r) => {
       if (!vigente) return;
-      if (r === 'ok') navigate('/', { replace: true, state: { directo: true } });
+      if (r === 'ok') navigate('/mi-web', { replace: true, state: { directo: true } });
       // Con una cuenta abierta no hace falta probar sin cuenta: a su app.
       else if (r === 'con_cuenta') navigate('/', { replace: true });
       else setResultado(r);

@@ -137,6 +137,59 @@
    -------------------------------------------------------------------------- */
 
 @layer components {
+  /* Cabecera y pie en azul noche (el mismo de los botones). Dentro de ellos
+     se redefinen los colores para que lo que llevan (marca, enlaces, botones,
+     pestañas) se lea sobre el azul: texto crema y acentos en champán. */
+  .cabecera-marca,
+  .pie-marca {
+    --color-ink: #f7f6f2;
+    --color-ink-muted: rgb(247 246 242 / 0.8);
+    --color-ink-subtle: rgb(247 246 242 / 0.62);
+    --color-line: rgb(255 255 255 / 0.12);
+    --color-line-strong: rgb(255 255 255 / 0.3);
+    --color-surface-overlay: rgb(255 255 255 / 0.1);
+    --color-accent: #c4a26a;
+    --color-accent-strong: #d4b783;
+    --color-caution: #f0b35a;
+    --logo-centro: #0e1a2b;
+    position: relative;
+    background: #1a2d4d;
+    color: var(--color-ink);
+  }
+  /* Se queda fija arriba al bajar: la sombra la separa del contenido. */
+  .cabecera-marca {
+    box-shadow: 0 6px 18px -10px rgb(14 26 43 / 0.55);
+  }
+  /* Línea en degradado champán, que se desvanece hacia los lados: bajo la
+     cabecera (por fuera, para no tapar la pestaña activa del panel) y sobre
+     el pie. */
+  .cabecera-marca::after,
+  .pie-marca::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      rgb(196 162 106 / 0) 0%,
+      rgb(196 162 106 / 0.85) 22%,
+      #f1dfb8 50%,
+      rgb(196 162 106 / 0.85) 78%,
+      rgb(196 162 106 / 0) 100%
+    );
+    pointer-events: none;
+  }
+  .cabecera-marca::after {
+    bottom: -2px;
+  }
+  .pie-marca::before {
+    top: 0;
+  }
+  .cabecera-marca .btn-primary,
+  .pie-marca .btn-primary {
+    color: #0e1a2b;
+  }
+
   .card {
     background: var(--color-surface-raised);
     border: 1px solid var(--color-line);

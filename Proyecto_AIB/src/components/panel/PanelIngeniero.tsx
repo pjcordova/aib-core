@@ -97,7 +97,7 @@ export function PanelIngeniero() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-line bg-surface-base/80 backdrop-blur-xl">
+      <header className="cabecera-marca sticky top-0 z-20">
         <Shell>
           <div className="flex items-center justify-between gap-4 py-1">
             <Wordmark subtitle="Panel del ingeniero" />

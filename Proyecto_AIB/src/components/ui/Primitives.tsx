@@ -7,21 +7,24 @@
 // hechas en momentos distintos.
 // ---------------------------------------------------------------------------
 
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 /* -------------------------------------------------------------------------- */
 
 export function Logo({ size = 32 }: { size?: number }) {
+  // Un id por logo: con uno compartido, todos usarían el degradado del
+  // primero, y el de la cabecera azul tiene otros colores.
+  const degradado = useId();
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
-        <linearGradient id="aib-logo-gradient" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={degradado} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--color-accent)" />
           <stop offset="100%" stopColor="var(--color-accent-strong)" />
         </linearGradient>
       </defs>
-      <path d="M16 3 L27 16 L16 29 L5 16 Z" fill="url(#aib-logo-gradient)" />
-      <path d="M16 9 L22 16 L16 23 L10 16 Z" fill="var(--color-accent-alt)" />
+      <path d="M16 3 L27 16 L16 29 L5 16 Z" fill={`url(#${degradado})`} />
+      <path d="M16 9 L22 16 L16 23 L10 16 Z" fill="var(--logo-centro, var(--color-accent-alt))" />
     </svg>
   );
 }
