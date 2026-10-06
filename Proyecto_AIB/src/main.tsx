@@ -12,6 +12,7 @@ import { EntradaInvitacion } from './components/EntradaInvitacion';
 import { EmpezarPrueba } from './components/EmpezarPrueba';
 import { UneteIngeniero } from './components/ingenieros/UneteIngeniero';
 import { UnirseEquipo } from './components/ingenieros/UnirseEquipo';
+import { Ingresar } from './components/Ingresar';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -48,6 +49,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/ingenieros" element={<UneteIngeniero />} />
             {/* El enlace con el que el dueño de un plan Negocio suma a su equipo. */}
             <Route path="/equipo/:token" element={<UnirseEquipo />} />
+            {/* Entrar con cuenta aunque el navegador tenga abierta una prueba sin cuenta. */}
+            <Route path="/ingresar" element={<Ingresar />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}
             <Route path="/dashboard/legado" element={<DashboardIngeniero />} />
             {/* Cualquier otra ruta vuelve al inicio en vez de dejar la página en blanco. */}

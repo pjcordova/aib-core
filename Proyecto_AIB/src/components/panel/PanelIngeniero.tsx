@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
 import { EncargosIngenieria } from '../EncargosIngenieria';
@@ -24,6 +24,7 @@ type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo' 
 export function PanelIngeniero() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
+  const navigate = useNavigate();
   const [pestana, setPestana] = useState<Pestana>('hoy');
   // Encargos de clientes reales que aún nadie ha revisado. Lo informan «Hoy» y Encargos.
   const [nuevos, setNuevos] = useState(0);
@@ -74,9 +75,21 @@ export function PanelIngeniero() {
               ? 'Ejecuta supabase_roles_plantillas.sql en el editor SQL de Supabase y marca tu cuenta como ingeniero.'
               : 'Tu cuenta es de cliente. Si eres el ingeniero, pide que te asignen el rol.'}
           </p>
-          <Link to="/" className="btn btn-primary mt-6">
-            Volver al inicio
-          </Link>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <Link to="/" className="btn btn-ghost">
+              Volver al inicio
+            </Link>
+            {/* Por ejemplo, el ingeniero que se quedó con una prueba sin cuenta abierta. */}
+            <button
+              type="button"
+              onClick={() => {
+                void signOut().then(() => navigate('/', { replace: true, state: { acceso: 'login' } }));
+              }}
+              className="btn btn-primary"
+            >
+              Entrar con mi cuenta de ingeniero
+            </button>
+          </div>
         </div>
       </div>
     );

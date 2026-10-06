@@ -109,6 +109,14 @@ export default function Home() {
     };
   }, [esInvitado, session?.user.id]);
 
+  // Quien está en una prueba sin cuenta (sesión anónima) y en realidad tiene
+  // cuenta (el ingeniero, por ejemplo): se cierra la prueba y se abre el login.
+  const ingresarConCuenta = async (avisar: boolean) => {
+    if (avisar && !window.confirm('Saldrás de esta prueba sin cuenta. ¿Ingresar con tu cuenta?')) return;
+    setAcceso('login');
+    await signOut();
+  };
+
   // Mientras Supabase resuelve la sesión no decidimos nada: si pintáramos el
   // login aquí, un usuario ya autenticado vería un parpadeo en cada recarga.
   if (initializing) {
@@ -153,7 +161,7 @@ export default function Home() {
 
   if (esInvitado && !invitacion?.activa) {
     // null: el enlace se abrió en otro navegador y la sesión pasó allí.
-    return <InvitacionInactiva enOtroNavegador={invitacion === null} />;
+    return <InvitacionInactiva enOtroNavegador={invitacion === null} onIngresar={() => void ingresarConCuenta(false)} />;
   }
 
   const reiniciar = () => {
@@ -248,7 +256,16 @@ export default function Home() {
                 </Link>
               )}
               {/* El invitado no tiene cuenta: si saliera, perdería su sesión
-                  hasta volver a abrir el enlace. */}
+                  hasta volver a abrir el enlace. Por eso «Ingresar» pregunta antes. */}
+              {esInvitado && (
+                <button
+                  type="button"
+                  onClick={() => void ingresarConCuenta(true)}
+                  className="text-sm text-ink-muted hover:text-ink"
+                >
+                  <span className="hidden sm:inline">¿Tienes cuenta? </span>Ingresar
+                </button>
+              )}
               {!esInvitado && (
                 <>
                   <span className="hidden text-sm text-ink-subtle lg:inline">{session.user.email}</span>
@@ -453,7 +470,7 @@ function BienvenidaInvitado({
  * La sesión ya no tiene invitación: o se abrió el enlace en otro navegador (la
  * invitación pasó allí) o el ingeniero la desactivó.
  */
-function InvitacionInactiva({ enOtroNavegador }: { enOtroNavegador: boolean }) {
+function InvitacionInactiva({ enOtroNavegador, onIngresar }: { enOtroNavegador: boolean; onIngresar: () => void }) {
   return (
     <div className="grid min-h-screen place-items-center px-6">
       <div className="max-w-md text-center">
@@ -465,6 +482,9 @@ function InvitacionInactiva({ enOtroNavegador }: { enOtroNavegador: boolean }) {
             ? 'Tu proyecto sigue allí. Para continuar aquí, vuelve a abrir el enlace de tu invitación.'
             : 'Pide a quien te envió el enlace que te mande uno nuevo.'}
         </p>
+        <button type="button" onClick={onIngresar} className="mt-6 text-sm text-ink-muted underline underline-offset-2 hover:text-ink">
+          ¿Tienes cuenta? Ingresar
+        </button>
       </div>
     </div>
   );
