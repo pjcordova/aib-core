@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
@@ -9,10 +9,12 @@ import { InvitacionesPanel } from './InvitacionesPanel';
 import { ComentariosPanel } from './ComentariosPanel';
 import { HoyPanel, type IrAEncargos } from './HoyPanel';
 import { IngenierosPanel } from './IngenierosPanel';
-import { CobrosPanel } from './CobrosPanel';
+import { PlanPanel } from './PlanPanel';
+import { PlanesAdmin } from './PlanesAdmin';
+import { miPlan } from '../../lib/planes';
 import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'hoy' | 'encargos' | 'cobros' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros';
+type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros' | 'plan';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -27,6 +29,23 @@ export function PanelIngeniero() {
   const [nuevos, setNuevos] = useState(0);
   // Cómo se abre la pestaña de encargos. Cambiar `vez` la monta de nuevo con ese filtro.
   const [irEncargos, setIrEncargos] = useState<{ vez: number; destino: IrAEncargos }>({ vez: 0, destino: {} });
+
+  // ABI viene con Pro y Negocio. null mientras se consulta.
+  const [conAbi, setConAbi] = useState<boolean | null>(null);
+  const [versionPlan, setVersionPlan] = useState(0);
+  const esIngeniero = perfil.rol === 'ingeniero';
+
+  useEffect(() => {
+    if (!esIngeniero) return;
+    let vigente = true;
+    // Si no se puede leer, se deja usar: el servidor igual lo comprueba.
+    void miPlan().then((p) => {
+      if (vigente) setConAbi(p ? p.plan !== 'free' : true);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [esIngeniero, session?.user.id, versionPlan]);
 
   const abrirEncargos = useCallback((destino: IrAEncargos) => {
     setIrEncargos((previo) => ({ vez: previo.vez + 1, destino }));
@@ -85,7 +104,6 @@ export function PanelIngeniero() {
               [
                 ['hoy', 'Hoy con ABI', 'Hoy'],
                 ['encargos', 'Encargos', 'Encargos'],
-                ['cobros', 'Cobros', 'Cobros'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
                 // El catálogo que ven los clientes es el del administrador.
@@ -93,6 +111,7 @@ export function PanelIngeniero() {
                 perfil.esAdmin
                   ? (['ingenieros', 'Ingenieros', 'Ingenieros'] as const)
                   : (['ingenieros', 'Mi perfil', 'Perfil'] as const),
+                perfil.esAdmin ? (['plan', 'Planes', 'Planes'] as const) : (['plan', 'Mi plan', 'Plan'] as const),
               ] as const
             ).map(([id, texto, corto]) => (
               <button
@@ -130,6 +149,8 @@ export function PanelIngeniero() {
             onInvitaciones={() => setPestana('invitaciones')}
             onComentarios={() => setPestana('comentarios')}
             onNuevos={setNuevos}
+            conAbi={conAbi}
+            onVerPlan={() => setPestana('plan')}
           />
         ) : pestana === 'encargos' ? (
           <EncargosIngenieria
@@ -143,11 +164,12 @@ export function PanelIngeniero() {
               },
             }}
           />
-        ) : pestana === 'cobros' ? (
-          <CobrosPanel
-            esAdmin={perfil.esAdmin}
-            onAbrirEncargo={(id, negocio) => abrirEncargos({ abrir: id, buscar: negocio ?? undefined })}
-          />
+        ) : pestana === 'plan' ? (
+          perfil.esAdmin ? (
+            <PlanesAdmin />
+          ) : (
+            <PlanPanel onCambio={() => setVersionPlan((v) => v + 1)} />
+          )
         ) : pestana === 'invitaciones' ? (
           <InvitacionesPanel esAdmin={perfil.esAdmin} />
         ) : pestana === 'comentarios' ? (

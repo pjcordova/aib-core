@@ -222,6 +222,33 @@ router.post('/avisos/probar-whatsapp', limitarPrueba, requireAuth, async (req, r
   }
 });
 
+/**
+ * Un ingeniero pidió un plan: se le avisa al administrador por WhatsApp para
+ * que, al ver su Yape, lo active. Lo que dice el aviso sale de la base de
+ * datos (mi_plan, con el token de quien pide), no del navegador.
+ */
+router.post('/planes/avisar-pedido', limitarPrueba, requireAuth, async (req, res, next) => {
+  try {
+    if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
+    const plan = await consultarComo(req.tokenUsuario, 'rpc/mi_plan', { cuerpo: {} });
+    if (!plan?.pedido) return res.status(202).json({ success: true, avisado: false });
+
+    const nombre = String(plan.nombre || 'Un ingeniero')
+      .replace(/[*_~`]/g, '')
+      .slice(0, 60);
+    const esPro = plan.pedido.plan === 'pro';
+    const precio = esPro ? plan.precios?.pro : plan.precios?.negocio;
+    await enviarWhatsapp(
+      `💳 *Pedido de plan en AIB+*\n${nombre} quiere el plan ${esPro ? 'Pro' : 'Negocio'}${precio ? ` (S/ ${precio} al mes)` : ''}.\n\nCuando veas su Yape, actívalo en tu panel → Planes: ${origenDeLaApp(req)}/dashboard`
+    );
+    return res.json({ success: true, avisado: true });
+  } catch (error) {
+    // El pedido ya quedó guardado: el administrador lo ve igual en su panel.
+    console.error('[AIB+] No se pudo avisar del pedido de plan:', error.message);
+    return next(error);
+  }
+});
+
 module.exports = router;
 module.exports.componerCorreo = componerCorreo;
 module.exports.componerWhatsapp = componerWhatsapp;

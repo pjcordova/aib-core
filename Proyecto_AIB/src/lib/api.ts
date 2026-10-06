@@ -321,3 +321,8 @@ export async function preguntarAbi(
 export async function probarWhatsappIngeniero(): Promise<void> {
   await post<{ success: boolean }>('/api/avisos/probar-whatsapp', {}, 20_000);
 }
+
+/** Avisa al administrador por WhatsApp de que el ingeniero pidió un plan. */
+export async function avisarPedidoPlan(): Promise<void> {
+  await post<{ success: boolean }>('/api/planes/avisar-pedido', {}, 20_000);
+}

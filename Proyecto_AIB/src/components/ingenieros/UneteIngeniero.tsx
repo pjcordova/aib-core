@@ -6,6 +6,8 @@ import { miPerfilIngeniero, type EstadoIngeniero, type MiPerfil } from '../../li
 import LoginRegistro from '../LoginRegistro';
 import { Wordmark } from '../ui/Primitives';
 import { FormularioPerfil } from './FormularioPerfil';
+import { PLANES, preciosPlanes } from '../../lib/planes';
+import { solesEnteros } from '../../lib/servicios';
 
 // ---------------------------------------------------------------------------
 // Únete a AIB+ como ingeniero (/ingenieros)
@@ -25,8 +27,8 @@ const VENTAJAS = [
     texto: 'Los dueños de negocio te eligen por tu perfil, tus rubros y las reseñas de tus clientes.',
   },
   {
-    titulo: 'ABI, tu asistente',
-    texto: 'Te dice qué cliente espera respuesta, te prepara los mensajes y te ayuda a organizar tu semana.',
+    titulo: 'Empiezas gratis',
+    texto: 'El plan Free no cuesta nada. Con Pro sumas a ABI, tu asistente con IA, y con Negocio, a tu equipo.',
   },
 ];
 
@@ -177,6 +179,75 @@ export function UneteIngeniero() {
           )}
         </section>
       </main>
+
+      <PlanesIngeniero />
     </div>
+  );
+}
+
+/** Los tres planes, con los precios que puso el administrador. */
+function PlanesIngeniero() {
+  const [precios, setPrecios] = useState<{ pro: number; negocio: number } | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    void preciosPlanes().then((p) => {
+      if (vigente) setPrecios(p);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  if (!precios) return null;
+
+  return (
+    <section id="planes" className="border-t border-line bg-surface-raised/60">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 className="text-center text-3xl sm:text-4xl">Planes para ingenieros</h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-ink-muted">
+          Los clientes llegan gratis en todos los planes. Pagas solo si quieres a ABI o trabajar en equipo.
+        </p>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {PLANES.map((p) => (
+            <article
+              key={p.id}
+              className={
+                'flex flex-col rounded-2xl border p-6 ' +
+                (p.id === 'pro' ? 'border-accent/40 bg-accent/5' : 'border-line bg-surface-base')
+              }
+            >
+              <h3 className="text-xl">{p.nombre}</h3>
+              <p className="mt-2">
+                {p.id === 'free' ? (
+                  <span className="text-3xl font-semibold text-ink">Gratis</span>
+                ) : (
+                  <>
+                    <span className="text-3xl font-semibold text-ink tabular-nums">
+                      {solesEnteros(p.id === 'pro' ? precios.pro : precios.negocio)}
+                    </span>
+                    <span className="text-sm text-ink-muted"> al mes</span>
+                  </>
+                )}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">{p.resumen}</p>
+              <ul className="mt-4 space-y-2 text-sm text-ink">
+                {p.incluye.map((linea) => (
+                  <li key={linea} className="flex gap-2">
+                    <span className="text-accent" aria-hidden="true">
+                      ✓
+                    </span>
+                    {linea}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+        <p className="mt-6 text-center text-xs text-ink-subtle">
+          Empiezas en Free. Cambias de plan cuando quieras desde tu panel, en «Mi plan».
+        </p>
+      </div>
+    </section>
   );
 }

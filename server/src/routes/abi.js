@@ -19,11 +19,12 @@ const limitar = crearLimitador({ maxPorMinuto: 12, nombre: 'abi' });
 const MAX_MENSAJES = 20;
 const MAX_CARACTERES_MENSAJE = 4000;
 
+/** ABI viene con los planes Pro y Negocio (supabase_planes.sql). */
 async function soloIngeniero(req, res, next) {
   try {
-    const esIngeniero = await consultarComo(req.tokenUsuario, 'rpc/es_ingeniero', { cuerpo: {} });
-    if (esIngeniero === true) return next();
-    return res.status(403).json({ success: false, error: 'ABI es solo para ingenieros.' });
+    const conAbi = await consultarComo(req.tokenUsuario, 'rpc/tengo_abi', { cuerpo: {} });
+    if (conAbi === true) return next();
+    return res.status(403).json({ success: false, error: 'ABI viene con el plan Pro. Actívalo en «Mi plan».' });
   } catch (error) {
     console.error('[AIB+] No se pudo comprobar el rol para ABI:', error.message);
     return res.status(503).json({ success: false, error: 'No pudimos comprobar tu cuenta. Inténtalo de nuevo.' });

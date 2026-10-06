@@ -38,11 +38,16 @@ export function HoyPanel({
   onInvitaciones,
   onComentarios,
   onNuevos,
+  conAbi,
+  onVerPlan,
 }: {
   onEncargos: (destino: IrAEncargos) => void;
   onInvitaciones: () => void;
   onComentarios: () => void;
   onNuevos?: (cantidad: number) => void;
+  /** ABI viene con Pro y Negocio. null mientras se consulta el plan. */
+  conAbi: boolean | null;
+  onVerPlan: () => void;
 }) {
   const [resumen, setResumen] = useState<ResumenHoy | null>(null);
   // Sube cuando ABI cambia algo (una etapa, una invitación): se vuelve a leer.
@@ -117,7 +122,21 @@ export function HoyPanel({
         </p>
       )}
 
-      <ChatAbi sugerencias={sugerencias} onCambio={() => setVersion((v) => v + 1)} />
+      {conAbi === true ? (
+        <ChatAbi sugerencias={sugerencias} onCambio={() => setVersion((v) => v + 1)} />
+      ) : conAbi === false ? (
+        <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-accent/30 bg-accent/5 p-5">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-ink">Pregúntale a ABI con el plan Pro</p>
+            <p className="mt-1 text-sm text-ink-muted">
+              Te dice qué responderle a cada cliente, te redacta los mensajes de WhatsApp y te ayuda a cotizar.
+            </p>
+          </div>
+          <button type="button" onClick={onVerPlan} className="btn btn-primary">
+            Ver planes
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-8">
         {/* ------------------------------------------------ esperan respuesta */}

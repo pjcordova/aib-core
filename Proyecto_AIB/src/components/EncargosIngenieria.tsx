@@ -25,7 +25,8 @@ import {
 } from '../lib/encargos';
 import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 import { conAnimaciones } from '../lib/animaciones';
-import { CobroEncargo } from './panel/CobroEncargo';
+import { ResponsableEncargo } from './panel/ResponsableEncargo';
+import { miEquipo, type MiEquipo } from '../lib/planes';
 
 // ---------------------------------------------------------------------------
 // Encargos aceptados
@@ -68,6 +69,18 @@ export function EncargosIngenieria({
   const [abierto, setAbierto] = useState<string | null>(inicial?.abrir ?? null);
   const [seguimiento, setSeguimiento] = useState<Map<string, CambioEstado[]>>(new Map());
   const [detalles, setDetalles] = useState<Map<string, ProyectoCompleto>>(new Map());
+  // Plan Negocio: el dueño reparte los encargos entre su equipo.
+  const [equipo, setEquipo] = useState<MiEquipo | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    void miEquipo().then((e) => {
+      if (vigente) setEquipo(e);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
 
   // Se está pidiendo la primera página de un filtro nuevo.
   const cargando = lista?.filtros !== filtros;
@@ -317,6 +330,7 @@ export function EncargosIngenieria({
                       {!f.tieneDocumentacion && <span className="text-caution"> · documentación pendiente</span>}
                       {f.cliente && <span> · {f.cliente}</span>}
                       {f.ingeniero && <span> · lo lleva {f.ingeniero}</span>}
+                      {f.responsable && <span> · a cargo de {f.responsable}</span>}
                     </p>
                   </div>
                   <span className="shrink-0 text-ink-subtle">{desplegado ? '−' : '+'}</span>
@@ -328,6 +342,8 @@ export function EncargosIngenieria({
                     detalle={detalles.get(f.id)}
                     onDetalle={guardarDetalle}
                     cambios={seguimiento.get(f.id) ?? []}
+                    equipo={equipo}
+                    onResponsable={(id, nombre) => actualizarFila(f.id, { responsableId: id, responsable: nombre })}
                     onCambio={(cambio) => {
                       setSeguimiento((previo) => new Map(previo).set(f.id, [...(previo.get(f.id) ?? []), cambio]));
                       actualizarFila(f.id, { estado: cambio.estado });
@@ -378,6 +394,8 @@ function DetalleEncargo({
   detalle,
   onDetalle,
   cambios,
+  equipo,
+  onResponsable,
   onCambio,
   onDocumentada,
 }: {
@@ -385,6 +403,8 @@ function DetalleEncargo({
   detalle: ProyectoCompleto | undefined;
   onDetalle: (detalle: ProyectoCompleto) => void;
   cambios: CambioEstado[];
+  equipo: MiEquipo | null;
+  onResponsable: (id: string | null, nombre: string | null) => void;
   onCambio: (cambio: CambioEstado) => void;
   onDocumentada: (documentacion: Documentacion) => void;
 }) {
@@ -416,7 +436,14 @@ function DetalleEncargo({
   return (
     <div className="animate-fade-up border-t border-line p-5 pt-6">
       <DatosCliente encargo={detalle} />
-      <CobroEncargo proyectoId={detalle.id} />
+      {equipo?.rol === 'dueno' && fila.ingenieroId === equipo.dueno_id && (
+        <ResponsableEncargo
+          proyectoId={fila.id}
+          responsableId={fila.responsableId}
+          equipo={equipo}
+          onCambio={onResponsable}
+        />
+      )}
       <EditorSeguimiento encargo={detalle} cambios={cambios} onCambio={onCambio} />
       {!doc ? (
         <SinDocumentacion
