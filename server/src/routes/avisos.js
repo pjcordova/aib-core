@@ -12,10 +12,36 @@ const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
 const { correoConfigurado, enviarCorreo, escapar } = require('../correo');
 const { whatsappConfigurado, enviarWhatsapp } = require('../whatsapp');
+const { consultarComo } = require('../supabaseUsuario');
 
 const router = Router();
 
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'avisar-encargo' });
+const limitarPrueba = crearLimitador({ maxPorMinuto: 3, nombre: 'probar-whatsapp' });
+
+/**
+ * Datos que solo el servidor puede pedir: los protege la misma clave secreta
+ * que el resumen diario (CRON_SECRET), no la sesión de quien llama.
+ */
+function consultarConClave(funcion, cuerpo) {
+  return consultarComo(config.supabaseAnonKey, `rpc/${funcion}`, { cuerpo: { p_clave: config.cronSecret, ...cuerpo } });
+}
+
+/**
+ * Con varios ingenieros, el encargo también avisa a quien lo eligieron (si no
+ * es el administrador, que ya recibe el aviso del servidor) por su propio
+ * WhatsApp de CallMeBot. Devuelve false si no tiene los avisos activados.
+ */
+async function avisarAlIngeniero(proyectoId, enlacePanel) {
+  const datos = await consultarConClave('aviso_ingeniero_de_encargo', { p_proyecto: proyectoId });
+  if (datos?.estado !== 'ok') return false;
+  const texto = componerWhatsapp({ empresa: datos.negocio }, enlacePanel).replace(
+    '*Nuevo encargo en AIB+*',
+    `*${datos.nombre ? `${datos.nombre}, t` : 'T'}e eligieron en AIB+*`
+  );
+  await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
+  return true;
+}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function registrarAviso(proyectoId, token) {
@@ -125,8 +151,9 @@ router.post('/avisar-encargo', limitar, requireAuth, async (req, res, next) => {
     }
 
     // Sin ningún canal configurado no se registra nada: si se configura más
-    // tarde, los encargos nuevos avisarán con normalidad.
-    if (!correoConfigurado() && !whatsappConfigurado()) {
+    // tarde, los encargos nuevos avisarán con normalidad. Con la clave del
+    // servidor, al menos se puede avisar al ingeniero elegido.
+    if (!correoConfigurado() && !whatsappConfigurado() && !config.cronSecret) {
       return res.status(202).json({ success: true, avisado: false });
     }
 
@@ -140,13 +167,14 @@ router.post('/avisar-encargo', limitar, requireAuth, async (req, res, next) => {
     const envios = [];
     if (correoConfigurado()) envios.push(['correo', enviarCorreo(componerCorreo(encargo, panel))]);
     if (whatsappConfigurado()) envios.push(['whatsapp', enviarWhatsapp(componerWhatsapp(encargo, panel))]);
+    if (config.cronSecret) envios.push(['ingeniero', avisarAlIngeniero(proyectoId, panel)]);
 
     // Cada canal por su lado: si uno falla, el otro sale igual.
     const resultados = await Promise.allSettled(envios.map(([, envio]) => envio));
     const avisado = {};
     resultados.forEach((resultado, i) => {
       const canal = envios[i][0];
-      avisado[canal] = resultado.status === 'fulfilled';
+      avisado[canal] = resultado.status === 'fulfilled' && resultado.value !== false;
       if (resultado.status === 'rejected') {
         console.error(`[AIB+] No se pudo avisar por ${canal}:`, resultado.reason?.message);
       }
@@ -157,6 +185,39 @@ router.post('/avisar-encargo', limitar, requireAuth, async (req, res, next) => {
     // El encargo ya está aceptado y guardado: un fallo aquí solo significa que
     // el ingeniero se entera al abrir su panel.
     console.error('[AIB+] No se pudo avisar del encargo:', error.message);
+    return next(error);
+  }
+});
+
+/**
+ * El ingeniero comprueba desde su perfil que le llegan los avisos: se le manda
+ * un WhatsApp de prueba a su número, con su clave de CallMeBot.
+ */
+router.post('/avisos/probar-whatsapp', limitarPrueba, requireAuth, async (req, res, next) => {
+  try {
+    if (!config.cronSecret) {
+      return res.status(503).json({ success: false, error: 'Los avisos no están configurados en el servidor.' });
+    }
+    const datos = await consultarConClave('aviso_de_prueba', { p_usuario: req.usuario.id });
+    if (datos?.estado !== 'ok') {
+      return res
+        .status(409)
+        .json({ success: false, error: 'Guarda tu WhatsApp en tu perfil y tu clave de CallMeBot antes de probar.' });
+    }
+    try {
+      await enviarWhatsapp(
+        `✅ Hola${datos.nombre ? ` ${datos.nombre}` : ''}, así te llegarán los avisos de AIB+: cuando un cliente te elija y cada mañana, con tu resumen.`,
+        { telefono: datos.whatsapp, apikey: datos.apikey }
+      );
+    } catch (error) {
+      console.warn('[AIB+] Prueba de WhatsApp fallida:', error.message);
+      return res.status(502).json({
+        success: false,
+        error: 'CallMeBot no aceptó el envío. Revisa que activaste CallMeBot con este mismo número y que la clave es la que te mandó.',
+      });
+    }
+    return res.json({ success: true });
+  } catch (error) {
     return next(error);
   }
 });

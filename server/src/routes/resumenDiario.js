@@ -1,14 +1,17 @@
 // --- ABI: EL RESUMEN DE CADA MAÑANA ---
 // Lo llama el cron de Vercel a las 8:00 de Lima (vercel.json), con la cabecera
 // Authorization: Bearer CRON_SECRET. Pide el resumen a la base de datos
-// (resumen_del_dia, protegida con la misma clave) y se lo manda al ingeniero
-// por WhatsApp. Si no hay nada pendiente o él lo desactivó en los ajustes de
-// ABI, no manda nada. Con ?prueba=1 devuelve el texto sin enviarlo.
+// (resumen_del_dia, protegida con la misma clave) y se lo manda al
+// administrador por WhatsApp. Después, a cada ingeniero con los avisos
+// activados, el suyo (resumenes_ingenieros): solo lo que lleva él. A quien no
+// tiene nada pendiente o lo desactivó en los ajustes de ABI no le llega nada.
+// Con ?prueba=1 devuelve los textos sin enviarlos (nunca números ni claves).
 
 const crypto = require('crypto');
 const { Router } = require('express');
 const { config } = require('../config');
 const { whatsappConfigurado, enviarWhatsapp } = require('../whatsapp');
+const { consultarComo } = require('../supabaseUsuario');
 
 const router = Router();
 
@@ -71,6 +74,67 @@ function componerResumen(r) {
   return [saludo, ...partes, `Tu panel: ${config.appUrl}/dashboard`].join('\n\n');
 }
 
+/** El resumen de cada ingeniero que no es el administrador, por su WhatsApp. */
+async function resumenesDeIngenieros(prueba) {
+  const r = await consultarComo(config.supabaseAnonKey, 'rpc/resumenes_ingenieros', {
+    cuerpo: { p_clave: config.cronSecret },
+  });
+  if (r?.estado !== 'ok') {
+    console.error('[AIB+] Resúmenes de ingenieros: la base de datos rechazó la clave.');
+    return { error: 'La clave no coincide con la de la base de datos.' };
+  }
+
+  const salida = { enviados: 0, sin_novedades: 0, fallidos: 0, ...(prueba ? { textos: [] } : {}) };
+  for (const ing of r.ingenieros ?? []) {
+    const texto = componerResumen(ing);
+    if (!texto) {
+      salida.sin_novedades += 1;
+    } else if (prueba) {
+      salida.textos.push({ nombre: ing.nombre, texto });
+    } else {
+      try {
+        await enviarWhatsapp(texto, { telefono: ing.whatsapp, apikey: ing.apikey });
+        salida.enviados += 1;
+      } catch (error) {
+        salida.fallidos += 1;
+        console.error(`[AIB+] No se pudo mandar el resumen a ${ing.nombre}:`, error.message);
+      }
+    }
+  }
+  return salida;
+}
+
+/** El del administrador: lo de toda la plataforma, por el WhatsApp del servidor. */
+async function resumenDelAdministrador(prueba) {
+  const respuesta = await fetch(`${config.supabaseUrl}/rest/v1/rpc/resumen_del_dia`, {
+    method: 'POST',
+    headers: {
+      apikey: config.supabaseAnonKey,
+      Authorization: `Bearer ${config.supabaseAnonKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_clave: config.cronSecret }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!respuesta.ok) throw new Error(`Supabase respondió ${respuesta.status}: ${(await respuesta.text()).slice(0, 200)}`);
+
+  const resumen = await respuesta.json();
+  if (resumen?.estado !== 'ok') {
+    console.error('[AIB+] Resumen diario: la base de datos rechazó la clave. Revisa claves_sistema.');
+    return { error: 'La clave del resumen no coincide con la de la base de datos.' };
+  }
+  if (!resumen.activo) return { enviado: false, motivo: 'El ingeniero lo desactivó en los ajustes de ABI.' };
+
+  const texto = componerResumen(resumen);
+  if (!texto) return { enviado: false, motivo: 'No hay nada pendiente.' };
+  if (prueba) return { enviado: false, texto };
+
+  if (!whatsappConfigurado()) return { error: 'Falta configurar el WhatsApp de avisos (CallMeBot).' };
+  await enviarWhatsapp(texto);
+  console.log('[AIB+] Resumen diario enviado por WhatsApp.');
+  return { enviado: true };
+}
+
 router.get('/abi/resumen-diario', async (req, res, next) => {
   if (!config.cronSecret) {
     return res.status(503).json({ success: false, error: 'Falta CRON_SECRET en el servidor.' });
@@ -80,37 +144,12 @@ router.get('/abi/resumen-diario', async (req, res, next) => {
   }
 
   try {
-    const respuesta = await fetch(`${config.supabaseUrl}/rest/v1/rpc/resumen_del_dia`, {
-      method: 'POST',
-      headers: {
-        apikey: config.supabaseAnonKey,
-        Authorization: `Bearer ${config.supabaseAnonKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ p_clave: config.cronSecret }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!respuesta.ok) throw new Error(`Supabase respondió ${respuesta.status}: ${(await respuesta.text()).slice(0, 200)}`);
-
-    const resumen = await respuesta.json();
-    if (resumen?.estado !== 'ok') {
-      console.error('[AIB+] Resumen diario: la base de datos rechazó la clave. Revisa claves_sistema.');
-      return res.status(500).json({ success: false, error: 'La clave del resumen no coincide con la de la base de datos.' });
-    }
-    if (!resumen.activo) {
-      return res.json({ success: true, enviado: false, motivo: 'El ingeniero lo desactivó en los ajustes de ABI.' });
-    }
-
-    const texto = componerResumen(resumen);
-    if (!texto) return res.json({ success: true, enviado: false, motivo: 'No hay nada pendiente.' });
-    if (req.query.prueba === '1') return res.json({ success: true, enviado: false, texto });
-
-    if (!whatsappConfigurado()) {
-      return res.status(503).json({ success: false, error: 'Falta configurar el WhatsApp de avisos (CallMeBot).' });
-    }
-    await enviarWhatsapp(texto);
-    console.log('[AIB+] Resumen diario enviado por WhatsApp.');
-    return res.json({ success: true, enviado: true });
+    const prueba = req.query.prueba === '1';
+    const admin = await resumenDelAdministrador(prueba);
+    const ingenieros = await resumenesDeIngenieros(prueba);
+    if (admin.error && ingenieros.error) return res.status(500).json({ success: false, error: admin.error });
+    // Lo del administrador, como antes, más lo de los demás ingenieros.
+    return res.json({ success: !admin.error, ...admin, ingenieros });
   } catch (error) {
     return next(error);
   }

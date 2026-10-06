@@ -17,11 +17,15 @@ function whatsappConfigurado() {
   return Boolean(whatsapp && /^\d{8,15}$/.test(whatsapp) && callmebotApiKey);
 }
 
-async function enviarWhatsapp(texto) {
+/**
+ * Por defecto, al WhatsApp del administrador (el del servidor). Con `destino`,
+ * al de otro ingeniero, que activó CallMeBot con su número y guardó su clave.
+ */
+async function enviarWhatsapp(texto, destino) {
   const parametros = new URLSearchParams({
-    phone: `+${config.avisos.whatsapp}`,
+    phone: `+${destino?.telefono ?? config.avisos.whatsapp}`,
     text: texto.slice(0, 1000),
-    apikey: config.avisos.callmebotApiKey,
+    apikey: destino?.apikey ?? config.avisos.callmebotApiKey,
   });
 
   const respuesta = await fetch(`https://api.callmebot.com/whatsapp.php?${parametros}`, {

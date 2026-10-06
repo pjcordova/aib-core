@@ -11,6 +11,7 @@ import {
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { FormularioPerfil } from '../ingenieros/FormularioPerfil';
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
+import { AvisosWhatsapp } from '../ingenieros/AvisosWhatsapp';
 
 // ---------------------------------------------------------------------------
 // Ingenieros del marketplace
@@ -71,6 +72,8 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
           />
         </div>
       )}
+      {/* Al administrador le avisa el WhatsApp configurado en el servidor. */}
+      {!esAdmin && perfil && <AvisosWhatsapp />}
     </div>
   );
 }

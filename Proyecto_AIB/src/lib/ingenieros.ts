@@ -189,3 +189,24 @@ export function textoEstrellas(promedio: number | null, resenas: number): string
   if (!resenas || promedio === null) return 'Nuevo en AIB+';
   return `${Number(promedio).toFixed(1)} ★ (${resenas} ${resenas === 1 ? 'reseña' : 'reseñas'})`;
 }
+
+/**
+ * La clave de CallMeBot del ingeniero, para que le lleguen sus avisos por
+ * WhatsApp. Nadie la puede leer desde la app; vacía, la borra.
+ */
+export async function guardarAvisoWhatsapp(apikey: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('guardar_aviso_ingeniero', { p_apikey: apikey });
+  if (error) {
+    console.error('[AIB+] No se pudo guardar la clave de avisos:', error.message);
+    throw new Error(
+      error.code === '23514' ? 'La clave solo tiene letras y números.' : 'No pudimos guardar la clave. Vuelve a intentarlo.'
+    );
+  }
+  return data === true;
+}
+
+/** ¿Tiene los avisos listos? (clave guardada y WhatsApp en su perfil) */
+export async function tengoAvisoWhatsapp(): Promise<boolean> {
+  const { data } = await supabase.rpc('tengo_aviso_ingeniero');
+  return data === true;
+}

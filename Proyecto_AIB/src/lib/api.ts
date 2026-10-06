@@ -316,3 +316,8 @@ export async function preguntarAbi(
   }
   return { respuesta: data.respuesta, acciones: (data.acciones ?? []).filter(esAccionValida) };
 }
+
+/** El ingeniero se manda un WhatsApp de prueba para comprobar sus avisos. */
+export async function probarWhatsappIngeniero(): Promise<void> {
+  await post<{ success: boolean }>('/api/avisos/probar-whatsapp', {}, 20_000);
+}
