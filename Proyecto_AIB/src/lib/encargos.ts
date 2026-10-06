@@ -32,6 +32,8 @@ export interface EncargoFila {
   estado: EstadoEncargo;
   /** Hecho por un ingeniero con su cuenta o desde una invitación de prueba. */
   esPrueba: boolean;
+  /** Nombre del ingeniero que lo lleva (con perfil); el administrador ve el de todos. */
+  ingeniero: string | null;
 }
 
 export interface FiltrosEncargos {
@@ -48,7 +50,7 @@ export const SIN_FILTROS: FiltrosEncargos = { busqueda: '', estado: '', servicio
 
 const COLUMNAS =
   'id, created_at, servicio, tipo_servicio, empresa, objetivo, presupuesto, cliente, plantilla, ' +
-  'respuestas, tiene_documentacion, semanas, tiene_maqueta, estado, es_prueba';
+  'respuestas, tiene_documentacion, semanas, tiene_maqueta, estado, es_prueba, ingeniero';
 
 interface FilaVista {
   id: string;
@@ -66,6 +68,7 @@ interface FilaVista {
   tiene_maqueta: boolean | null;
   estado: EstadoEncargo;
   es_prueba: boolean | null;
+  ingeniero: string | null;
 }
 
 function filaDe(f: FilaVista): EncargoFila {
@@ -85,6 +88,7 @@ function filaDe(f: FilaVista): EncargoFila {
     tieneMaqueta: f.tiene_maqueta === true,
     estado: f.estado,
     esPrueba: f.es_prueba === true,
+    ingeniero: f.ingeniero ?? null,
   };
 }
 

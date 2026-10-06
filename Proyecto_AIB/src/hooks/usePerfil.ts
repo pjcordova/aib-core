@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// usePerfil — rol de la cuenta (cliente o ingeniero)
+// usePerfil — rol de la cuenta (cliente o ingeniero) y si es el administrador
 // ---------------------------------------------------------------------------
 // Si la tabla `perfiles` todavía no existe (no se ejecutó
 // supabase_roles_plantillas.sql), no se rompe nada: la cuenta se trata como
@@ -13,6 +13,8 @@ export type Rol = 'cliente' | 'ingeniero';
 
 interface EstadoPerfil {
   rol: Rol;
+  /** El administrador del marketplace: ve todo y aprueba ingenieros. */
+  esAdmin: boolean;
   cargando: boolean;
   /** true si la base de datos aún no tiene la tabla de perfiles. */
   sinConfigurar: boolean;
@@ -21,6 +23,7 @@ interface EstadoPerfil {
 export function usePerfil(userId: string | null | undefined): EstadoPerfil {
   const [estado, setEstado] = useState<EstadoPerfil>({
     rol: 'cliente',
+    esAdmin: false,
     cargando: true,
     sinConfigurar: false,
   });
@@ -31,7 +34,7 @@ export function usePerfil(userId: string | null | undefined): EstadoPerfil {
 
     supabase
       .from('perfiles')
-      .select('rol')
+      .select('rol, es_admin')
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -39,11 +42,17 @@ export function usePerfil(userId: string | null | undefined): EstadoPerfil {
         if (error) {
           // 42P01 = la tabla no existe. Cualquier otro error también degrada a
           // cliente: es la opción que no abre nada que no deba abrirse.
-          setEstado({ rol: 'cliente', cargando: false, sinConfigurar: error.code === '42P01' || error.code === 'PGRST205' });
+          setEstado({
+            rol: 'cliente',
+            esAdmin: false,
+            cargando: false,
+            sinConfigurar: error.code === '42P01' || error.code === 'PGRST205',
+          });
           return;
         }
         setEstado({
           rol: data?.rol === 'ingeniero' ? 'ingeniero' : 'cliente',
+          esAdmin: data?.rol === 'ingeniero' && data?.es_admin === true,
           cargando: false,
           sinConfigurar: false,
         });

@@ -315,6 +315,7 @@ export function EncargosIngenieria({
                       {f.semanas ? ` · ~${f.semanas} semanas` : ''}
                       {!f.tieneDocumentacion && <span className="text-caution"> · documentación pendiente</span>}
                       {f.cliente && <span> · {f.cliente}</span>}
+                      {f.ingeniero && <span> · lo lleva {f.ingeniero}</span>}
                     </p>
                   </div>
                   <span className="shrink-0 text-ink-subtle">{desplegado ? '−' : '+'}</span>

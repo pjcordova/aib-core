@@ -22,13 +22,15 @@ interface Props {
   error: string | null;
   onEnviar: (datos: DatosEncargo) => void;
   onCancelar: () => void;
+  /** El ingeniero que eligió en el paso anterior, si eligió uno. */
+  ingeniero?: string | null;
 }
 
 /**
  * Último paso al aceptar: cómo contactar al cliente y lo que más cambia el
  * precio. Sin esto el ingeniero recibía el encargo sin forma de responder.
  */
-export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnviar, onCancelar }: Props) {
+export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnviar, onCancelar, ingeniero }: Props) {
   const { session } = useAuth();
   const [nombre, setNombre] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -81,9 +83,11 @@ export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnv
         }}
         className="card animate-fade-up max-h-[92vh] w-full max-w-lg overflow-y-auto p-6 sm:p-8"
       >
-        <p className="text-xs font-medium tracking-widest text-accent uppercase">Último paso</p>
+        <p className="text-xs font-medium tracking-widest text-accent uppercase">
+          {ingeniero ? 'Paso 2 de 2' : 'Último paso'}
+        </p>
         <h2 id="titulo-contacto" className="mt-1.5 text-xl font-semibold text-balance">
-          ¿Cómo te contacta el ingeniero?
+          ¿Cómo te contacta {ingeniero ? ingeniero.split(' ')[0] : 'el ingeniero'}?
         </h2>
         <p className="mt-1.5 text-sm text-ink-muted">
           Te escribirá para mostrarte la propuesta. Estos datos solo los ve el ingeniero de tu

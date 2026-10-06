@@ -6,6 +6,7 @@ import { PrototypePreview } from './components/PrototypePreviewDiferido';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { Portada } from './components/Portada';
 import { conPrecioMostrado, miPrecio } from './lib/pruebaPrecio';
+import { ElegirIngeniero } from './components/ingenieros/ElegirIngeniero';
 import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
 import { WebPreview } from './components/web/WebPreview';
@@ -57,6 +58,9 @@ export default function Home() {
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
   const [aceptacionAbierto, setAceptacionAbierto] = useState<EstadoAceptacion>('inactivo');
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  // Al aceptar, el cliente elige ingeniero (salvo si vino con la invitación de uno).
+  const [eligiendoIngeniero, setEligiendoIngeniero] = useState(false);
+  const [ingenieroElegido, setIngenieroElegido] = useState<string | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [cargandoProyecto, setCargandoProyecto] = useState(false);
   // Prueba de precio en una maqueta reabierta que aún no se aceptó.
@@ -203,6 +207,13 @@ export default function Home() {
 
   const servicio = tipo ? obtenerServicio(tipo) : null;
 
+  // Quien llegó con la invitación de un ingeniero ya tiene el suyo.
+  const vinoConSuIngeniero = esInvitado && invitacion?.origen === 'ingeniero';
+  const aceptarConIngeniero = () => {
+    if (vinoConSuIngeniero) setPidiendoContacto(true);
+    else setEligiendoIngeniero(true);
+  };
+
   const empezarIA = (texto: string) => {
     const limpio = texto.trim();
     if (!limpio || !servicio) return;
@@ -272,7 +283,7 @@ export default function Home() {
                   usage={abierto.usage}
                   guardado="guardado"
                   aceptacion={aceptacionAbierto}
-                  onAceptar={() => setPidiendoContacto(true)}
+                  onAceptar={aceptarConIngeniero}
                   onGuardarEdicion={guardarCambiosAbierto}
                   proyectoId={abierto.id}
                   conSeguimiento={abierto.aceptado}
@@ -286,7 +297,7 @@ export default function Home() {
                   usage={abierto.usage}
                   guardado="guardado"
                   aceptacion={aceptacionAbierto}
-                  onAceptar={() => setPidiendoContacto(true)}
+                  onAceptar={aceptarConIngeniero}
                 />
               )}
             </>
@@ -294,6 +305,7 @@ export default function Home() {
             <FlujoWeb
               onGuardado={refrescarLista}
               empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
+              elegirIngeniero={!vinoConSuIngeniero}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
             />
           ) : servicio && iniciado ? (
@@ -362,8 +374,21 @@ export default function Home() {
         </Shell>
       </main>
 
+      {abierto && eligiendoIngeniero && (
+        <ElegirIngeniero
+          proyectoId={abierto.id}
+          rubro={abierto.ficha?.categoria || undefined}
+          onElegido={(nombre) => {
+            setIngenieroElegido(nombre);
+            setEligiendoIngeniero(false);
+            setPidiendoContacto(true);
+          }}
+          onCancelar={() => setEligiendoIngeniero(false)}
+        />
+      )}
       {abierto && pidiendoContacto && (
         <ContactoEncargo
+          ingeniero={ingenieroElegido}
           tipoServicio={abierto.tipoServicio}
           objetivo={abierto.ficha?.objetivo}
           enviando={aceptacionAbierto === 'procesando'}

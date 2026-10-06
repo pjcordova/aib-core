@@ -93,6 +93,8 @@ GRANT EXECUTE ON FUNCTION public.es_ingeniero() TO authenticated;
 -- Las políticas SELECT se suman: el cliente sigue viendo solo los suyos (la
 -- política original) y el ingeniero, además, los de todos.
 
+-- OJO: con varios ingenieros, supabase_marketplace.sql sustituye esta política
+-- (cada ingeniero ve solo lo suyo). Ejecútalo después si vuelves a correr este archivo.
 DROP POLICY IF EXISTS "El ingeniero ve todos los proyectos" ON public.proyectos;
 CREATE POLICY "El ingeniero ve todos los proyectos"
   ON public.proyectos FOR SELECT

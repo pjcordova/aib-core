@@ -8,12 +8,14 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
 import { PLANTILLAS_BASE } from '../plantillas';
 import { renderizarPlantilla, type PlantillaBase } from '../lib/plantillas';
 import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
+import { ingenierosDisponibles, type IngenieroPublico } from '../lib/ingenieros';
+import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 
 type Acceso = 'login' | 'registro';
 
@@ -36,8 +38,8 @@ const PASOS = [
     texto: 'Elige el diseño que más te guste y míralo con tu nombre. Cambia textos y colores, y pon tus fotos.',
   },
   {
-    titulo: 'Un ingeniero la construye',
-    texto: 'Si te gusta, dejas tu WhatsApp y un ingeniero te contacta con una propuesta para hacerla realidad.',
+    titulo: 'Elige a tu ingeniero',
+    texto: 'Si te gusta, eliges quién la construye por su perfil y sus reseñas. Te contacta con una propuesta.',
   },
 ];
 
@@ -68,9 +70,14 @@ const PREGUNTAS = [
     respuesta: 'Sí. Ahí mismo cambias los textos y los colores, pones tus fotos o pruebas otro diseño.',
   },
   {
+    pregunta: '¿Quién construye mi web?',
+    respuesta:
+      'Tú lo eliges entre los ingenieros de AIB+: ves su perfil, los rubros con los que trabajan y lo que opinan sus clientes. Al terminar, tú también puedes calificar a tu ingeniero.',
+  },
+  {
     pregunta: '¿Qué pasa cuando digo «Me gusta, sigamos»?',
     respuesta:
-      'Dejas tu nombre y tu WhatsApp, y el proyecto le llega a un ingeniero con todo lo que respondiste. Te contacta con una propuesta y puedes seguir el avance desde la app.',
+      'Eliges a tu ingeniero y dejas tu nombre y tu WhatsApp. Le llega tu proyecto con todo lo que respondiste, te contacta con una propuesta y puedes seguir el avance desde la app.',
   },
   {
     pregunta: '¿Puedo enseñársela a alguien antes de decidir?',
@@ -210,6 +217,8 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
         {/* ------------------------------------------------------- ejemplos */}
         <Ejemplos />
 
+        <Ingenieros />
+
         {/* -------------------------------------------- por qué un ingeniero */}
         <section className="mx-auto grid max-w-6xl items-start gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2">
           <div>
@@ -282,9 +291,14 @@ export function Portada({ onAcceso }: { onAcceso: (modo: Acceso) => void }) {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs text-ink-subtle sm:flex-row sm:px-6">
           <span>Cordova Solutions © {new Date().getFullYear()}</span>
-          <button type="button" onClick={() => onAcceso('login')} className="hover:text-ink">
-            ¿Eres ingeniero? Ingresa aquí
-          </button>
+          <span className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link to="/ingenieros" className="font-medium text-ink hover:text-accent">
+              ¿Eres ingeniero? Únete a AIB+
+            </Link>
+            <button type="button" onClick={() => onAcceso('login')} className="hover:text-ink">
+              Ingresar
+            </button>
+          </span>
         </div>
       </footer>
 
@@ -376,6 +390,39 @@ function Ejemplos() {
             alto={enEscritorio ? 460 : 560}
           />
         )}
+      </div>
+    </section>
+  );
+}
+
+/** Los ingenieros aprobados, con sus reseñas. Si aún no hay ninguno, no sale. */
+function Ingenieros() {
+  const [lista, setLista] = useState<IngenieroPublico[]>([]);
+
+  useEffect(() => {
+    let vigente = true;
+    void ingenierosDisponibles().then((l) => {
+      if (vigente) setLista(l);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  if (lista.length === 0) return null;
+
+  return (
+    <section id="ingenieros" className="scroll-mt-6 border-y border-line bg-surface-raised/60">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 className="text-center text-3xl sm:text-4xl">Conoce a los ingenieros</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
+          Cuando tu web te guste, eliges a uno de ellos para construirla. Sus clientes los califican al terminar.
+        </p>
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {lista.slice(0, 6).map((ing) => (
+            <TarjetaIngeniero key={ing.id} ingeniero={ing} />
+          ))}
+        </div>
       </div>
     </section>
   );

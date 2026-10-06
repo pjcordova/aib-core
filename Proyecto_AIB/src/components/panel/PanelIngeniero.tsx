@@ -8,9 +8,10 @@ import { CatalogoPlantillas } from './CatalogoPlantillas';
 import { InvitacionesPanel } from './InvitacionesPanel';
 import { ComentariosPanel } from './ComentariosPanel';
 import { HoyPanel, type IrAEncargos } from './HoyPanel';
+import { IngenierosPanel } from './IngenierosPanel';
 import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo';
+type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -85,7 +86,11 @@ export function PanelIngeniero() {
                 ['encargos', 'Encargos', 'Encargos'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
-                ['catalogo', 'Catálogo de plantillas', 'Catálogo'],
+                // El catálogo que ven los clientes es el del administrador.
+                ...(perfil.esAdmin ? ([['catalogo', 'Catálogo de plantillas', 'Catálogo']] as const) : []),
+                perfil.esAdmin
+                  ? (['ingenieros', 'Ingenieros', 'Ingenieros'] as const)
+                  : (['ingenieros', 'Mi perfil', 'Perfil'] as const),
               ] as const
             ).map(([id, texto, corto]) => (
               <button
@@ -137,12 +142,14 @@ export function PanelIngeniero() {
             }}
           />
         ) : pestana === 'invitaciones' ? (
-          <InvitacionesPanel />
+          <InvitacionesPanel esAdmin={perfil.esAdmin} />
         ) : pestana === 'comentarios' ? (
           <ComentariosPanel />
-        ) : (
+        ) : pestana === 'ingenieros' ? (
+          <IngenierosPanel esAdmin={perfil.esAdmin} />
+        ) : perfil.esAdmin ? (
           <CatalogoPlantillas />
-        )}
+        ) : null}
       </main>
     </div>
   );

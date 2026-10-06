@@ -19,9 +19,13 @@ interface LoginRegistroProps {
   modoInicial?: AuthMode;
   /** Vuelve a la portada. */
   onVolver?: () => void;
+  /** A dónde lleva el enlace del correo de confirmación (por defecto, a la portada). */
+  redirigirA?: string;
+  /** Texto bajo la marca. */
+  subtitulo?: string;
 }
 
-const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicial = 'login', onVolver }) => {
+const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicial = 'login', onVolver, redirigirA, subtitulo }) => {
   const [mode, setMode] = useState<AuthMode>(modoInicial);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +57,11 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
         }
         onAuthSuccess();
       } else {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          ...(redirigirA ? { options: { emailRedirectTo: redirigirA } } : {}),
+        });
         if (signUpError) {
           setError(signUpError.message);
           return;
@@ -79,7 +87,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
               AIB<span className="text-accent-alt">+</span>
             </h1>
             <p className="mt-1 text-xs tracking-wide text-ink-subtle">
-              {mode === 'registro' ? 'Crea tu cuenta y mira tu web en un minuto' : 'La web de tu negocio'}
+              {subtitulo ?? (mode === 'registro' ? 'Crea tu cuenta y mira tu web en un minuto' : 'La web de tu negocio')}
             </p>
           </div>
 

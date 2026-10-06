@@ -26,7 +26,8 @@ import { EmbudoPortadaPanel } from './EmbudoPortadaPanel';
 const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short' });
 const indiceEtapa = (inv: Invitacion) => ETAPAS_INVITACION.findIndex((e) => e.valor === etapaDe(inv));
 
-export function InvitacionesPanel() {
+/** esAdmin: las métricas de toda la plataforma solo las ve el administrador. */
+export function InvitacionesPanel({ esAdmin = false }: { esAdmin?: boolean }) {
   const [invitaciones, setInvitaciones] = useState<Invitacion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [sinConfigurar, setSinConfigurar] = useState(false);
@@ -203,10 +204,11 @@ export function InvitacionesPanel() {
         </div>
       )}
 
-      <EmbudoPortadaPanel />
+      {esAdmin && <EmbudoPortadaPanel />}
 
-      <EmbudoCliente />
-      <PruebaPrecioPanel />
+      {/* Métricas de toda la plataforma: solo el administrador. */}
+      {esAdmin && <EmbudoCliente />}
+      {esAdmin && <PruebaPrecioPanel />}
 
       {/* ------------------------------------------------------------ lista */}
       {eliminada && (

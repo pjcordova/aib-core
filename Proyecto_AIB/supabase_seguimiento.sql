@@ -31,6 +31,8 @@ CREATE INDEX IF NOT EXISTS seguimiento_encargos_proyecto_idx
 
 ALTER TABLE public.seguimiento_encargos ENABLE ROW LEVEL SECURITY;
 
+-- OJO: con varios ingenieros, supabase_marketplace.sql sustituye esta política
+-- (cada ingeniero ve solo lo suyo). Ejecútalo después si vuelves a correr este archivo.
 -- El cliente ve el seguimiento de sus proyectos; el ingeniero, el de todos.
 DROP POLICY IF EXISTS "seguimiento: lo ven el dueño y el ingeniero" ON public.seguimiento_encargos;
 CREATE POLICY "seguimiento: lo ven el dueño y el ingeniero"

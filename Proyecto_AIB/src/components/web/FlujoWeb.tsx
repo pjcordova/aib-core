@@ -44,6 +44,7 @@ import { MiniVista } from '../panel/MiniVista';
 import { WebPreview } from './WebPreview';
 import { nuevaSesionDeCuestionario, registrarProgreso } from '../../lib/embudo';
 import { conPrecioMostrado, miPrecio } from '../../lib/pruebaPrecio';
+import { ElegirIngeniero } from '../ingenieros/ElegirIngeniero';
 
 type Fase = 'preguntas' | 'buscando' | 'eligiendo' | 'generando' | 'listo' | 'error';
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
@@ -56,6 +57,11 @@ interface Props {
   empresaInicial?: string;
   /** El cliente pasó la primera pregunta. Se avisa una vez, con el nombre de su negocio. */
   onEmpezar?: (empresa: string) => void;
+  /**
+   * Si al aceptar elige ingeniero. No lo elige quien llegó con la invitación
+   * de un ingeniero: ya tiene el suyo.
+   */
+  elegirIngeniero?: boolean;
 }
 
 const MAX_EMPRESA = 80;
@@ -72,7 +78,7 @@ const MIN_RUBRO = 10;
  * solo entonces la IA escribe sus textos. Si ninguna encaja, o prefiere algo a
  * medida, se genera una maqueta nueva como antes.
  */
-export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
+export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngeniero = true }: Props) {
   const [paso, setPaso] = useState(0);
   const [fase, setFase] = useState<Fase>('preguntas');
   // Prueba de precio: el precio que le tocó a este cliente (null si no hay).
@@ -103,6 +109,8 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
   const [guardado, setGuardado] = useState<EstadoGuardado>('inactivo');
   const [aceptacion, setAceptacion] = useState<EstadoAceptacion>('inactivo');
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  const [eligiendoIngeniero, setEligiendoIngeniero] = useState(false);
+  const [ingenieroElegido, setIngenieroElegido] = useState<string | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const proyectoId = useRef<string | null>(null);
   /** El mismo id, como estado: la maqueta lo necesita para ofrecer el enlace de compartir. */
@@ -431,14 +439,28 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar }: Props) {
           }
           onAceptar={() => {
             registrarProgreso(sesion, 'quiso-aceptar');
-            setPidiendoContacto(true);
+            if (elegirIngeniero && proyectoId.current) setEligiendoIngeniero(true);
+            else setPidiendoContacto(true);
           }}
           onGuardarEdicion={guardarCambios}
           precio={precioPrueba}
           proyectoId={idGuardado}
         />
+        {eligiendoIngeniero && idGuardado && (
+          <ElegirIngeniero
+            proyectoId={idGuardado}
+            rubro={categoria || undefined}
+            onElegido={(nombre) => {
+              setIngenieroElegido(nombre);
+              setEligiendoIngeniero(false);
+              setPidiendoContacto(true);
+            }}
+            onCancelar={() => setEligiendoIngeniero(false)}
+          />
+        )}
         {pidiendoContacto && (
           <ContactoEncargo
+            ingeniero={ingenieroElegido}
             tipoServicio="web"
             objetivo={objetivo}
             enviando={aceptacion === 'procesando'}

@@ -39,6 +39,8 @@ CREATE POLICY "comentarios: el cliente escribe sobre lo suyo"
     )
   );
 
+-- OJO: con varios ingenieros, supabase_marketplace.sql sustituye esta política
+-- (cada ingeniero ve solo lo suyo). Ejecútalo después si vuelves a correr este archivo.
 DROP POLICY IF EXISTS "comentarios: el ingeniero los lee" ON public.comentarios;
 CREATE POLICY "comentarios: el ingeniero los lee"
   ON public.comentarios FOR SELECT TO authenticated
