@@ -14,6 +14,11 @@ interface Props {
    * caja reducida, y se quedaban en blanco.
    */
   inmediata?: boolean;
+  /**
+   * Se puede recorrer: desplazarse por la página y tocar sus enlaces internos,
+   * como en los mockups de la portada. Si no, es una imagen fija.
+   */
+  interactiva?: boolean;
 }
 
 /**
@@ -28,15 +33,38 @@ function sinEsperarFuentes(documento: string): string {
   );
 }
 
+/** Sin barra de desplazamiento: dentro de un celular o una ventana pequeña estorba. */
+const SIN_BARRA = 'html{scrollbar-width:none}html::-webkit-scrollbar{display:none}';
+
+/**
+ * Sin animaciones de entrada: en la página real lucen, pero en una miniatura
+ * el contenido arranca invisible y, dentro de una caja reducida, a veces no
+ * llegaba a aparecer al desplazarse. Así se ve siempre todo.
+ */
+const SIN_ANIMACIONES = '*,*::before,*::after{animation:none!important}';
+
+function paraMiniatura(documento: string): string {
+  const estilo = `<style>${SIN_BARRA}${SIN_ANIMACIONES}</style>`;
+  const pagina = sinEsperarFuentes(documento);
+  return pagina.includes('</head>') ? pagina.replace('</head>', `${estilo}</head>`) : estilo + pagina;
+}
+
 /**
  * Miniatura en vivo de una página: la pinta a tamaño de escritorio en un
  * iframe y la reduce hasta caber en su tarjeta. No hace falta guardar capturas:
  * si la plantilla cambia, la miniatura cambia con ella.
  */
-export function MiniVista({ documento, titulo, anchoPagina = 1280, alto = 200, inmediata = false }: Props) {
+export function MiniVista({
+  documento,
+  titulo,
+  anchoPagina = 1280,
+  alto = 200,
+  inmediata = false,
+  interactiva = false,
+}: Props) {
   const caja = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(0.25);
-  const pagina = useMemo(() => sinEsperarFuentes(documento), [documento]);
+  const pagina = useMemo(() => paraMiniatura(documento), [documento]);
 
   useEffect(() => {
     const el = caja.current;
@@ -55,9 +83,10 @@ export function MiniVista({ documento, titulo, anchoPagina = 1280, alto = 200, i
         srcDoc={pagina}
         sandbox="allow-scripts"
         loading={inmediata ? 'eager' : 'lazy'}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="pointer-events-none absolute top-0 left-0 origin-top-left border-0"
+        {...(interactiva ? {} : { tabIndex: -1, 'aria-hidden': true })}
+        className={
+          'absolute top-0 left-0 origin-top-left border-0 ' + (interactiva ? '' : 'pointer-events-none')
+        }
         style={{
           width: anchoPagina,
           height: alto / escala,

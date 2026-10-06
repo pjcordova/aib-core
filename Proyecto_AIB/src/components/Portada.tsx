@@ -213,12 +213,14 @@ export function Portada({
                     anchoPagina={390}
                     alto={540}
                     inmediata
+                    interactiva
                   />
                 )}
               </div>
             </div>
             <figcaption className="mt-3 text-center text-xs text-ink-subtle">
-              Un diseño real de AIB+, con un restaurante de ejemplo
+              Un diseño real de AIB+, con un restaurante de ejemplo.
+              <span className="block font-medium text-ink-muted">Desliza dentro para recorrerlo ↕</span>
             </figcaption>
           </figure>
         </section>
@@ -402,9 +404,13 @@ function Ejemplos() {
             anchoPagina={enEscritorio ? 1280 : 390}
             alto={enEscritorio ? 460 : 560}
             inmediata
+            interactiva
           />
         )}
       </div>
+      <p className="mt-3 text-center text-xs font-medium text-ink-muted">
+        Desliza dentro del diseño para recorrerlo completo ↕
+      </p>
     </section>
   );
 }
