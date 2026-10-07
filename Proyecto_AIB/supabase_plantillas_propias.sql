@@ -345,3 +345,49 @@ REVOKE ALL ON FUNCTION public.catalogo_cliente() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.contenido_plantillas(UUID[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.catalogo_cliente() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.contenido_plantillas(UUID[]) TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 5. Servicios escritos a mano («Otro»)
+-- ----------------------------------------------------------------------------
+-- Si marca «Otro», escribe cuáles (hasta 5): con eso AIB+ le prepara un
+-- formulario para cada uno. Salen en su tarjeta y el administrador los ve.
+ALTER TABLE public.perfiles_ingeniero ADD COLUMN IF NOT EXISTS servicios_otros TEXT[] NOT NULL DEFAULT '{}';
+
+CREATE OR REPLACE FUNCTION public.servicios_otros_validos(p_otros TEXT[])
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE SET search_path = ''
+AS $$
+  SELECT cardinality(p_otros) <= 5
+     AND COALESCE(bool_and(char_length(o) BETWEEN 2 AND 60 AND o !~ '[<>{}]'), true)
+  FROM unnest(p_otros) AS o;
+$$;
+
+ALTER TABLE public.perfiles_ingeniero DROP CONSTRAINT IF EXISTS perfiles_ingeniero_servicios_otros_check;
+ALTER TABLE public.perfiles_ingeniero ADD CONSTRAINT perfiles_ingeniero_servicios_otros_check
+  CHECK (public.servicios_otros_validos(servicios_otros));
+
+-- Reemplaza a la de un solo parámetro (sección 3): p_otros es opcional.
+DROP FUNCTION IF EXISTS public.guardar_servicios_ingeniero(TEXT[]);
+CREATE OR REPLACE FUNCTION public.guardar_servicios_ingeniero(p_servicios TEXT[], p_otros TEXT[] DEFAULT '{}')
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_servicios TEXT[] := (SELECT COALESCE(array_agg(DISTINCT s), '{}') FROM unnest(p_servicios) s);
+  v_otros     TEXT[];
+BEGIN
+  -- Solo cuentan si marcó «Otro»; limpios y sin repetir.
+  SELECT COALESCE(array_agg(DISTINCT btrim(o)) FILTER (WHERE btrim(o) <> ''), '{}')
+    INTO v_otros
+  FROM unnest(CASE WHEN 'otro' = ANY (v_servicios) THEN COALESCE(p_otros, '{}') ELSE '{}' END) o;
+
+  UPDATE public.perfiles_ingeniero
+  SET servicios = v_servicios, servicios_otros = v_otros, actualizado_en = now()
+  WHERE user_id = auth.uid();
+  RETURN FOUND;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.guardar_servicios_ingeniero(TEXT[], TEXT[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.guardar_servicios_ingeniero(TEXT[], TEXT[]) TO authenticated;
+
+-- ingenieros_disponibles() e ingenieros_para_admin() devuelven además
+-- 'servicios_otros' (y la del administrador, 'servicios'): mismas funciones de
+-- la sección 3 y de supabase_marketplace.sql con esas claves añadidas.

@@ -7,6 +7,7 @@ import {
   textoEstrellas,
   type IngenieroAdmin,
   type MiPerfil,
+  textoServicios,
 } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { FormularioPerfil } from '../ingenieros/FormularioPerfil';
@@ -243,6 +244,16 @@ function FilaIngeniero({
           </p>
           {ing.especialidades.length > 0 && (
             <p className="mt-1 text-xs text-ink-muted">{ing.especialidades.map(etiquetaRubro).join(' · ')}</p>
+          )}
+          {ing.servicios && ing.servicios.length > 0 && (
+            <p className="mt-1 text-xs text-ink-muted">
+              <span className="text-ink-subtle">Servicios:</span> {textoServicios(ing.servicios, ing.servicios_otros)}
+              {ing.servicios_otros && ing.servicios_otros.length > 0 && (
+                <span className="ml-1 rounded-full bg-accent-alt/20 px-2 py-0.5 text-[11px] text-ink">
+                  pide formulario para {ing.servicios_otros.length === 1 ? '1 servicio' : `${ing.servicios_otros.length} servicios`}
+                </span>
+              )}
+            </p>
           )}
           {ing.bio && <p className="mt-2 text-sm whitespace-pre-line text-ink">{ing.bio}</p>}
           {ing.portafolio_url && (

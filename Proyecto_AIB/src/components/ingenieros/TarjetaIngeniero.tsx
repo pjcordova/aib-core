@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { etiquetaServicio, textoEstrellas, type IngenieroPublico } from '../../lib/ingenieros';
+import { textoEstrellas, textoServicios, type IngenieroPublico } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 
 const etiquetaRubro = (valor: string) => CATEGORIAS_NEGOCIO.find((c) => c.valor === valor)?.etiqueta ?? valor;
@@ -96,7 +96,7 @@ export function TarjetaIngeniero({
       {conoceSuRubro && <p className="mt-2 text-xs text-ink">✓ Trabaja con negocios como el tuyo</p>}
       {ingeniero.servicios && ingeniero.servicios.length > 0 && (
         <p className="mt-2 text-xs text-ink-muted">
-          <span className="text-ink-subtle">Ofrece:</span> {ingeniero.servicios.map(etiquetaServicio).join(' · ')}
+          <span className="text-ink-subtle">Ofrece:</span> {textoServicios(ingeniero.servicios, ingeniero.servicios_otros)}
         </p>
       )}
 

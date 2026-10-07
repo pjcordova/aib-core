@@ -4,6 +4,7 @@ import { subirFoto } from '../../lib/fotos';
 import {
   guardarPerfilIngeniero,
   guardarServicios,
+  leerServiciosOtros,
   SERVICIOS_INGENIERO,
   type DatosPerfil,
   type EstadoIngeniero,
@@ -31,7 +32,7 @@ const VACIO: DatosPerfil = {
 };
 
 interface Props {
-  inicial?: (DatosPerfil & { servicios?: string[] }) | null;
+  inicial?: (DatosPerfil & { servicios?: string[]; servicios_otros?: string[] }) | null;
   /** Texto del botón: «Enviar solicitud» al postular, «Guardar perfil» al editar. */
   textoBoton: string;
   onGuardado: (estado: EstadoIngeniero) => void;
@@ -43,6 +44,9 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
   const [anios, setAnios] = useState(inicial?.anios_experiencia != null ? String(inicial.anios_experiencia) : '');
   // Qué servicios ofrece (web, CRM, ERP…): se guardan aparte del perfil.
   const [servicios, setServicios] = useState<string[]>(inicial?.servicios?.length ? inicial.servicios : ['web']);
+  // Con «Otro», los que escribe a mano: AIB+ le prepara un formulario para cada uno.
+  const [otros, setOtros] = useState((inicial?.servicios_otros ?? []).join(', '));
+  const conOtro = servicios.includes('otro');
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -79,6 +83,7 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
     datos.titular.trim().length < 3 && 'Escribe una línea que te describa.',
     datos.especialidades.length === 0 && 'Elige al menos un rubro.',
     servicios.length === 0 && 'Elige al menos un servicio.',
+    conOtro && leerServiciosOtros(otros).length === 0 && 'Escribe qué otros servicios ofreces.',
     whatsapp.trim() && !numero && 'Revisa tu WhatsApp (ej: 987 654 321).',
     portafolio && !enlaceValido(portafolio) && 'Revisa el enlace de tu portafolio (ej: tuportafolio.com).',
     anios && !(Number(anios) >= 0 && Number(anios) <= 60) && 'Revisa los años de experiencia.',
@@ -106,7 +111,7 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
       setError(resultado.error);
       return;
     }
-    if (!(await guardarServicios(servicios))) {
+    if (!(await guardarServicios(servicios, conOtro ? leerServiciosOtros(otros) : []))) {
       setError('Tu perfil se guardó, pero no tus servicios. Vuelve a intentarlo.');
       return;
     }
@@ -247,6 +252,21 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
             );
           })}
         </div>
+        {conOtro && (
+          <label className="mt-3 block">
+            <span className="mb-1.5 block text-sm text-ink-muted">¿Qué otros servicios ofreces?</span>
+            <input
+              className="field"
+              value={otros}
+              onChange={(e) => setOtros(e.target.value.slice(0, 320))}
+              placeholder="Ej: chatbots, landing pages, mantenimiento web"
+            />
+            <span className="mt-1 block text-xs text-ink-subtle">
+              Sepáralos con comas (hasta 5). Con esto AIB+ te prepara un formulario para cada servicio, para que tus
+              clientes te cuenten lo que necesitan.
+            </span>
+          </label>
+        )}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-3">
