@@ -60,7 +60,9 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          ...(redirigirA ? { options: { emailRedirectTo: redirigirA } } : {}),
+          // El enlace del correo de confirmación vuelve a donde se registró. Sin
+          // esto, Supabase usa su dirección por defecto (Site URL).
+          options: { emailRedirectTo: redirigirA ?? `${window.location.origin}${window.location.pathname}` },
         });
         if (signUpError) {
           setError(signUpError.message);
