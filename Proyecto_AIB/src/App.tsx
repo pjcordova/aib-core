@@ -379,6 +379,7 @@ export default function Home() {
             <BienvenidaInvitado
               negocio={invitacion?.negocio ?? null}
               desdePortada={invitacion?.origen === 'portada'}
+              ingeniero={invitacion?.origen === 'ingeniero' ? (invitacion?.ingeniero ?? null) : null}
               onEmpezar={() => setTipo('web')}
               cargandoProyecto={cargandoProyecto}
               onAbrir={abrirProyecto}
@@ -464,6 +465,7 @@ export default function Home() {
 function BienvenidaInvitado({
   negocio,
   desdePortada,
+  ingeniero,
   onEmpezar,
   cargandoProyecto,
   onAbrir,
@@ -472,6 +474,8 @@ function BienvenidaInvitado({
   negocio: string | null;
   /** Llegó por «Pruébalo gratis», no con un enlace del ingeniero. */
   desdePortada: boolean;
+  /** El nombre de su ingeniero, si llegó con su enlace o desde su página. */
+  ingeniero: string | null;
   onEmpezar: () => void;
   cargandoProyecto: boolean;
   onAbrir: (id: string) => void;
@@ -484,7 +488,11 @@ function BienvenidaInvitado({
       </p>
       <h1 className="text-4xl font-bold text-balance sm:text-5xl">{negocio ? `Hola, ${negocio} 👋` : 'Hola 👋'}</h1>
       <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-        {desdePortada ? 'Mira cómo se vería tu página web.' : 'Te invitaron a ver cómo se vería tu página web.'}{' '}
+        {desdePortada
+          ? 'Mira cómo se vería tu página web.'
+          : ingeniero
+            ? `${ingeniero.split(/\s+/)[0]} te invita a ver cómo se vería tu página web.`
+            : 'Te invitaron a ver cómo se vería tu página web.'}{' '}
         Responde unas preguntas rápidas, casi todas con un clic, y en un minuto verás una primera versión con
         tu nombre y tus colores. No necesitas crear cuenta ni pagar nada.
       </p>

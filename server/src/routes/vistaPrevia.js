@@ -51,6 +51,28 @@ async function vistaPrevia(tipo, req, res) {
   const textos = typeof nombre === 'string' && nombre ? TEXTOS[tipo] : null;
   const titulo = textos ? textos.titulo(nombre) : GENERICO.titulo;
   const descripcion = textos ? textos.descripcion : GENERICO.descripcion;
+  enviarTarjeta(req, res, titulo, descripcion);
+}
+
+/** La página pública de un ingeniero (/ing/:slug): su nombre y lo que hace. */
+async function vistaPerfil(req, res) {
+  const slug = String(req.params.slug ?? '');
+  let datos = null;
+  if (/^[a-z0-9-]{3,40}$/.test(slug)) {
+    try {
+      datos = await consultarComo(config.supabaseAnonKey, 'rpc/vista_previa_perfil', { cuerpo: { p_slug: slug } });
+    } catch (error) {
+      console.warn('[AIB+] Vista previa del perfil sin datos:', error.message);
+    }
+  }
+  const titulo = datos?.nombre ? `${datos.nombre} · Ingeniero web en AIB+` : GENERICO.titulo;
+  const descripcion = datos?.nombre
+    ? `${datos.titular ? `${datos.titular}. ` : ''}Mira mis diseños y arma tu web conmigo en un minuto, gratis.`
+    : GENERICO.descripcion;
+  enviarTarjeta(req, res, titulo, descripcion);
+}
+
+function enviarTarjeta(req, res, titulo, descripcion) {
   const origen = `${req.protocol}://${req.get('host')}`;
   const url = `${origen}${req.path}`;
   const imagen = `${origen}/og.png`;
@@ -83,5 +105,6 @@ async function vistaPrevia(tipo, req, res) {
 
 router.get('/i/:token', (req, res) => vistaPrevia('invitacion', req, res));
 router.get('/ver/:token', (req, res) => vistaPrevia('maqueta', req, res));
+router.get('/ing/:slug', vistaPerfil);
 
 module.exports = router;

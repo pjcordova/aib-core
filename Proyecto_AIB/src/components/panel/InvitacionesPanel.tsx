@@ -243,6 +243,11 @@ export function InvitacionesPanel({ esAdmin = false }: { esAdmin?: boolean }) {
                           Prueba
                         </span>
                       )}
+                      {inv.canal === 'perfil' && (
+                        <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-ink-muted">
+                          Desde tu página
+                        </span>
+                      )}
                       {inv.origen === 'portada' && (
                         <span className="rounded-full border border-accent-alt/60 px-2 py-0.5 text-[11px] text-ink-muted">
                           Desde la portada

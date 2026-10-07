@@ -57,6 +57,8 @@ export interface MiPerfil extends DatosPerfil {
   servicios: string[];
   /** Lo que escribió al marcar «Otro»: AIB+ prepara su formulario. */
   servicios_otros: string[];
+  /** Su página pública: /ing/:slug. */
+  slug: string | null;
 }
 
 export interface ResenaPublica {
@@ -83,6 +85,7 @@ export interface IngenieroPublico {
   ultimas: ResenaPublica[];
   servicios?: string[];
   servicios_otros?: string[];
+  slug?: string | null;
 }
 
 /** Lo que ve el administrador de cada ingeniero o solicitud. */
@@ -106,7 +109,7 @@ export async function miPerfilIngeniero(): Promise<MiPerfil | null> {
   if (!user) return null;
   const { data, error } = await supabase
     .from('perfiles_ingeniero')
-    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, estado, servicios, servicios_otros')
+    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, estado, servicios, servicios_otros, slug')
     .eq('user_id', user.id)
     .maybeSingle();
   if (error) {

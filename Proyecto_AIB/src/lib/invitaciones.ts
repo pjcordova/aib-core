@@ -33,6 +33,8 @@ export interface Invitacion {
   origen: 'ingeniero' | 'portada';
   /** Este cliente también ve los diseños premium de su ingeniero. */
   con_premium?: boolean;
+  /** 'perfil': llegó desde la página pública del ingeniero. */
+  canal?: string | null;
 }
 
 export type EtapaInvitacion = 'enviada' | 'abierta' | 'empezo' | 'maqueta' | 'acepto';
@@ -204,23 +206,27 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
 }
 
 export interface MiInvitacion {
-  /** null: llegó desde la portada y todavía no dijo cómo se llama su negocio. */
+  /**
+   * null: llegó desde la portada o desde la página de un ingeniero y todavía
+   * no dijo cómo se llama su negocio.
+   */
   negocio: string | null;
   activa: boolean;
   origen: 'ingeniero' | 'portada';
+  /** El nombre de su ingeniero (si tiene perfil). */
+  ingeniero: string | null;
 }
 
 /** La invitación del cliente con sesión anónima. null si no tiene. */
 export async function miInvitacion(): Promise<MiInvitacion | null> {
   const { data, error } = await supabase.rpc('mi_invitacion');
   if (error || !data) return null;
-  const inv = data as { negocio?: unknown; activa?: unknown; origen?: unknown };
-  const origen = inv.origen === 'portada' ? 'portada' : 'ingeniero';
-  if (typeof inv.negocio !== 'string' && origen !== 'portada') return null;
+  const inv = data as { negocio?: unknown; activa?: unknown; origen?: unknown; ingeniero?: unknown };
   return {
     negocio: typeof inv.negocio === 'string' ? inv.negocio : null,
     activa: inv.activa === true,
-    origen,
+    origen: inv.origen === 'portada' ? 'portada' : 'ingeniero',
+    ingeniero: typeof inv.ingeniero === 'string' && inv.ingeniero ? inv.ingeniero : null,
   };
 }
 

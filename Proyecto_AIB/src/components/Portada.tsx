@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
 import { PLANTILLAS_BASE } from '../plantillas';
@@ -440,7 +440,17 @@ function Ingenieros() {
         </p>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lista.slice(0, 6).map((ing) => (
-            <TarjetaIngeniero key={ing.id} ingeniero={ing} />
+            <TarjetaIngeniero
+              key={ing.id}
+              ingeniero={ing}
+              accion={
+                ing.slug ? (
+                  <Link to={`/ing/${ing.slug}`} className="btn btn-ghost w-full">
+                    Ver su página
+                  </Link>
+                ) : undefined
+              }
+            />
           ))}
         </div>
       </div>
