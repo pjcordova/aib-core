@@ -32,6 +32,15 @@
           "value": "noindex, nofollow"
         }
       ]
+    },
+    {
+      "source": "/propuesta/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -67,6 +76,17 @@
     },
     {
       "source": "/ing/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|SkypeUriPreview|Pinterestbot|redditbot|Iframely|Embedly).*"
+        }
+      ],
+      "destination": "/api"
+    },
+    {
+      "source": "/propuesta/:token",
       "has": [
         {
           "type": "header",

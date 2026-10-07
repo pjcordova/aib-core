@@ -26,6 +26,7 @@ import {
 import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 import { conAnimaciones } from '../lib/animaciones';
 import { ResponsableEncargo } from './panel/ResponsableEncargo';
+import { PropuestaEncargo } from './propuestas/PropuestaEncargo';
 import { miEquipo, type MiEquipo } from '../lib/planes';
 
 // ---------------------------------------------------------------------------
@@ -444,6 +445,7 @@ function DetalleEncargo({
           onCambio={onResponsable}
         />
       )}
+      <PropuestaEncargo encargo={detalle} />
       <EditorSeguimiento encargo={detalle} cambios={cambios} onCambio={onCambio} />
       {!doc ? (
         <SinDocumentacion

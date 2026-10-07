@@ -14,6 +14,7 @@ import { UneteIngeniero } from './components/ingenieros/UneteIngeniero';
 import { UnirseEquipo } from './components/ingenieros/UnirseEquipo';
 import { Ingresar } from './components/Ingresar';
 import { PerfilPublico } from './components/ingenieros/PerfilPublico';
+import { PaginaPropuesta } from './components/propuestas/PaginaPropuesta';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -57,6 +58,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/ingresar" element={<Ingresar />} />
             {/* La página pública de cada ingeniero, para compartir con sus clientes. */}
             <Route path="/ing/:slug" element={<PerfilPublico />} />
+            {/* La propuesta que el ingeniero le manda al cliente, para aceptarla sin cuenta. */}
+            <Route path="/propuesta/:token" element={<PaginaPropuesta />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}
             <Route path="/dashboard/legado" element={<DashboardIngeniero />} />
             {/* Cualquier otra ruta vuelve al inicio en vez de dejar la página en blanco. */}

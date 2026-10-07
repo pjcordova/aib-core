@@ -249,6 +249,49 @@ router.post('/planes/avisar-pedido', limitarPrueba, requireAuth, async (req, res
   }
 });
 
+/**
+ * El cliente respondió una propuesta (la aceptó o pidió cambios): se le avisa
+ * a su ingeniero por WhatsApp. El cliente puede no tener cuenta, así que basta
+ * el token de la propuesta; la base de datos solo devuelve algo si hay una
+ * respuesta sin avisar todavía, y la marca como avisada.
+ */
+router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
+  try {
+    const { token } = req.body ?? {};
+    if (typeof token !== 'string' || !/^[0-9a-f]{32}$/.test(token) || !config.cronSecret) {
+      return res.status(202).json({ success: true, avisado: false });
+    }
+    const datos = await consultarConClave('aviso_respuesta_propuesta', { p_token: token });
+    if (datos?.estado !== 'ok') return res.status(202).json({ success: true, avisado: false });
+
+    const negocio = String(datos.negocio || 'Tu cliente')
+      .replace(/[*_~`]/g, '')
+      .slice(0, 80);
+    const comentario = String(datos.comentario || '')
+      .replace(/[*_~`]/g, '')
+      .slice(0, 300);
+    const panel = `${origenDeLaApp(req)}/dashboard`;
+    const texto =
+      datos.respuesta === 'aceptada'
+        ? `🎉 *${negocio} aceptó tu propuesta* de S/ ${datos.precio}.\n\nEl encargo pasó a «En desarrollo». Míralo en tu panel: ${panel}`
+        : `✏️ *${negocio} pidió cambios en tu propuesta*:\n«${comentario}»\n\nEnvíale una nueva desde tu panel: ${panel}`;
+
+    // El administrador recibe sus avisos en el WhatsApp del servidor; los demás, en el suyo.
+    if (datos.es_admin) {
+      if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
+      await enviarWhatsapp(texto);
+    } else {
+      if (!datos.whatsapp || !datos.apikey) return res.status(202).json({ success: true, avisado: false });
+      await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
+    }
+    return res.json({ success: true, avisado: true });
+  } catch (error) {
+    // La respuesta del cliente ya quedó guardada: el ingeniero la ve en su panel.
+    console.error('[AIB+] No se pudo avisar de la respuesta a la propuesta:', error.message);
+    return next(error);
+  }
+});
+
 module.exports = router;
 module.exports.componerCorreo = componerCorreo;
 module.exports.componerWhatsapp = componerWhatsapp;

@@ -5,6 +5,7 @@ import { usePerfil } from '../../hooks/usePerfil';
 import { EncargosIngenieria } from '../EncargosIngenieria';
 import { Shell, Wordmark } from '../ui/Primitives';
 import { CatalogoPlantillas } from './CatalogoPlantillas';
+import { IngresosPanel } from './IngresosPanel';
 import { InvitacionesPanel } from './InvitacionesPanel';
 import { ComentariosPanel } from './ComentariosPanel';
 import { HoyPanel, type IrAEncargos } from './HoyPanel';
@@ -14,7 +15,7 @@ import { PlanesAdmin } from './PlanesAdmin';
 import { miPlan } from '../../lib/planes';
 import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'hoy' | 'encargos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros' | 'plan';
+type Pestana = 'hoy' | 'encargos' | 'ingresos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros' | 'plan';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -117,6 +118,7 @@ export function PanelIngeniero() {
               [
                 ['hoy', 'Hoy con ABI', 'Hoy'],
                 ['encargos', 'Encargos', 'Encargos'],
+                ['ingresos', 'Ingresos', 'Ingresos'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
                 // Cada ingeniero sube sus diseños; el administrador además tiene la biblioteca.
@@ -185,6 +187,11 @@ export function PanelIngeniero() {
           ) : (
             <PlanPanel onCambio={() => setVersionPlan((v) => v + 1)} />
           )
+        ) : pestana === 'ingresos' ? (
+          <IngresosPanel
+            esAdmin={perfil.esAdmin}
+            onAbrirEncargo={(id, negocio) => abrirEncargos({ abrir: id, buscar: negocio ?? undefined })}
+          />
         ) : pestana === 'invitaciones' ? (
           <InvitacionesPanel esAdmin={perfil.esAdmin} />
         ) : pestana === 'comentarios' ? (

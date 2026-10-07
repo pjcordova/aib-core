@@ -13,6 +13,7 @@ import { enlaceWhatsapp } from '../lib/contacto';
 import type { TipoServicio } from '../lib/servicios';
 import type { ProyectoCompleto } from '../lib/proyectos';
 import { TuIngeniero } from './ingenieros/TuIngeniero';
+import { PropuestaCliente } from './propuestas/PropuestaCliente';
 
 // ---------------------------------------------------------------------------
 // Seguimiento del encargo
@@ -132,6 +133,7 @@ export function SeguimientoCliente({
 
   return (
     <section className="card mt-6 p-5" aria-labelledby="titulo-seguimiento">
+      <PropuestaCliente proyectoId={proyectoId} />
       <TuIngeniero proyectoId={proyectoId} publicada={estadoActual(cambios) === 'publicada'} />
       <h2 id="titulo-seguimiento" className="mb-4 text-xs font-semibold tracking-wide text-accent uppercase">
         Estado de tu encargo

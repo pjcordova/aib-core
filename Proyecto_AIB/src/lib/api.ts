@@ -326,3 +326,22 @@ export async function probarWhatsappIngeniero(): Promise<void> {
 export async function avisarPedidoPlan(): Promise<void> {
   await post<{ success: boolean }>('/api/planes/avisar-pedido', {}, 20_000);
 }
+
+/**
+ * El cliente respondió una propuesta: el servidor avisa a su ingeniero por
+ * WhatsApp. No pide sesión (el cliente puede no tener cuenta): basta el token,
+ * y el servidor solo avisa si hay una respuesta sin avisar. Si falla, el
+ * ingeniero igual la ve en su panel.
+ */
+export async function avisarRespuestaPropuesta(token: string): Promise<void> {
+  try {
+    await fetch(`${API_URL}/api/propuestas/respuesta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    // Sin aviso no se pierde nada: la respuesta ya está guardada.
+  }
+}

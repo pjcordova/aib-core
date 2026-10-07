@@ -72,6 +72,22 @@ async function vistaPerfil(req, res) {
   enviarTarjeta(req, res, titulo, descripcion);
 }
 
+/** La propuesta que el ingeniero le manda al cliente (/propuesta/:token). */
+async function vistaPropuesta(req, res) {
+  const token = String(req.params.token ?? '');
+  let datos = null;
+  if (/^[0-9a-f]{32}$/.test(token)) {
+    try {
+      datos = await consultarComo(config.supabaseAnonKey, 'rpc/vista_previa_propuesta', { cuerpo: { p_token: token } });
+    } catch (error) {
+      console.warn('[AIB+] Vista previa de la propuesta sin datos:', error.message);
+    }
+  }
+  const titulo = datos?.negocio ? `Propuesta de ${datos.ingeniero} para ${datos.negocio}` : 'Tu propuesta en AIB+';
+  const descripcion = 'Mira el precio, el plazo y lo que incluye tu web. Puedes aceptarla o pedir cambios con un clic.';
+  enviarTarjeta(req, res, titulo, descripcion);
+}
+
 function enviarTarjeta(req, res, titulo, descripcion) {
   const origen = `${req.protocol}://${req.get('host')}`;
   const url = `${origen}${req.path}`;
@@ -106,5 +122,6 @@ function enviarTarjeta(req, res, titulo, descripcion) {
 router.get('/i/:token', (req, res) => vistaPrevia('invitacion', req, res));
 router.get('/ver/:token', (req, res) => vistaPrevia('maqueta', req, res));
 router.get('/ing/:slug', vistaPerfil);
+router.get('/propuesta/:token', vistaPropuesta);
 
 module.exports = router;
