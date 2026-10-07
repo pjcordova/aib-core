@@ -93,7 +93,9 @@ CREATE TABLE IF NOT EXISTS public.perfiles_ingeniero (
                                                        'salud-bienestar', 'institucion', 'otro']),
   anios_experiencia INTEGER CHECK (anios_experiencia IS NULL OR anios_experiencia BETWEEN 0 AND 60),
   ciudad            TEXT CHECK (ciudad IS NULL OR char_length(btrim(ciudad)) BETWEEN 1 AND 60),
-  portafolio_url    TEXT CHECK (portafolio_url IS NULL OR portafolio_url ~ '^https://[^[:space:]<>"]{3,300}$'),
+  -- El largo va aparte: PostgreSQL no admite repeticiones de más de 255 en una
+  -- expresión regular ({3,300} fallaba con cualquier enlace).
+  portafolio_url    TEXT CHECK (portafolio_url IS NULL OR (portafolio_url ~* '^https?://[^[:space:]<>"]{3,}$' AND char_length(portafolio_url) <= 308)),
   -- Solo fotos de nuestro almacenamiento (supabase_fotos.sql).
   foto_url          TEXT CHECK (foto_url IS NULL
                                 OR foto_url ~ '^https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/fotos/[^[:space:]<>"]+$'),
@@ -105,6 +107,11 @@ CREATE TABLE IF NOT EXISTS public.perfiles_ingeniero (
   actualizado_en    TIMESTAMPTZ NOT NULL DEFAULT now(),
   revisado_en       TIMESTAMPTZ
 );
+
+-- Las bases que ya tenían la tabla con la regla rota ({3,300}): se rehace.
+ALTER TABLE public.perfiles_ingeniero DROP CONSTRAINT IF EXISTS perfiles_ingeniero_portafolio_url_check;
+ALTER TABLE public.perfiles_ingeniero ADD CONSTRAINT perfiles_ingeniero_portafolio_url_check
+  CHECK (portafolio_url IS NULL OR (portafolio_url ~* '^https?://[^[:space:]<>"]{3,}$' AND char_length(portafolio_url) <= 308));
 
 ALTER TABLE public.perfiles_ingeniero ENABLE ROW LEVEL SECURITY;
 

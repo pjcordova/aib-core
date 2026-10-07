@@ -65,13 +65,13 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
   };
 
   const numero = whatsapp.trim() ? normalizarWhatsapp(whatsapp) : null;
-  const portafolio = (datos.portafolio_url ?? '').trim();
+  const portafolio = normalizarEnlace(datos.portafolio_url ?? '');
   const problemas = [
     datos.nombre.trim().length < 2 && 'Escribe tu nombre.',
     datos.titular.trim().length < 3 && 'Escribe una línea que te describa.',
     datos.especialidades.length === 0 && 'Elige al menos un rubro.',
     whatsapp.trim() && !numero && 'Revisa tu WhatsApp (ej: 987 654 321).',
-    portafolio && !/^https:\/\/\S{3,300}$/.test(portafolio) && 'El portafolio debe ser un enlace que empiece por https://',
+    portafolio && !enlaceValido(portafolio) && 'Revisa el enlace de tu portafolio (ej: tuportafolio.com).',
     anios && !(Number(anios) >= 0 && Number(anios) <= 60) && 'Revisa los años de experiencia.',
   ].filter(Boolean) as string[];
 
@@ -226,8 +226,10 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
             className="field"
             value={datos.portafolio_url ?? ''}
             onChange={(e) => cambiar('portafolio_url', e.target.value)}
-            placeholder="https://tuportafolio.com"
+            placeholder="tuportafolio.com o github.com/tu-usuario"
             inputMode="url"
+            autoCapitalize="none"
+            spellCheck={false}
           />
         </label>
       </div>
@@ -258,4 +260,19 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
       </button>
     </form>
   );
+}
+
+/**
+ * El portafolio como lo escriba: «misitio.com», «www.misitio.com» o con
+ * http(s)://. Si no trae el protocolo, se le pone https://.
+ */
+function normalizarEnlace(texto: string): string {
+  const limpio = texto.trim().replace(/\s+/g, '');
+  if (!limpio) return '';
+  return /^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`;
+}
+
+/** Un enlace web con dominio (algo.algo), sin caracteres raros y no muy largo. */
+function enlaceValido(enlace: string): boolean {
+  return enlace.length <= 300 && /^https?:\/\/[^\s<>"/]+\.[^\s<>"/]{2,}([/?#][^\s<>"]*)?$/i.test(enlace);
 }
