@@ -22,6 +22,12 @@ export interface PlantillaUsada {
   nombre: string;
   /** Precio orientativo que vio el cliente al elegirla, si el ingeniero lo había fijado. */
   precio_desde?: number | null;
+  /**
+   * Quién la diseñó, si es la plantilla propia de un ingeniero (no de la
+   * biblioteca de AIB+): al aceptar, el encargo va directo a él.
+   */
+  ingeniero_id?: string | null;
+  ingeniero?: string | null;
 }
 
 /**

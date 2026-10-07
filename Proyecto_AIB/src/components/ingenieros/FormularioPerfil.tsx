@@ -1,7 +1,13 @@
 import { useRef, useState } from 'react';
 import { normalizarWhatsapp } from '../../lib/contacto';
 import { subirFoto } from '../../lib/fotos';
-import { guardarPerfilIngeniero, type DatosPerfil, type EstadoIngeniero } from '../../lib/ingenieros';
+import {
+  guardarPerfilIngeniero,
+  guardarServicios,
+  SERVICIOS_INGENIERO,
+  type DatosPerfil,
+  type EstadoIngeniero,
+} from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 
 // ---------------------------------------------------------------------------
@@ -25,7 +31,7 @@ const VACIO: DatosPerfil = {
 };
 
 interface Props {
-  inicial?: DatosPerfil | null;
+  inicial?: (DatosPerfil & { servicios?: string[] }) | null;
   /** Texto del botón: «Enviar solicitud» al postular, «Guardar perfil» al editar. */
   textoBoton: string;
   onGuardado: (estado: EstadoIngeniero) => void;
@@ -35,6 +41,8 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
   const [datos, setDatos] = useState<DatosPerfil>(inicial ?? VACIO);
   const [whatsapp, setWhatsapp] = useState(inicial?.whatsapp ?? '');
   const [anios, setAnios] = useState(inicial?.anios_experiencia != null ? String(inicial.anios_experiencia) : '');
+  // Qué servicios ofrece (web, CRM, ERP…): se guardan aparte del perfil.
+  const [servicios, setServicios] = useState<string[]>(inicial?.servicios?.length ? inicial.servicios : ['web']);
   const [subiendo, setSubiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -70,6 +78,7 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
     datos.nombre.trim().length < 2 && 'Escribe tu nombre.',
     datos.titular.trim().length < 3 && 'Escribe una línea que te describa.',
     datos.especialidades.length === 0 && 'Elige al menos un rubro.',
+    servicios.length === 0 && 'Elige al menos un servicio.',
     whatsapp.trim() && !numero && 'Revisa tu WhatsApp (ej: 987 654 321).',
     portafolio && !enlaceValido(portafolio) && 'Revisa el enlace de tu portafolio (ej: tuportafolio.com).',
     anios && !(Number(anios) >= 0 && Number(anios) <= 60) && 'Revisa los años de experiencia.',
@@ -95,6 +104,10 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
     setGuardando(false);
     if (!resultado.ok) {
       setError(resultado.error);
+      return;
+    }
+    if (!(await guardarServicios(servicios))) {
+      setError('Tu perfil se guardó, pero no tus servicios. Vuelve a intentarlo.');
       return;
     }
     onGuardado(resultado.estado);
@@ -203,6 +216,33 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
                 }
               >
                 {c.etiqueta}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm text-ink-muted">¿Qué servicios ofreces?</legend>
+        <div className="flex flex-wrap gap-2">
+          {SERVICIOS_INGENIERO.map((s) => {
+            const elegido = servicios.includes(s.valor);
+            return (
+              <button
+                key={s.valor}
+                type="button"
+                onClick={() =>
+                  setServicios((lista) => (elegido ? lista.filter((v) => v !== s.valor) : [...lista, s.valor]))
+                }
+                aria-pressed={elegido}
+                className={
+                  'rounded-full border px-3 py-1.5 text-sm transition-colors ' +
+                  (elegido
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-line-strong bg-surface-raised text-ink hover:border-accent/50')
+                }
+              >
+                {s.etiqueta}
               </button>
             );
           })}

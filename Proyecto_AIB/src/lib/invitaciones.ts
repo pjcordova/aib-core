@@ -31,6 +31,8 @@ export interface Invitacion {
   aceptada_en: string | null;
   /** 'portada': alguien que pulsó «Pruébalo gratis», sin invitación del ingeniero. */
   origen: 'ingeniero' | 'portada';
+  /** Este cliente también ve los diseños premium de su ingeniero. */
+  con_premium?: boolean;
 }
 
 export type EtapaInvitacion = 'enviada' | 'abierta' | 'empezo' | 'maqueta' | 'acepto';
@@ -116,6 +118,13 @@ export async function cambiarInvitacion(
     p_es_prueba: cambios.esPrueba ?? null,
   });
   if (error) console.error('[AIB+] No se pudo cambiar la invitación:', error.message);
+  return !error && data === true;
+}
+
+/** Le habilita (o quita) al cliente de la invitación los diseños premium. */
+export async function cambiarPremium(id: string, valor: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('premium_invitacion', { p_id: id, p_valor: valor });
+  if (error) console.error('[AIB+] No se pudo cambiar el acceso premium:', error.message);
   return !error && data === true;
 }
 

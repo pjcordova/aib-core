@@ -119,8 +119,10 @@ export function PanelIngeniero() {
                 ['encargos', 'Encargos', 'Encargos'],
                 ['invitaciones', 'Invitaciones', 'Invitaciones'],
                 ['comentarios', 'Comentarios', 'Comentarios'],
-                // El catálogo que ven los clientes es el del administrador.
-                ...(perfil.esAdmin ? ([['catalogo', 'Catálogo de plantillas', 'Catálogo']] as const) : []),
+                // Cada ingeniero sube sus diseños; el administrador además tiene la biblioteca.
+                perfil.esAdmin
+                  ? (['catalogo', 'Catálogo de plantillas', 'Catálogo'] as const)
+                  : (['catalogo', 'Mis plantillas', 'Plantillas'] as const),
                 perfil.esAdmin
                   ? (['ingenieros', 'Ingenieros', 'Ingenieros'] as const)
                   : (['ingenieros', 'Mi perfil', 'Perfil'] as const),
@@ -189,9 +191,9 @@ export function PanelIngeniero() {
           <ComentariosPanel />
         ) : pestana === 'ingenieros' ? (
           <IngenierosPanel esAdmin={perfil.esAdmin} />
-        ) : perfil.esAdmin ? (
-          <CatalogoPlantillas />
-        ) : null}
+        ) : (
+          <CatalogoPlantillas esAdmin={perfil.esAdmin} />
+        )}
       </main>
     </div>
   );

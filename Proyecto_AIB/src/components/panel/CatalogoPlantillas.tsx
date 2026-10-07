@@ -10,6 +10,8 @@ import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type PlantillaBase } from '../
 import { PREGUNTAS_WEB, etiquetaDe, solesEnteros } from '../../lib/servicios';
 import { PLANTILLAS_BASE } from '../../plantillas';
 import { MiniVista } from './MiniVista';
+import { SubirDiseno } from './SubirDiseno';
+import { NIVELES, type NivelPlantilla } from '../../lib/plantillaPropia';
 
 const ESTILOS = PREGUNTAS_WEB.find((p) => p.id === 'estilo')?.opciones ?? [];
 
@@ -34,11 +36,12 @@ function leerEtiquetas(texto: string): string[] {
 /**
  * Catálogo de plantillas del ingeniero.
  *
- * Es el lugar donde decide qué ofrece a sus clientes: qué plantillas están
- * activas, con qué etiquetas se emparejan y —lo que más le sirve— cuáles le
- * consiguen propuestas aceptadas.
+ * Es el lugar donde decide qué ofrece a sus clientes: sube sus propios
+ * diseños, les pone nivel y precio, decide cuáles publica y ve cuáles le
+ * consiguen propuestas aceptadas. El administrador tiene además la biblioteca
+ * de AIB+.
  */
-export function CatalogoPlantillas() {
+export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
   const [plantillas, setPlantillas] = useState<PlantillaDelCatalogo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [sinConfigurar, setSinConfigurar] = useState(false);
@@ -49,6 +52,8 @@ export function CatalogoPlantillas() {
   const [filtroEstilo, setFiltroEstilo] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [ampliada, setAmpliada] = useState<PlantillaBase | null>(null);
+  // 'nuevo': subiendo un diseño; una plantilla: editando esa.
+  const [subiendo, setSubiendo] = useState<PlantillaDelCatalogo | 'nuevo' | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -107,12 +112,15 @@ export function CatalogoPlantillas() {
     <section className="mx-auto max-w-6xl px-5 py-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold">Catálogo de plantillas</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Las plantillas activas son las que AIB+ ofrece a tus clientes según su negocio y
-            su estilo.
+          <h2 className="text-2xl font-semibold">{esAdmin ? 'Catálogo de plantillas' : 'Mis plantillas'}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+            Tus diseños publicados los ven los clientes de tu enlace y, en la plataforma, todos los clientes de ese tipo
+            de negocio. Las premium solo las ve el cliente al que se las habilites en su invitación.
           </p>
         </div>
+        <button type="button" onClick={() => setSubiendo('nuevo')} className="btn btn-primary">
+          Subir mi diseño
+        </button>
       </header>
 
       {error && (
@@ -153,10 +161,11 @@ export function CatalogoPlantillas() {
       {/* ------------------------------------------------- mis plantillas */}
       {plantillas.length === 0 ? (
         <div className="card mb-10 p-8 text-center">
-          <p className="font-medium">Tu catálogo está vacío</p>
+          <p className="font-medium">Aún no tienes diseños</p>
           <p className="mt-1 text-sm text-ink-muted">
-            Añade una plantilla de la biblioteca de abajo. Mientras no tengas ninguna activa,
-            AIB+ genera las maquetas con IA.
+            {esAdmin
+              ? 'Sube tu diseño o añade uno de la biblioteca de abajo.'
+              : 'Sube tu primer diseño con «Subir mi diseño». Mientras no tengas ninguno, los clientes de tu enlace ven los diseños de AIB+.'}
           </p>
         </div>
       ) : visibles.length === 0 ? (
@@ -171,6 +180,8 @@ export function CatalogoPlantillas() {
               onActivar={(activa) => void accion(actualizarPlantilla(p.fila.id, { activa }))}
               onEtiquetas={(etiquetas) => void accion(actualizarPlantilla(p.fila.id, { etiquetas }))}
               onPrecio={(precio_desde) => void accion(actualizarPlantilla(p.fila.id, { precio_desde }))}
+              onNivel={(nivel) => void accion(actualizarPlantilla(p.fila.id, { nivel }))}
+              onEditar={p.fila.tipo === 'propia' ? () => setSubiendo(p) : undefined}
               onQuitar={() => void accion(quitarPlantilla(p.fila.id))}
             />
           ))}
@@ -178,7 +189,7 @@ export function CatalogoPlantillas() {
       )}
 
       {/* ------------------------------------------------------ biblioteca */}
-      {disponibles.length > 0 && (
+      {esAdmin && disponibles.length > 0 && (
         <div>
           <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-subtle uppercase">Biblioteca AIB+</h3>
           <p className="mb-4 text-sm text-ink-muted">Plantillas listas para añadir a tu catálogo.</p>
@@ -210,6 +221,16 @@ export function CatalogoPlantillas() {
       )}
 
       {ampliada && <VistaAmpliada base={ampliada} onCerrar={() => setAmpliada(null)} />}
+      {subiendo && (
+        <SubirDiseno
+          existente={subiendo === 'nuevo' ? undefined : subiendo}
+          onCerrar={() => setSubiendo(null)}
+          onListo={() => {
+            setSubiendo(null);
+            recargar();
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -256,6 +277,8 @@ function TarjetaPlantilla({
   onActivar,
   onEtiquetas,
   onPrecio,
+  onNivel,
+  onEditar,
   onQuitar,
 }: {
   plantilla: PlantillaDelCatalogo;
@@ -263,6 +286,9 @@ function TarjetaPlantilla({
   onActivar: (activa: boolean) => void;
   onEtiquetas: (etiquetas: string[]) => void;
   onPrecio: (precio: number | null) => void;
+  onNivel: (nivel: NivelPlantilla) => void;
+  /** Solo las propias: cambiar el archivo o sus datos. */
+  onEditar?: () => void;
   onQuitar: () => void;
 }) {
   const { fila, base } = plantilla;
@@ -284,7 +310,8 @@ function TarjetaPlantilla({
           <div className="min-w-0">
             <p className="truncate font-semibold text-ink">{fila.nombre}</p>
             <p className="mt-0.5 text-xs text-ink-subtle">
-              {etiquetaCategoria(fila.categoria)} · {etiquetaDe(ESTILOS, fila.estilo)}
+              {fila.tipo === 'propia' ? 'Tu diseño' : 'Biblioteca AIB+'} · {etiquetaCategoria(fila.categoria)} ·{' '}
+              {etiquetaDe(ESTILOS, fila.estilo)}
             </p>
           </div>
           <button
@@ -297,11 +324,39 @@ function TarjetaPlantilla({
                 ? 'bg-positive/15 text-positive hover:bg-positive/25'
                 : 'bg-line text-ink-muted hover:text-ink')
             }
-            title={fila.activa ? 'Se ofrece a tus clientes. Clic para pausar.' : 'Pausada. Clic para activar.'}
+            title={fila.activa ? 'La ven tus clientes. Clic para ocultarla.' : 'Oculta. Clic para publicarla.'}
           >
-            {fila.activa ? '● Activa' : '○ Pausada'}
+            {fila.activa ? '● Publicada' : '○ Oculta'}
           </button>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+            Nivel
+            <select
+              value={fila.nivel}
+              onChange={(e) => onNivel(e.target.value as NivelPlantilla)}
+              className="field !w-auto !py-1 text-xs"
+              aria-label="Nivel de la plantilla"
+            >
+              {NIVELES.map((n) => (
+                <option key={n.valor} value={n.valor}>
+                  {n.etiqueta}
+                </option>
+              ))}
+            </select>
+          </label>
+          {onEditar && (
+            <button type="button" onClick={onEditar} className="text-xs text-accent hover:underline">
+              Editar diseño
+            </button>
+          )}
+        </div>
+        {fila.nivel === 'premium' && (
+          <p className="mt-1.5 text-[11px] text-ink-subtle">
+            No sale en la plataforma: habilítala en la invitación del cliente especial.
+          </p>
+        )}
 
         {/* Etiquetas */}
         {editando ? (
@@ -430,18 +485,24 @@ function PrecioDesde({ precio, onGuardar }: { precio: number | null; onGuardar: 
   }
 
   return (
-    <p className="mt-3 text-xs text-ink-muted">
-      {precio ? (
-        <>
-          Precio para el cliente: <strong className="text-ink">desde {solesEnteros(precio)}</strong>
-        </>
-      ) : (
-        'Sin precio orientativo: el cliente no verá ninguno.'
-      )}{' '}
-      <button type="button" onClick={() => setEditando(true)} className="text-accent hover:underline">
+    <div
+      className={
+        'mt-3 flex items-center justify-between gap-2 rounded-lg px-3 py-2 ' +
+        (precio ? 'bg-accent/5' : 'border border-dashed border-caution/50')
+      }
+    >
+      <div className="min-w-0">
+        <p className="text-[11px] text-ink-subtle uppercase">Precio para el cliente</p>
+        {precio ? (
+          <p className="text-base font-semibold text-ink tabular-nums">desde {solesEnteros(precio)}</p>
+        ) : (
+          <p className="text-xs text-caution">Sin precio: el cliente no verá ninguno</p>
+        )}
+      </div>
+      <button type="button" onClick={() => setEditando(true)} className="btn btn-ghost shrink-0 !px-3 !py-1 text-xs">
         {precio ? 'Cambiar' : 'Poner precio'}
       </button>
-    </p>
+    </div>
   );
 }
 

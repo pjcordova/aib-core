@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   cambiarInvitacion,
+  cambiarPremium,
   crearInvitacion,
   eliminarInvitacion,
   ETAPAS_INVITACION,
@@ -77,6 +78,10 @@ export function InvitacionesPanel({ esAdmin = false }: { esAdmin?: boolean }) {
       return;
     }
     if (await cambiarInvitacion(inv.id, cambios)) setVersion((v) => v + 1);
+  };
+
+  const premium = async (inv: Invitacion) => {
+    if (await cambiarPremium(inv.id, !inv.con_premium)) setVersion((v) => v + 1);
   };
 
   // Los encargos aceptados de una invitación real se conservan: para borrar
@@ -283,6 +288,19 @@ export function InvitacionesPanel({ esAdmin = false }: { esAdmin?: boolean }) {
                   >
                     {inv.activa ? 'Desactivar' : 'Reactivar'}
                   </button>
+                  {inv.origen !== 'portada' && (
+                    <button
+                      type="button"
+                      onClick={() => void premium(inv)}
+                      aria-pressed={!!inv.con_premium}
+                      title="Si está habilitado, este cliente también ve tus diseños premium"
+                      className={
+                        'btn btn-ghost !px-3 !py-1.5 text-xs ' + (inv.con_premium ? '!border-accent-alt bg-accent-alt/15 text-ink' : '')
+                      }
+                    >
+                      {inv.con_premium ? '★ Ve tus premium' : '☆ Habilitar premium'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => void cambiar(inv, { esPrueba: !inv.es_prueba })}

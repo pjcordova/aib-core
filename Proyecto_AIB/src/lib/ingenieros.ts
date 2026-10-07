@@ -10,6 +10,19 @@ import { supabase } from './supabase';
 
 export type EstadoIngeniero = 'pendiente' | 'aprobado' | 'rechazado' | 'pausado';
 
+/** Los servicios que puede ofrecer un ingeniero. */
+export const SERVICIOS_INGENIERO: { valor: string; etiqueta: string }[] = [
+  { valor: 'web', etiqueta: 'Página web' },
+  { valor: 'tienda-online', etiqueta: 'Tienda online' },
+  { valor: 'crm', etiqueta: 'CRM' },
+  { valor: 'erp', etiqueta: 'ERP' },
+  { valor: 'automatizacion', etiqueta: 'Automatizaciones' },
+  { valor: 'app-movil', etiqueta: 'App móvil' },
+  { valor: 'otro', etiqueta: 'Otro' },
+];
+
+export const etiquetaServicio = (v: string) => SERVICIOS_INGENIERO.find((s) => s.valor === v)?.etiqueta ?? v;
+
 /** Lo que el propio ingeniero escribe en su perfil. */
 export interface DatosPerfil {
   nombre: string;
@@ -25,6 +38,7 @@ export interface DatosPerfil {
 
 export interface MiPerfil extends DatosPerfil {
   estado: EstadoIngeniero;
+  servicios: string[];
 }
 
 export interface ResenaPublica {
@@ -49,6 +63,7 @@ export interface IngenieroPublico {
   promedio: number | null;
   resenas: number;
   ultimas: ResenaPublica[];
+  servicios?: string[];
 }
 
 /** Lo que ve el administrador de cada ingeniero o solicitud. */
@@ -70,7 +85,7 @@ export async function miPerfilIngeniero(): Promise<MiPerfil | null> {
   if (!user) return null;
   const { data, error } = await supabase
     .from('perfiles_ingeniero')
-    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, estado')
+    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, estado, servicios')
     .eq('user_id', user.id)
     .maybeSingle();
   if (error) {
@@ -105,6 +120,13 @@ export async function guardarPerfilIngeniero(
     };
   }
   return { ok: true, estado: ((data as { estado?: EstadoIngeniero } | null)?.estado ?? 'pendiente') as EstadoIngeniero };
+}
+
+/** Los servicios que ofrece (se guarda aparte del perfil). */
+export async function guardarServicios(servicios: string[]): Promise<boolean> {
+  const { data, error } = await supabase.rpc('guardar_servicios_ingeniero', { p_servicios: servicios });
+  if (error) console.error('[AIB+] No se pudieron guardar los servicios:', error.message);
+  return data === true;
 }
 
 export async function ingenierosDisponibles(): Promise<IngenieroPublico[]> {

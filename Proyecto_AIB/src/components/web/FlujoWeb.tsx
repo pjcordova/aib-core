@@ -27,6 +27,7 @@ import {
 } from '../../lib/servicios';
 import {
   listarPlantillasActivas,
+  conContenido,
   emparejar,
   registrarEvento,
   type PlantillaDelCatalogo,
@@ -45,6 +46,9 @@ import { WebPreview } from './WebPreview';
 import { nuevaSesionDeCuestionario, registrarProgreso } from '../../lib/embudo';
 import { conPrecioMostrado, miPrecio } from '../../lib/pruebaPrecio';
 import { ElegirIngeniero } from '../ingenieros/ElegirIngeniero';
+import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
+import { elegirIngeniero as asignarIngeniero, textoEstrellas } from '../../lib/ingenieros';
+import { etiquetaNivel } from '../../lib/plantillaPropia';
 
 type Fase = 'preguntas' | 'buscando' | 'eligiendo' | 'generando' | 'listo' | 'error';
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
@@ -168,7 +172,8 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
     const seccionesPregunta = PREGUNTAS_WEB.find((p) => p.id === 'secciones');
     const presupuestoPregunta = PREGUNTAS_WEB.find((p) => p.id === 'presupuesto');
     // Lo que pidió y la plantilla no trae: el ingeniero tiene que añadirlo.
-    const base = plantilla ? obtenerPlantillaBase(plantilla.base) : null;
+    // En las propias no se sabe qué secciones trae: no se marca ninguna.
+    const base = plantilla && plantilla.base !== 'propia' ? obtenerPlantillaBase(plantilla.base) : null;
     const faltan = base ? seccionesQueFaltan(base, f.secciones) : [];
     return [
       { question_id: 'empresa', question: 'Nombre de la empresa', answer: f.empresa },
@@ -263,13 +268,16 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
     const f = ficha();
     const [activas, precio] = await Promise.all([listarPlantillasActivas(), miPrecio()]);
     setPrecioPrueba(precio);
-    const mejores = emparejar(activas, {
-      categoria,
-      estilo,
-      rubro: f.rubro,
-      empresa: f.empresa,
-      secciones: f.secciones,
-    });
+    // Las propias llegan sin su diseño: se pide solo el de las que se enseñan.
+    const mejores = await conContenido(
+      emparejar(activas, {
+        categoria,
+        estilo,
+        rubro: f.rubro,
+        empresa: f.empresa,
+        secciones: f.secciones,
+      })
+    );
 
     if (mejores.length === 0) {
       void generarConIA();
@@ -284,11 +292,14 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
   /** El cliente eligió una plantilla: la IA escribe solo sus textos. */
   const elegirPlantilla = async (c: PlantillaDelCatalogo) => {
     const f = ficha();
+    // La propia de un ingeniero: al aceptar, el encargo va directo a él.
+    const autor = c.fila.tipo === 'propia' && c.fila.ingeniero && !c.fila.ingeniero.es_admin ? c.fila.ingeniero : null;
     const usada: PlantillaUsada = {
       id: c.fila.id,
       base: c.base.id,
       nombre: c.fila.nombre,
       precio_desde: c.fila.precio_desde,
+      ...(autor ? { ingeniero_id: autor.id, ingeniero: autor.nombre } : {}),
     };
     const esNueva = ultimaElegida.current?.fila.id !== c.fila.id;
     ultimaElegida.current = c;
@@ -300,6 +311,16 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
     setError(null);
 
     try {
+      // Las propias no llevan textos de la IA: el diseño es el del ingeniero,
+      // con el nombre, los colores y la descripción del cliente.
+      if (c.fila.tipo === 'propia') {
+        const doc = renderizarPlantilla(c.base, { descripcion: f.rubro }, f);
+        setDocumento(doc);
+        setConsumo(null);
+        setFase('listo');
+        await guardar({ documento: doc }, usada);
+        return;
+      }
       const { textos, usage } = await rellenarPlantilla(c.base.id, {
         empresa: f.empresa,
         rubro: f.rubro,
@@ -383,6 +404,21 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
     onGuardado?.();
   };
 
+  /**
+   * Eligió el diseño propio de un ingeniero: es él quien lo construye, sin
+   * pasar por la lista. Si ya no está disponible, se elige de la lista.
+   */
+  const elegirAutor = async (autor: string, nombre: string | null) => {
+    if (!proyectoId.current) return;
+    const r = await asignarIngeniero(proyectoId.current, autor);
+    if (r === 'ok' || r === 'propio') {
+      setIngenieroElegido(r === 'ok' ? nombre : null);
+      setPidiendoContacto(true);
+    } else {
+      setEligiendoIngeniero(true);
+    }
+  };
+
   /* ------------------------------------------------------------- pantallas */
 
   if (fase === 'error' && error) {
@@ -439,8 +475,10 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
           }
           onAceptar={() => {
             registrarProgreso(sesion, 'quiso-aceptar');
-            if (elegirIngeniero && proyectoId.current) setEligiendoIngeniero(true);
-            else setPidiendoContacto(true);
+            if (elegirIngeniero && proyectoId.current) {
+              if (plantillaUsada?.ingeniero_id) void elegirAutor(plantillaUsada.ingeniero_id, plantillaUsada.ingeniero ?? null);
+              else setEligiendoIngeniero(true);
+            } else setPidiendoContacto(true);
           }}
           onGuardarEdicion={guardarCambios}
           precio={precioPrueba}
@@ -565,7 +603,7 @@ function EleccionPlantilla({
         <p className="mb-2 text-sm font-medium tracking-widest text-accent uppercase">¡Listo, {ficha.empresa}!</p>
         <h2 className="text-3xl font-bold text-balance">¿Cuál de estos diseños te gusta más?</h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-ink-muted">
-          Ya tienen tu nombre y tus colores. Elige uno y escribimos los textos pensando en ti.
+          Ya tienen tu nombre y tus colores. Compara diseños, precios y quién los construye, y elige el que más te guste.
         </p>
       </div>
 
@@ -573,15 +611,35 @@ function EleccionPlantilla({
         {candidatas.map((c) => (
           <article key={c.fila.id} className="card group overflow-hidden">
             <MiniVista
-              documento={renderizarPlantilla(c.base, c.base.ejemplo, ficha)}
+              documento={renderizarPlantilla(
+                c.base,
+                c.fila.tipo === 'propia' ? { descripcion: ficha.rubro } : c.base.ejemplo,
+                ficha
+              )}
               titulo={`Diseño ${c.fila.nombre}`}
               alto={260}
               inmediata
             />
             <div className="p-4">
-              <p className="font-semibold text-ink">{c.fila.nombre}</p>
-              <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>
-              <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-ink">{c.fila.nombre}</p>
+                {c.fila.nivel !== 'basica' && (
+                  <span className="rounded-full bg-accent-alt/20 px-2 py-0.5 text-[11px] font-medium text-ink">
+                    {etiquetaNivel(c.fila.nivel)}
+                  </span>
+                )}
+              </div>
+              {c.base.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>}
+              {c.fila.ingeniero && !c.fila.ingeniero.es_admin && c.fila.ingeniero.nombre && (
+                <div className="mt-3 flex items-center gap-2">
+                  <FotoIngeniero nombre={c.fila.ingeniero.nombre} foto={c.fila.ingeniero.foto_url} tamano={28} />
+                  <p className="min-w-0 text-xs text-ink-muted">
+                    Lo construye <span className="font-medium text-ink">{c.fila.ingeniero.nombre}</span>
+                    <span className="block">{textoEstrellas(c.fila.ingeniero.promedio, c.fila.ingeniero.resenas)}</span>
+                  </p>
+                </div>
+              )}
+              {c.fila.tipo === 'biblioteca' && <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />}
               {conPrecios && c.fila.precio_desde !== null && (
                 <PrecioOrientativo precio={c.fila.precio_desde} presupuesto={ficha.presupuesto} />
               )}

@@ -20,6 +20,7 @@ import {
   type ProyectoCompleto,
 } from './lib/proyectos';
 import { registrarEvento } from './lib/catalogo';
+import { elegirIngeniero as asignarIngeniero } from './lib/ingenieros';
 import { miInvitacion, registrarInicioInvitacion, type MiInvitacion } from './lib/invitaciones';
 import { leerModoCliente, salirModoCliente } from './lib/modoCliente';
 import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
@@ -230,9 +231,23 @@ export default function Home() {
 
   // Quien llegó con la invitación de un ingeniero ya tiene el suyo.
   const vinoConSuIngeniero = esInvitado && invitacion?.origen === 'ingeniero';
-  const aceptarConIngeniero = () => {
-    if (vinoConSuIngeniero) setPidiendoContacto(true);
-    else setEligiendoIngeniero(true);
+  const aceptarConIngeniero = async () => {
+    if (vinoConSuIngeniero) {
+      setPidiendoContacto(true);
+      return;
+    }
+    // Eligió el diseño propio de un ingeniero: lo construye él, sin pasar por
+    // la lista (salvo que ya no esté disponible).
+    const autor = abierto?.plantilla?.ingeniero_id;
+    if (autor && abierto) {
+      const r = await asignarIngeniero(abierto.id, autor);
+      if (r === 'ok' || r === 'propio') {
+        setIngenieroElegido(r === 'ok' ? (abierto.plantilla?.ingeniero ?? null) : null);
+        setPidiendoContacto(true);
+        return;
+      }
+    }
+    setEligiendoIngeniero(true);
   };
 
   const empezarIA = (texto: string) => {

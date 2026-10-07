@@ -10,6 +10,7 @@ import { supabase } from './supabase';
 import type { CategoriaNegocio, PlantillaBase } from './plantillas';
 import { obtenerPlantillaBase } from '../plantillas';
 import type { FichaWeb } from './servicios';
+import { basePropia, type DisenoPropio, type NivelPlantilla } from './plantillaPropia';
 
 export interface FilaPlantilla {
   id: string;
@@ -26,6 +27,27 @@ export interface FilaPlantilla {
   veces_elegida: number;
   veces_aceptada: number;
   created_at: string;
+  /** 'biblioteca': una de AIB+ (base = su id). 'propia': la subió el ingeniero (base = 'propia'). */
+  tipo: 'biblioteca' | 'propia';
+  nivel: NivelPlantilla;
+  descripcion: string | null;
+  /** El diseño de las propias. En el catálogo del cliente llega aparte (conContenido). */
+  html?: string | null;
+  css?: string | null;
+  fuentes?: string[] | null;
+  color_primario: string | null;
+  color_secundario: string | null;
+  /** Quién la construye, para el cliente que elige (catalogo_cliente). */
+  ingeniero?: IngenieroDePlantilla;
+}
+
+export interface IngenieroDePlantilla {
+  id: string;
+  es_admin: boolean;
+  nombre: string | null;
+  foto_url: string | null;
+  promedio: number | null;
+  resenas: number;
 }
 
 /** Una fila del catálogo junto con su plantilla base, lista para pintar. */
@@ -44,8 +66,10 @@ function faltaTabla(codigo: string | undefined): boolean {
 /** Une filas con su plantilla base; descarta las que apuntan a una que ya no existe. */
 function conBase(filas: FilaPlantilla[]): PlantillaDelCatalogo[] {
   return filas.flatMap((fila) => {
-    const base = obtenerPlantillaBase(fila.base);
-    return base ? [{ fila, base }] : [];
+    const f = { ...fila, tipo: fila.tipo ?? 'biblioteca', nivel: fila.nivel ?? 'basica' };
+    if (f.tipo === 'propia') return [{ fila: f, base: basePropia(f) }];
+    const base = obtenerPlantillaBase(f.base);
+    return base ? [{ fila: f, base }] : [];
   });
 }
 
@@ -75,6 +99,47 @@ export async function listarMisPlantillas(): Promise<{
   return { plantillas: conBase((data ?? []) as FilaPlantilla[]), sinConfigurar: false };
 }
 
+/** Lo que el ingeniero completa al subir su propio diseño. */
+export interface DatosPropia {
+  nombre: string;
+  descripcion: string;
+  categoria: CategoriaNegocio;
+  estilo: string;
+  nivel: NivelPlantilla;
+  precio_desde: number | null;
+  color_primario: string;
+  color_secundario: string;
+}
+
+/** Sube un diseño propio al catálogo del ingeniero. Sale publicado. */
+export async function anadirPropia(datos: DatosPropia, diseno: DisenoPropio): Promise<{ error: string | null }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'No hay sesión activa.' };
+
+  const { error } = await supabase.from('plantillas').insert({
+    ingeniero_id: user.id,
+    base: 'propia',
+    tipo: 'propia',
+    ...datos,
+    descripcion: datos.descripcion.trim() || null,
+    etiquetas: [],
+    ...diseno,
+  });
+  if (error) {
+    console.error('[AIB+] No se pudo subir la plantilla:', error.message);
+    return { error: mensajeDeError(error.code, error.message) };
+  }
+  return { error: null };
+}
+
+function mensajeDeError(codigo: string | undefined, mensaje: string): string {
+  if (codigo === '54000') return 'Llegaste al máximo de 40 plantillas.';
+  if (codigo === '23514') return 'Revisa los datos: alguno no tiene el formato esperado (o la página pesa demasiado).';
+  return mensaje;
+}
+
 /** Añade una plantilla de la biblioteca base al catálogo del ingeniero. */
 export async function anadirPlantilla(base: PlantillaBase): Promise<{ error: string | null }> {
   const {
@@ -100,12 +165,29 @@ export async function anadirPlantilla(base: PlantillaBase): Promise<{ error: str
 
 export async function actualizarPlantilla(
   id: string,
-  cambios: Partial<Pick<FilaPlantilla, 'activa' | 'etiquetas' | 'nombre' | 'estilo' | 'precio_desde'>>
+  cambios: Partial<
+    Pick<
+      FilaPlantilla,
+      | 'activa'
+      | 'etiquetas'
+      | 'nombre'
+      | 'estilo'
+      | 'precio_desde'
+      | 'nivel'
+      | 'descripcion'
+      | 'categoria'
+      | 'color_primario'
+      | 'color_secundario'
+      | 'html'
+      | 'css'
+      | 'fuentes'
+    >
+  >
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from('plantillas').update(cambios).eq('id', id);
   if (error) {
     console.error('[AIB+] No se pudo actualizar la plantilla:', error.message);
-    return { error: error.message };
+    return { error: mensajeDeError(error.code, error.message) };
   }
   return { error: null };
 }
@@ -129,12 +211,37 @@ export async function quitarPlantilla(id: string): Promise<{ error: string | nul
  * nunca debe bloquear al cliente.
  */
 export async function listarPlantillasActivas(): Promise<PlantillaDelCatalogo[]> {
-  const { data, error } = await supabase.from('plantillas').select('*').eq('activa', true);
+  // Qué ve cada cliente lo decide la base de datos (catalogo_cliente): el de
+  // un ingeniero, solo las suyas; el de la plataforma, las de todos.
+  const { data, error } = await supabase.rpc('catalogo_cliente');
   if (error) {
     if (!faltaTabla(error.code)) console.error('[AIB+] No se pudieron leer las plantillas:', error.message);
     return [];
   }
-  return conBase((data ?? []) as FilaPlantilla[]);
+  return conBase(((data as FilaPlantilla[] | null) ?? []).filter((f) => f.activa));
+}
+
+/**
+ * El catálogo llega sin el diseño de las propias (pesa): se pide solo el de
+ * las que se van a enseñar. Las que no llegan se quitan.
+ */
+export async function conContenido(candidatas: PlantillaDelCatalogo[]): Promise<PlantillaDelCatalogo[]> {
+  const ids = candidatas.filter((c) => c.fila.tipo === 'propia').map((c) => c.fila.id);
+  if (ids.length === 0) return candidatas;
+
+  const { data, error } = await supabase.rpc('contenido_plantillas', { p_ids: ids });
+  if (error) console.warn('[AIB+] No se pudieron leer los diseños:', error.message);
+  const contenidos = new Map(
+    ((data as ({ id: string } & DisenoPropio)[] | null) ?? []).map((d) => [d.id, d] as const)
+  );
+
+  return candidatas.flatMap((c) => {
+    if (c.fila.tipo !== 'propia') return [c];
+    const d = contenidos.get(c.fila.id);
+    if (!d) return [];
+    const fila = { ...c.fila, html: d.html, css: d.css, fuentes: d.fuentes };
+    return [{ fila, base: basePropia(fila) }];
+  });
 }
 
 /** Suma uno al contador. Si falla no pasa nada: es estadística, no negocio. */
@@ -173,7 +280,7 @@ function normalizar(texto: string): string {
 export function emparejar(
   candidatas: PlantillaDelCatalogo[],
   cliente: { categoria: CategoriaNegocio | ''; estilo: string } & Pick<FichaWeb, 'rubro' | 'empresa' | 'secciones'>,
-  maximo = 3
+  maximo = 6
 ): PlantillaDelCatalogo[] {
   const texto = normalizar(`${cliente.empresa} ${cliente.rubro}`);
 
@@ -188,9 +295,11 @@ export function emparejar(
       for (const seccion of cliente.secciones) {
         if (c.base.secciones.includes(seccion)) puntos += 1;
       }
-      // Desempate por lo que ya demostró funcionar con otros clientes.
+      // Desempate por lo que ya demostró funcionar con otros clientes y por
+      // las estrellas de quien la construye.
       const tasa = c.fila.veces_mostrada > 0 ? c.fila.veces_aceptada / c.fila.veces_mostrada : 0;
-      return { c, puntos: puntos + tasa };
+      const estrellas = c.fila.ingeniero?.promedio ? Number(c.fila.ingeniero.promedio) / 10 : 0;
+      return { c, puntos: puntos + tasa + estrellas };
     })
     .sort((a, b) => b.puntos - a.puntos)
     .slice(0, maximo)
