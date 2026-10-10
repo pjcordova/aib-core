@@ -16,6 +16,7 @@ import { Ingresar } from './components/Ingresar';
 import { PerfilPublico } from './components/ingenieros/PerfilPublico';
 import { PaginaPropuesta } from './components/propuestas/PaginaPropuesta';
 import { PaginaResena } from './components/PaginaResena';
+import { Explorar } from './components/Explorar';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -61,6 +62,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/ing/:slug" element={<PerfilPublico />} />
             {/* La propuesta que el ingeniero le manda al cliente, para aceptarla sin cuenta. */}
             <Route path="/propuesta/:token" element={<PaginaPropuesta />} />
+            {/* El buscador de ingenieros: por servicio, rubro, presupuesto y reseñas. */}
+            <Route path="/explorar" element={<Explorar />} />
             {/* La reseña que deja el cliente con el enlace de su ingeniero, sin cuenta. */}
             <Route path="/resena/:token" element={<PaginaResena />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}

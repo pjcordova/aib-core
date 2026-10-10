@@ -6,6 +6,7 @@ import {
   documentoDeDiseno,
   empezarConfirmando,
   perfilPublico,
+  registrarVisitaPerfil,
   type DisenoPublico,
   type PerfilPublico as Perfil,
 } from '../../lib/perfilPublico';
@@ -51,7 +52,10 @@ export function PerfilPublico() {
   }, [slug]);
 
   useEffect(() => {
-    if (perfil) document.title = `${perfil.nombre} · Ingeniero en AIB+`;
+    if (!perfil) return;
+    document.title = `${perfil.nombre} · Ingeniero en AIB+`;
+    // Para sus estadísticas: cuántos abren su página (sin saber quién).
+    registrarVisitaPerfil(perfil.slug);
   }, [perfil]);
 
   const primerNombre = perfil?.nombre.split(/\s+/)[0] ?? '';
@@ -194,6 +198,44 @@ export function PerfilPublico() {
                   <TarjetaDiseno key={d.id} diseno={d} empezando={empezando} onQuiero={() => void empezar(d.servicio)} />
                 ))}
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* --------------------------------------------- proyectos que ya hizo */}
+        {(perfil.trabajos?.length ?? 0) > 0 && (
+          <section className="mx-auto max-w-6xl px-4 pt-14 sm:px-6">
+            <h2 className="text-3xl">Proyectos que ya hizo</h2>
+            <p className="mt-2 text-ink-muted">Trabajos reales de {primerNombre}, funcionando.</p>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {perfil.trabajos?.map((t) => (
+                <article key={t.id} className="card overflow-hidden">
+                  {t.imagen_url ? (
+                    <img src={t.imagen_url} alt={`Captura de ${t.titulo}`} className="aspect-video w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="grid aspect-video place-items-center bg-surface-overlay text-5xl" aria-hidden="true">
+                      {iconoDeClave(t.servicio)}
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="font-semibold text-ink">{t.titulo}</p>
+                    <p className="mt-0.5 text-xs text-ink-subtle">
+                      {iconoDeClave(t.servicio)} {nombreDeClave(t.servicio)}
+                    </p>
+                    {t.descripcion && <p className="mt-2 text-sm text-ink-muted">{t.descripcion}</p>}
+                    {t.enlace && (
+                      <a
+                        href={t.enlace}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="mt-3 inline-block text-sm font-medium text-accent hover:underline"
+                      >
+                        Verlo en vivo ↗
+                      </a>
+                    )}
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
         )}

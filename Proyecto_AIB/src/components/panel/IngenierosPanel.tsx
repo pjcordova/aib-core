@@ -15,6 +15,7 @@ import { FormularioPerfil } from '../ingenieros/FormularioPerfil';
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
 import { AvisosWhatsapp } from '../ingenieros/AvisosWhatsapp';
 import { TuPaginaPublica } from '../ingenieros/TuPaginaPublica';
+import { MisTrabajos } from '../ingenieros/MisTrabajos';
 
 // ---------------------------------------------------------------------------
 // Ingenieros del marketplace
@@ -62,6 +63,7 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
         </p>
       )}
       {perfil?.slug && perfil.estado === 'aprobado' && <TuPaginaPublica slug={perfil.slug} />}
+      {perfil?.estado === 'aprobado' && <MisTrabajos />}
       {perfil === undefined ? (
         <p className="text-sm text-ink-subtle">Cargando…</p>
       ) : (

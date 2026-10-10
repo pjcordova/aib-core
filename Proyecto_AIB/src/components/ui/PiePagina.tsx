@@ -69,6 +69,11 @@ export function PiePagina({
                 </li>
               )}
               <li>
+                <Link to="/explorar" className={enlace}>
+                  Encuentra tu ingeniero
+                </Link>
+              </li>
+              <li>
                 <Link to="/probar" className={enlace}>
                   Pruébalo gratis
                 </Link>

@@ -711,6 +711,11 @@ function Ingenieros() {
           />
         ))}
       </div>
+      <p className="mt-8 text-center">
+        <Link to={filtro ? `/explorar?servicio=${filtro}` : '/explorar'} className="btn btn-ghost px-6 py-3">
+          Buscar entre todos los ingenieros →
+        </Link>
+      </p>
     </section>
   );
 }

@@ -8,6 +8,7 @@
 import { supabase } from './supabase';
 import type { ResenaPublica } from './ingenieros';
 import type { FilaPlantilla } from './catalogo';
+import type { Trabajo } from './portafolio';
 import { basePropia } from './plantillaPropia';
 import { renderizarPlantilla } from './plantillas';
 import { obtenerPlantillaBase } from '../plantillas';
@@ -51,6 +52,8 @@ export interface PerfilPublico {
   publicadas: number;
   ultimas: ResenaPublica[];
   disenos: DisenoPublico[];
+  /** Proyectos que ya hizo, con su enlace en vivo (supabase_portafolio.sql). */
+  trabajos?: Trabajo[];
 }
 
 export const urlPerfil = (slug: string) => `${window.location.origin}/ing/${slug}`;
@@ -135,4 +138,46 @@ export async function cambiarSlug(slug: string): Promise<{ estado: 'ok' | 'inval
     return { estado: 'error' };
   }
   return data as { estado: 'ok' | 'invalido' | 'ocupado'; slug?: string };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Estadísticas de la página (supabase_estadisticas_perfil.sql)               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Cuenta la visita una vez por sesión del navegador. Si falla no pasa nada:
+ * es estadística, no negocio.
+ */
+export function registrarVisitaPerfil(slug: string): void {
+  const clave = `aib-visita-${slug}`;
+  try {
+    if (window.sessionStorage.getItem(clave)) return;
+    window.sessionStorage.setItem(clave, '1');
+  } catch {
+    // Sin almacenamiento: se cuenta igual.
+  }
+  void supabase.rpc('registrar_visita_perfil', { p_slug: slug }).then(({ error }) => {
+    if (error) console.warn('[AIB+] No se pudo contar la visita:', error.message);
+  });
+}
+
+export interface EstadisticasPagina {
+  visitas_30: number;
+  visitas_7: number;
+  /** Pulsaron «Trabajar con…» o «Lo quiero» en sus diseños. */
+  empezaron: number;
+  /** Llegaron a ver cómo quedaría su proyecto. */
+  vieron: number;
+  /** Lo aceptaron: el encargo le llegó. */
+  eligieron: number;
+}
+
+/** Las de los últimos 30 días. null si no se pudieron leer. */
+export async function estadisticasMiPagina(): Promise<EstadisticasPagina | null> {
+  const { data, error } = await supabase.rpc('estadisticas_mi_pagina');
+  if (error) {
+    console.warn('[AIB+] No se pudieron leer las estadísticas:', error.message);
+    return null;
+  }
+  return (data as EstadisticasPagina | null) ?? null;
 }

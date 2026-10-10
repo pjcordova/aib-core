@@ -71,3 +71,27 @@ export function servicioDeBusqueda(texto: string): Exclude<TipoServicio, 'otro'>
   }
   return mejor?.clave ?? null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Buscador de ingenieros (/explorar)                                         */
+/* -------------------------------------------------------------------------- */
+
+export interface PreciosIngeniero {
+  id: string;
+  creado_en: string;
+  /** Diseños publicados (sin los premium). */
+  disenos: number;
+  /** El precio «desde» más bajo de sus diseños. */
+  desde: number | null;
+  /** El más bajo de cada servicio: { web: 1500, crm: 2500 }. */
+  desde_por_servicio: Record<string, number>;
+  /** Proyectos que ya entregó (etapa «Publicada»). */
+  entregados: number;
+}
+
+/** Por ingeniero: sus diseños, sus precios y lo que ya entregó (supabase_explorar.sql). */
+export async function preciosIngenieros(): Promise<Map<string, PreciosIngeniero>> {
+  const { data, error } = await supabase.rpc('precios_ingenieros');
+  if (error) console.warn('[AIB+] No se pudieron leer los precios de los ingenieros:', error.message);
+  return new Map(((data as PreciosIngeniero[] | null) ?? []).map((p) => [p.id, p] as const));
+}

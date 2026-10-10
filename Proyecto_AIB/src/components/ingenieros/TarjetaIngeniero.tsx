@@ -42,12 +42,15 @@ export function TarjetaIngeniero({
   rubroDelCliente,
   accion,
   elegido = false,
+  extra,
 }: {
   ingeniero: IngenieroPublico;
   /** Si trabaja el rubro del cliente, se destaca. */
   rubroDelCliente?: string;
   accion?: ReactNode;
   elegido?: boolean;
+  /** Algo más bajo sus servicios (en el buscador: sus precios y diseños). */
+  extra?: ReactNode;
 }) {
   const [abierto, setAbierto] = useState(false);
   const conoceSuRubro = !!rubroDelCliente && ingeniero.especialidades.includes(rubroDelCliente);
@@ -99,6 +102,7 @@ export function TarjetaIngeniero({
           <span className="text-ink-subtle">Ofrece:</span> {textoServicios(ingeniero.servicios, ingeniero.servicios_otros)}
         </p>
       )}
+      {extra}
 
       {abierto && (
         <div className="mt-4 space-y-3 border-t border-line pt-4 text-sm">

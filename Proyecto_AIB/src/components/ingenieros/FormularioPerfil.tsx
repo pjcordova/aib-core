@@ -10,6 +10,7 @@ import {
   type EstadoIngeniero,
 } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
+import { enlaceValido, normalizarEnlace } from '../../lib/portafolio';
 
 // ---------------------------------------------------------------------------
 // Perfil del ingeniero
@@ -320,19 +321,4 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
       </button>
     </form>
   );
-}
-
-/**
- * El portafolio como lo escriba: «misitio.com», «www.misitio.com» o con
- * http(s)://. Si no trae el protocolo, se le pone https://.
- */
-function normalizarEnlace(texto: string): string {
-  const limpio = texto.trim().replace(/\s+/g, '');
-  if (!limpio) return '';
-  return /^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`;
-}
-
-/** Un enlace web con dominio (algo.algo), sin caracteres raros y no muy largo. */
-function enlaceValido(enlace: string): boolean {
-  return enlace.length <= 300 && /^https?:\/\/[^\s<>"/]+\.[^\s<>"/]{2,}([/?#][^\s<>"]*)?$/i.test(enlace);
 }
