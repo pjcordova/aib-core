@@ -292,8 +292,9 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
   /** El cliente eligió una plantilla: la IA escribe solo sus textos. */
   const elegirPlantilla = async (c: PlantillaDelCatalogo) => {
     const f = ficha();
-    // La propia de un ingeniero: al aceptar, el encargo va directo a él.
-    const autor = c.fila.tipo === 'propia' && c.fila.ingeniero && !c.fila.ingeniero.es_admin ? c.fila.ingeniero : null;
+    // El diseño de un ingeniero (propio o de la biblioteca que tiene en su
+    // catálogo): al aceptar, el encargo va directo a él.
+    const autor = c.fila.ingeniero && !c.fila.ingeniero.es_admin ? c.fila.ingeniero : null;
     const usada: PlantillaUsada = {
       id: c.fila.id,
       base: c.base.id,
@@ -448,6 +449,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
         onElegir={(c) => void elegirPlantilla(c)}
         onAMedida={() => void generarConIA()}
         conPrecios={precioPrueba === null}
+        mostrarAutor={elegirIngeniero}
       />
     );
   }
@@ -591,6 +593,7 @@ export function EleccionPlantilla({
   onAMedida,
   conPrecios,
   textoAMedida = 'Crear un diseño a medida con IA. Tarda un poco más.',
+  mostrarAutor = true,
 }: {
   /** Con una prueba de precio activa, el precio solo se ve junto a la maqueta. */
   conPrecios: boolean;
@@ -599,6 +602,11 @@ export function EleccionPlantilla({
   onElegir: (c: PlantillaDelCatalogo) => void;
   onAMedida: () => void;
   textoAMedida?: string;
+  /**
+   * Quién lo construye. No se muestra al cliente que llegó con su ingeniero:
+   * sea de quien sea el diseño, se lo construye el suyo.
+   */
+  mostrarAutor?: boolean;
 }) {
   return (
     <section className="animate-fade-up mx-auto max-w-5xl py-10">
@@ -633,7 +641,7 @@ export function EleccionPlantilla({
                 )}
               </div>
               {c.base.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>}
-              {c.fila.ingeniero && !c.fila.ingeniero.es_admin && c.fila.ingeniero.nombre && (
+              {mostrarAutor && c.fila.ingeniero && !c.fila.ingeniero.es_admin && c.fila.ingeniero.nombre && (
                 <div className="mt-3 flex items-center gap-2">
                   <FotoIngeniero nombre={c.fila.ingeniero.nombre} foto={c.fila.ingeniero.foto_url} tamano={28} />
                   <p className="min-w-0 text-xs text-ink-muted">

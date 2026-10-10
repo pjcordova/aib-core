@@ -1,62 +1,75 @@
 // ---------------------------------------------------------------------------
 // Portada pública
 // ---------------------------------------------------------------------------
-// Lo primero que ve un dueño de negocio que llega a AIB+ sin invitación. La
-// idea es la de un marketplace: AIB+ le enseña en un minuto cómo quedaría su
-// web y un ingeniero la construye. Todo lo que promete aquí existe en la app,
-// y los ejemplos son las plantillas reales con sus textos de muestra.
+// Lo primero que ve un dueño de negocio que llega a AIB+ sin invitación. Es un
+// marketplace de tecnología: elige lo que necesita (web, tienda, CRM, ERP,
+// automatización o app), ve los diseños reales de los ingenieros con sus
+// precios y reseñas, y en un minuto mira cómo quedaría con su nombre. Todo lo
+// que promete aquí existe en la app; los datos salen de vitrina_portada()
+// (supabase_portada_marketplace.sql).
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
-import { PLANTILLAS_BASE } from '../plantillas';
-import { renderizarPlantilla, type PlantillaBase } from '../lib/plantillas';
+import { useAuth } from '../hooks/useAuth';
 import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
-import { ingenierosDisponibles, type IngenieroPublico } from '../lib/ingenieros';
-import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
+import { ingenierosDisponibles, textoEstrellas, type IngenieroPublico } from '../lib/ingenieros';
+import { documentoDeDiseno, empezarConfirmando } from '../lib/perfilPublico';
+import { etiquetaNivel } from '../lib/plantillaPropia';
+import { obtenerServicio, solesEnteros, type TipoServicio } from '../lib/servicios';
+import { servicioDeBusqueda, vitrinaPortada, type DisenoVitrina, type Vitrina } from '../lib/vitrina';
+import { FotoIngeniero, TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { PiePagina } from './ui/PiePagina';
 
 type Acceso = 'login' | 'registro';
+type Clave = Exclude<TipoServicio, 'otro'>;
 
-/** Negocios inventados para enseñar cada diseño: son ejemplos, no clientes. */
-const EJEMPLOS: { id: string; rubro: string; negocio: string }[] = [
-  { id: 'restaurante', rubro: 'Restaurante', negocio: 'Sazón de la Casa' },
-  { id: 'moda-boutique', rubro: 'Tienda de ropa', negocio: 'Alma Boutique' },
-  { id: 'salud-belleza', rubro: 'Salud y belleza', negocio: 'Spa Armonía' },
-  { id: 'consultora', rubro: 'Consultora', negocio: 'Norte Consultores' },
-  { id: 'institucional', rubro: 'Institución u ONG', negocio: 'Asociación Las Flores' },
-];
+const CLAVES: Clave[] = ['web', 'crm', 'erp', 'automatizacion', 'app-movil'];
+
+/** Negocios inventados para los diseños de la biblioteca: son ejemplos, no clientes. */
+const NEGOCIOS_EJEMPLO: Record<string, string> = {
+  restaurante: 'Sazón de la Casa',
+  'moda-boutique': 'Alma Boutique',
+  'salud-belleza': 'Spa Armonía',
+  consultora: 'Norte Consultores',
+  institucional: 'Asociación Las Flores',
+};
 
 const PASOS = [
   {
-    titulo: 'Cuéntanos de tu negocio',
-    texto: 'Nombre, rubro, para qué quieres la web y tus colores. Casi todo con un clic.',
+    titulo: 'Elige lo que necesitas',
+    texto: 'Una web, una tienda online, un CRM, un ERP, una automatización o una app. Respondes unas preguntas, casi todas con un clic.',
   },
   {
-    titulo: 'Mira tu web en un minuto',
-    texto: 'Elige el diseño que más te guste y míralo con tu nombre. Cambia textos y colores, y pon tus fotos.',
+    titulo: 'Mira cómo quedaría',
+    texto: 'Ves los diseños de los ingenieros con tu nombre y tus colores, y comparas precios y reseñas.',
   },
   {
     titulo: 'Elige a tu ingeniero',
-    texto: 'Si te gusta, eliges quién la construye por su perfil y sus reseñas. Te contacta con una propuesta.',
+    texto: 'Te envía su propuesta con precio y plazo. La aceptas con un clic y sigues el avance desde la app.',
   },
 ];
 
 const INCLUYE = [
-  'Tu nombre, tu logo y tus colores',
-  'Botón de WhatsApp para que tus clientes te escriban',
-  'Se ve bien en el celular',
-  'Tus propias fotos',
-  'Un enlace para mostrársela a tu socio o tu familia',
+  'Ves cómo quedaría antes de pagar nada',
+  'Ingenieros con perfil, diseños y reseñas de sus clientes',
+  'Propuesta formal con precio, plazo y lo que incluye',
+  'Sigues el avance de tu proyecto paso a paso',
+  'Pagas directo a tu ingeniero: AIB+ no te cobra nada',
 ];
 
 const PREGUNTAS = [
   {
+    pregunta: '¿Qué puedo pedir?',
+    respuesta:
+      'Páginas web y tiendas online, CRM para tus clientes y ventas, ERP para inventario y facturación, automatizaciones y apps móviles. Cada ingeniero muestra en su perfil lo que ofrece.',
+  },
+  {
     pregunta: '¿Cuánto cuesta?',
     respuesta:
-      'Ver tu web es gratis. Si quieres que un ingeniero la construya, te envía una propuesta con el precio según lo que necesites. No pagas nada por verla ni por recibir la propuesta.',
+      'Verlo es gratis. Cada diseño muestra su precio «desde» y el ingeniero te envía una propuesta con el precio final según lo que necesites. No pagas nada por verlo ni por recibir la propuesta.',
   },
   {
     pregunta: '¿Necesito saber de tecnología?',
@@ -64,53 +77,45 @@ const PREGUNTAS = [
   },
   {
     pregunta: '¿Tengo que crear una cuenta?',
-    respuesta: 'No. Pulsas «Pruébalo gratis» y empiezas. Si vuelves desde el mismo navegador, tu web te estará esperando.',
-  },
-  {
-    pregunta: '¿Puedo cambiar lo que no me guste?',
-    respuesta: 'Sí. Ahí mismo cambias los textos y los colores, pones tus fotos o pruebas otro diseño.',
-  },
-  {
-    pregunta: '¿Quién construye mi web?',
     respuesta:
-      'Tú lo eliges entre los ingenieros de AIB+: ves su perfil, los rubros con los que trabajan y lo que opinan sus clientes. Al terminar, tú también puedes calificar a tu ingeniero.',
+      'No. Pulsas «Pruébalo gratis» y empiezas. Si vuelves desde el mismo navegador, tu proyecto te estará esperando.',
+  },
+  {
+    pregunta: '¿Cómo elijo a mi ingeniero?',
+    respuesta:
+      'Por su perfil, sus diseños, sus precios y lo que opinan sus clientes. Si te gusta un diseño, lo construye quien lo hizo. Al terminar, tú también lo calificas.',
   },
   {
     pregunta: '¿Qué pasa cuando digo «Me gusta, sigamos»?',
     respuesta:
-      'Eliges a tu ingeniero y dejas tu nombre y tu WhatsApp. Le llega tu proyecto con todo lo que respondiste, te contacta con una propuesta y puedes seguir el avance desde la app.',
+      'Dejas tu nombre y tu WhatsApp. Tu ingeniero recibe tu proyecto con todo lo que respondiste, te envía su propuesta y la aceptas o pides cambios con un clic.',
   },
   {
-    pregunta: '¿Puedo enseñársela a alguien antes de decidir?',
-    respuesta: 'Sí. Con «Compartir» creas un enlace para que la vean tu socio, tu familia o quien quieras.',
+    pregunta: 'Soy ingeniero, ¿puedo ofrecer mis servicios?',
+    respuesta:
+      'Sí. Crea tu perfil en «Únete como ingeniero», sube tus diseños con su precio y recibe clientes con su proyecto ya descrito.',
   },
 ];
-
-/** La página de muestra de un diseño, con un negocio de ejemplo y sus colores. */
-function documentoDeEjemplo(id: string): string | null {
-  const base = PLANTILLAS_BASE.find((p) => p.id === id) as PlantillaBase | undefined;
-  const ejemplo = EJEMPLOS.find((e) => e.id === id);
-  if (!base || !ejemplo) return null;
-  return renderizarPlantilla(base, base.ejemplo, {
-    empresa: ejemplo.negocio,
-    logo: null,
-    paleta: base.paletaOriginal,
-  });
-}
 
 export function Portada({
   onAcceso,
   continuar,
 }: {
   onAcceso: (modo: Acceso) => void;
-  /** Quien ya tiene una prueba o una invitación abierta: vuelve a su web. */
+  /** Quien ya tiene una prueba o una invitación abierta: vuelve a ella. */
   continuar?: () => void;
 }) {
   const navigate = useNavigate();
-  // Sin cuenta: /probar abre una sesión de prueba y lleva al cuestionario.
-  // Con una prueba ya abierta, se sigue con esa.
-  const probar = () => (continuar ? continuar() : navigate('/probar'));
   const medir = !continuar;
+
+  /**
+   * Sin cuenta, /probar abre una sesión de prueba; con una ya abierta, se
+   * sigue con esa. `clave`: el servicio con el que empieza (sin ella, elige).
+   */
+  const probar = (clave?: Clave) => {
+    if (continuar) navigate('/mi-web', { state: clave ? { clave } : null });
+    else navigate(clave ? `/probar?servicio=${clave}` : '/probar');
+  };
 
   // Medición del marketplace: la visita y su canal (?c=), sin datos personales.
   // Quien vuelve desde su prueba ya contó al llegar.
@@ -120,19 +125,43 @@ export function Portada({
     registrarVisitaPortada();
   }, [medir]);
 
-  // En el celular, el botón queda fijo abajo en cuanto el de la portada se
-  // pierde de vista.
-  const botonPortada = useRef<HTMLDivElement>(null);
+  // undefined mientras carga; null si no se pudo leer (la portada sigue sin ella).
+  const [vitrina, setVitrina] = useState<Vitrina | null | undefined>(undefined);
+  useEffect(() => {
+    let vigente = true;
+    void vitrinaPortada().then((v) => {
+      if (vigente) setVitrina(v);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  // Los servicios que alguien ofrece. Mientras carga, todos (sin cifras).
+  const servicios = useMemo(() => {
+    const datos = new Map((vitrina?.servicios ?? []).map((s) => [s.clave, s] as const));
+    return CLAVES.filter((c) => !vitrina || (datos.get(c)?.ingenieros ?? 0) > 0).map((c) => ({
+      ...obtenerServicio(c),
+      clave: c,
+      datos: datos.get(c),
+    }));
+  }, [vitrina]);
+
+  // En el celular, el botón queda fijo abajo en cuanto el buscador se pierde de vista.
+  const buscador = useRef<HTMLDivElement>(null);
   const [botonFijo, setBotonFijo] = useState(false);
   useEffect(() => {
-    const el = botonPortada.current;
+    const el = buscador.current;
     if (!el) return;
     const observador = new IntersectionObserver(([entrada]) => setBotonFijo(!entrada.isIntersecting));
     observador.observe(el);
     return () => observador.disconnect();
   }, []);
 
-  const celular = useMemo(() => documentoDeEjemplo('restaurante'), []);
+  const destacado = useMemo(
+    () => vitrina?.plantillas.find((d) => d.servicio === 'web' && d.precio_desde) ?? vitrina?.plantillas[0],
+    [vitrina]
+  );
 
   return (
     <div className="min-h-screen">
@@ -140,15 +169,18 @@ export function Portada({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Wordmark />
           <nav className="flex items-center gap-6" aria-label="Secciones">
-            <a href="#como-funciona" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-              Cómo funciona
-            </a>
-            <a href="#ejemplos" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-              Ejemplos
-            </a>
-            <a href="#preguntas" className="hidden text-sm text-ink-muted hover:text-ink md:inline">
-              Preguntas
-            </a>
+            {(
+              [
+                ['#servicios', 'Servicios'],
+                ['#plantillas', 'Diseños'],
+                ['#ingenieros', 'Ingenieros'],
+                ['#preguntas', 'Preguntas'],
+              ] as const
+            ).map(([href, texto]) => (
+              <a key={href} href={href} className="hidden text-sm text-ink-muted hover:text-ink md:inline">
+                {texto}
+              </a>
+            ))}
             <button
               type="button"
               onClick={() => onAcceso('login')}
@@ -158,8 +190,8 @@ export function Portada({
             </button>
             {continuar && (
               <button type="button" onClick={continuar} className="btn btn-primary">
-                <span className="sm:hidden">Mi web</span>
-                <span className="hidden sm:inline">Continuar con mi web</span>
+                <span className="sm:hidden">Mi proyecto</span>
+                <span className="hidden sm:inline">Continuar mi proyecto</span>
               </button>
             )}
           </nav>
@@ -168,29 +200,36 @@ export function Portada({
 
       <main>
         {/* -------------------------------------------------------- portada */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-8 pb-16 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:pt-14">
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-8 pb-16 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:pt-14">
           <div className="animate-fade-up text-center lg:text-left">
             <p className="mb-4 text-xs font-medium tracking-[0.2em] text-ink-subtle uppercase">
-              Para negocios y emprendedores
+              Marketplace de tecnología para negocios
             </p>
             <h1 className="text-4xl leading-[1.08] text-balance sm:text-5xl lg:text-6xl">
-              La web de tu negocio, lista para ver en un minuto
+              La tecnología que tu negocio necesita, hecha por ingenieros
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-muted sm:text-lg lg:mx-0">
-              Responde unas preguntas y mira gratis cómo quedaría, con tu nombre, tu logo y tus colores. Si te
-              gusta, un ingeniero de software la construye contigo.
+              Páginas web, tiendas online, CRM, ERP, automatizaciones y apps. Mira gratis cómo quedaría con tu nombre y
+              tus colores, compara ingenieros y recibe su propuesta.
             </p>
-            <div
-              ref={botonPortada}
-              className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start"
-            >
-              <button type="button" onClick={probar} className="btn btn-primary w-full px-8 py-3 text-base sm:w-auto">
-                Pruébalo gratis
-              </button>
-              <a href="#ejemplos" className="btn btn-ghost w-full px-6 py-3 text-base sm:w-auto">
-                Ver ejemplos
-              </a>
+
+            <div ref={buscador} className="mt-8">
+              <Buscador onElegir={probar} />
             </div>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-2 lg:justify-start" aria-label="Servicios">
+              {servicios.map((s) => (
+                <button
+                  key={s.clave}
+                  type="button"
+                  onClick={() => probar(s.clave)}
+                  className="rounded-full border border-line-strong bg-surface-raised px-3.5 py-1.5 text-sm text-ink transition-colors hover:border-accent/60"
+                >
+                  <span aria-hidden="true">{s.icono}</span> {s.nombre}
+                </button>
+              ))}
+            </div>
+
             <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink-muted lg:justify-start">
               {['Gratis para ver', 'Sin crear cuenta', 'Decides después'].map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
@@ -203,27 +242,51 @@ export function Portada({
             </ul>
           </div>
 
-          <figure className="animate-fade-up mx-auto w-full max-w-[290px]">
-            <div className="rounded-[2.75rem] bg-ink p-3 shadow-[var(--shadow-lifted)]">
-              <div className="overflow-hidden rounded-[2.1rem] bg-white">
-                {celular && (
-                  <MiniVista
-                    documento={celular}
-                    titulo="Ejemplo de web para un restaurante, vista en el celular"
-                    anchoPagina={390}
-                    alto={540}
-                    inmediata
-                    interactiva
-                  />
-                )}
-              </div>
-            </div>
-            <figcaption className="mt-3 text-center text-xs text-ink-subtle">
-              Un diseño real de AIB+, con un restaurante de ejemplo.
-              <span className="block font-medium text-ink-muted">Desliza dentro para recorrerlo ↕</span>
-            </figcaption>
-          </figure>
+          <Destacado diseno={destacado} cargando={vitrina === undefined} />
         </section>
+
+        {/* -------------------------------------------------------- servicios */}
+        <section id="servicios" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <h2 className="text-center text-3xl sm:text-4xl">¿Qué necesita tu negocio?</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
+              Elige un servicio: respondes unas preguntas y ves gratis cómo quedaría, con los diseños de los ingenieros.
+            </p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {servicios.map((s) => (
+                <button
+                  key={s.clave}
+                  type="button"
+                  onClick={() => probar(s.clave)}
+                  className="card group flex flex-col gap-3 p-6 text-left transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[var(--shadow-glow)]"
+                >
+                  <span className="text-3xl" aria-hidden="true">
+                    {s.icono}
+                  </span>
+                  <span className="text-xl text-ink">{s.nombre}</span>
+                  <span className="text-sm leading-relaxed text-ink-muted">{s.descripcion}</span>
+                  {s.datos && (
+                    <span className="text-xs text-ink-subtle">
+                      {s.datos.ingenieros} {s.datos.ingenieros === 1 ? 'ingeniero' : 'ingenieros'}
+                      {s.datos.plantillas > 0 &&
+                        ` · ${s.datos.plantillas} ${s.datos.plantillas === 1 ? 'diseño' : 'diseños'}`}
+                      {s.datos.desde ? (
+                        <>
+                          {' · '}
+                          <span className="font-semibold text-ink">desde {solesEnteros(s.datos.desde)}</span>
+                        </>
+                      ) : null}
+                    </span>
+                  )}
+                  <span className="mt-auto text-sm font-medium text-accent group-hover:underline">Empezar gratis →</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------------------- diseños */}
+        {vitrina && vitrina.plantillas.length > 0 && <Disenos disenos={vitrina.plantillas} onProbar={probar} />}
 
         {/* ------------------------------------------------- cómo funciona */}
         <section id="como-funciona" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
@@ -241,25 +304,22 @@ export function Portada({
           </div>
         </section>
 
-        {/* ------------------------------------------------------- ejemplos */}
-        <Ejemplos />
-
         <Ingenieros />
 
         {/* -------------------------------------------- por qué un ingeniero */}
         <section className="mx-auto grid max-w-6xl items-start gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2">
           <div>
-            <h2 className="text-3xl sm:text-4xl">No es un creador de páginas: es tu web, hecha por un ingeniero</h2>
+            <h2 className="text-3xl sm:text-4xl">No es un creador de páginas: son ingenieros de verdad</h2>
             <p className="mt-4 text-ink-muted">
               Tu ingeniero recibe tu proyecto con todo lo que respondiste y el diseño que elegiste: no tienes que
               explicarle todo desde cero. Así la conversación empieza por lo importante.
             </p>
-            <button type="button" onClick={probar} className="btn btn-primary mt-8 px-8 py-3 text-base">
+            <button type="button" onClick={() => probar()} className="btn btn-primary mt-8 px-8 py-3 text-base">
               Empezar gratis
             </button>
           </div>
           <div className="card p-6">
-            <h3 className="text-xl">Lo que verás en tu web</h3>
+            <h3 className="text-xl">Lo que tienes con AIB+</h3>
             <ul className="mt-5 space-y-3">
               {INCLUYE.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-ink">
@@ -273,6 +333,22 @@ export function Portada({
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------- para ingenieros */}
+        <section className="px-4 pb-16 sm:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 rounded-3xl border border-line bg-surface-raised p-8 text-center sm:flex-row sm:text-left">
+            <div>
+              <h2 className="text-2xl">¿Eres ingeniero de software?</h2>
+              <p className="mt-2 max-w-2xl text-sm text-ink-muted">
+                Ofrece tus servicios en AIB+: sube tus diseños con su precio, recibe clientes con su proyecto ya descrito y
+                lleva tus propuestas y cobros en un solo lugar.
+              </p>
+            </div>
+            <Link to="/ingenieros" className="btn btn-ghost shrink-0 px-6 py-3">
+              Únete como ingeniero
+            </Link>
           </div>
         </section>
 
@@ -302,11 +378,11 @@ export function Portada({
         {/* ----------------------------------------------------- llamada final */}
         <section className="px-4 pb-20 sm:px-6">
           <div className="mx-auto max-w-4xl rounded-3xl bg-accent px-6 py-12 text-center text-white sm:px-12">
-            <h2 className="text-3xl text-balance sm:text-4xl">Tu negocio merece una web que dé confianza</h2>
-            <p className="mx-auto mt-3 max-w-lg text-white/75">Mírala hoy, decide después.</p>
+            <h2 className="text-3xl text-balance sm:text-4xl">Tu negocio, con la tecnología que necesita</h2>
+            <p className="mx-auto mt-3 max-w-lg text-white/75">Míralo hoy, decide después.</p>
             <button
               type="button"
-              onClick={probar}
+              onClick={() => probar()}
               className="btn mt-8 bg-accent-alt px-8 py-3 text-base text-ink hover:brightness-105"
             >
               Pruébalo gratis
@@ -317,7 +393,7 @@ export function Portada({
 
       <PiePagina enPortada onIngresar={() => onAcceso('login')} espacioBotonFijo />
 
-      {/* Botón fijo en el celular, cuando el de arriba ya no se ve */}
+      {/* Botón fijo en el celular, cuando el buscador ya no se ve */}
       <div
         className={
           'fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface-base/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur transition-transform duration-300 sm:hidden ' +
@@ -327,7 +403,7 @@ export function Portada({
       >
         <button
           type="button"
-          onClick={probar}
+          onClick={() => probar()}
           tabIndex={botonFijo ? 0 : -1}
           className="btn btn-primary w-full py-3 text-base"
         >
@@ -338,86 +414,243 @@ export function Portada({
   );
 }
 
-/** Galería de diseños reales, uno por rubro. Se pinta solo el que se mira. */
-function Ejemplos() {
-  const [elegido, setElegido] = useState(EJEMPLOS[0].id);
-  const documento = useMemo(() => documentoDeEjemplo(elegido), [elegido]);
-  const ejemplo = EJEMPLOS.find((e) => e.id === elegido) ?? EJEMPLOS[0];
-  // En el celular se enseña la versión móvil: la de escritorio reducida no se leería.
-  const [enEscritorio, setEnEscritorio] = useState(() => window.matchMedia('(min-width: 640px)').matches);
-  useEffect(() => {
-    const consulta = window.matchMedia('(min-width: 640px)');
-    const cambiar = () => setEnEscritorio(consulta.matches);
-    consulta.addEventListener('change', cambiar);
-    return () => consulta.removeEventListener('change', cambiar);
-  }, []);
+/* -------------------------------------------------------------------------- */
+
+/**
+ * «¿Qué necesitas?» con sus palabras. Si se parece a un servicio, empieza por
+ * ese; si no, le pide que elija uno.
+ */
+function Buscador({ onElegir }: { onElegir: (clave?: Clave) => void }) {
+  const [texto, setTexto] = useState('');
+  const [sinCoincidencia, setSinCoincidencia] = useState(false);
 
   return (
-    <section id="ejemplos" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
-      <h2 className="text-center text-3xl sm:text-4xl">Diseños pensados para tu rubro</h2>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const clave = servicioDeBusqueda(texto);
+        if (clave) onElegir(clave);
+        else if (!texto.trim()) onElegir();
+        else setSinCoincidencia(true);
+      }}
+      className="mx-auto max-w-xl lg:mx-0"
+      role="search"
+    >
+      <div className="flex flex-col gap-2 rounded-2xl border border-line-strong bg-surface-raised p-2 shadow-[var(--shadow-lifted)] sm:flex-row">
+        <input
+          type="search"
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setSinCoincidencia(false);
+          }}
+          placeholder="¿Qué necesitas? Ej: controlar mi inventario"
+          aria-label="¿Qué necesita tu negocio?"
+          className="min-w-0 flex-1 rounded-xl bg-transparent px-3 py-2.5 text-base text-ink outline-none placeholder:text-ink-subtle"
+        />
+        <button type="submit" className="btn btn-primary px-6 py-2.5 text-base">
+          Pruébalo gratis
+        </button>
+      </div>
+      {sinCoincidencia && (
+        <p className="mt-2 text-sm text-ink-muted" role="status">
+          No lo encontramos tal cual: elige el servicio que más se parezca.
+        </p>
+      )}
+    </form>
+  );
+}
+
+/** Un diseño real de un ingeniero, en un celular, con quién lo hizo y su precio. */
+function Destacado({ diseno, cargando }: { diseno: DisenoVitrina | undefined; cargando: boolean }) {
+  const documento = useMemo(
+    () => (diseno ? documentoDeDiseno(diseno, NEGOCIOS_EJEMPLO[diseno.base] ?? 'Tu negocio') : null),
+    [diseno]
+  );
+  if (!cargando && !documento) return null;
+
+  return (
+    <figure className="animate-fade-up mx-auto w-full max-w-[290px]">
+      <div className="rounded-[2.75rem] bg-ink p-3 shadow-[var(--shadow-lifted)]">
+        <div className="overflow-hidden rounded-[2.1rem] bg-white">
+          {documento ? (
+            <MiniVista
+              documento={documento}
+              titulo={`Diseño ${diseno?.nombre ?? ''}, visto en el celular`}
+              anchoPagina={390}
+              alto={540}
+              inmediata
+              interactiva
+            />
+          ) : (
+            <div className="h-[540px] animate-pulse bg-surface-overlay" />
+          )}
+        </div>
+      </div>
+      {diseno && (
+        <figcaption className="mt-3 flex items-center justify-center gap-2 text-xs text-ink-subtle">
+          <FotoIngeniero nombre={diseno.ingeniero.nombre} foto={diseno.ingeniero.foto_url} tamano={24} />
+          <span>
+            Diseño de <span className="font-medium text-ink-muted">{diseno.ingeniero.nombre.split(/\s+/)[0]}</span>
+            {diseno.precio_desde ? ` · desde ${solesEnteros(diseno.precio_desde)}` : ''}
+            <span className="block font-medium text-ink-muted">Desliza dentro para recorrerlo ↕</span>
+          </span>
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+/**
+ * Los diseños de los ingenieros, por servicio. «Lo quiero» empieza la prueba
+ * con quien lo hizo y en ese servicio: ve sus diseños con su nombre.
+ */
+function Disenos({ disenos, onProbar }: { disenos: DisenoVitrina[]; onProbar: (clave?: Clave) => void }) {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const conDisenos = CLAVES.filter((c) => disenos.some((d) => d.servicio === c));
+  const [servicio, setServicio] = useState<Clave>(conDisenos[0] ?? 'web');
+  const [empezando, setEmpezando] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const loQuiero = async (d: DisenoVitrina) => {
+    const clave = d.servicio as Clave;
+    if (!d.ingeniero.slug) {
+      onProbar(clave);
+      return;
+    }
+    setEmpezando(d.id);
+    setError('');
+    const nombre = d.ingeniero.nombre.split(/\s+/)[0];
+    const r = await empezarConfirmando(d.ingeniero.slug, nombre, signOut);
+    setEmpezando(null);
+    if (r === 'ok') navigate('/mi-web', { state: { clave } });
+    else if (r === 'con_cuenta') navigate('/');
+    else if (r === 'lleno') setError(`${nombre} recibió muchas solicitudes hoy. Prueba con otro diseño o vuelve mañana.`);
+    else if (r !== 'cancelado') setError('No pudimos empezar. Revisa tu conexión y vuelve a intentarlo.');
+  };
+
+  return (
+    <section id="plantillas" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 className="text-center text-3xl sm:text-4xl">Diseños de nuestros ingenieros</h2>
       <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
-        Te mostramos los que mejor encajan con tu negocio y eliges el que más te guste. Estos son con negocios de
-        ejemplo: el tuyo saldrá con tu nombre, tus colores y tus textos.
+        Cada uno con su precio y quién lo construye. El tuyo saldrá con tu nombre, tus colores y tus textos.
       </p>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-2" role="tablist" aria-label="Elige un rubro">
-        {EJEMPLOS.map((e) => (
-          <button
-            key={e.id}
-            type="button"
-            role="tab"
-            aria-selected={elegido === e.id}
-            onClick={() => setElegido(e.id)}
-            className={
-              'rounded-full border px-4 py-2 text-sm transition-colors ' +
-              (elegido === e.id
-                ? 'border-accent bg-accent text-white'
-                : 'border-line-strong bg-surface-raised text-ink hover:border-accent/50')
-            }
-          >
-            {e.rubro}
-          </button>
-        ))}
-      </div>
-
-      <div
-        className={
-          'mt-8 overflow-hidden rounded-2xl border border-line bg-surface-deep shadow-[var(--shadow-lifted)] ' +
-          (enEscritorio ? '' : 'mx-auto max-w-[340px]')
-        }
-      >
-        <div className="flex items-center gap-2 border-b border-line bg-surface-overlay px-4 py-2.5">
-          <span className="flex gap-1.5" aria-hidden="true">
-            <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-            <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-            <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-          </span>
-          <span className="mx-auto truncate rounded-md bg-surface-deep/70 px-3 py-0.5 text-[11px] text-ink-subtle">
-            {ejemplo.negocio} · ejemplo
-          </span>
+      {conDisenos.length > 1 && (
+        <div className="mt-8 flex flex-wrap justify-center gap-2" role="tablist" aria-label="Elige un servicio">
+          {conDisenos.map((c) => {
+            const s = obtenerServicio(c);
+            return (
+              <button
+                key={c}
+                type="button"
+                role="tab"
+                aria-selected={servicio === c}
+                onClick={() => setServicio(c)}
+                className={
+                  'rounded-full border px-4 py-2 text-sm transition-colors ' +
+                  (servicio === c
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-line-strong bg-surface-raised text-ink hover:border-accent/50')
+                }
+              >
+                <span aria-hidden="true">{s.icono}</span> {s.nombre}
+              </button>
+            );
+          })}
         </div>
-        {documento && (
-          <MiniVista
-            key={elegido + (enEscritorio ? '-escritorio' : '-movil')}
-            documento={documento}
-            titulo={`Ejemplo de web para ${ejemplo.rubro.toLowerCase()}`}
-            anchoPagina={enEscritorio ? 1280 : 390}
-            alto={enEscritorio ? 460 : 560}
-            inmediata
-            interactiva
-          />
-        )}
+      )}
+
+      {error && (
+        <p role="alert" className="mt-6 text-center text-sm text-negative">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {disenos
+          .filter((d) => d.servicio === servicio)
+          .map((d) => (
+            <TarjetaDiseno
+              key={d.id}
+              diseno={d}
+              empezando={empezando === d.id}
+              ocupado={empezando !== null}
+              onQuiero={() => void loQuiero(d)}
+            />
+          ))}
       </div>
-      <p className="mt-3 text-center text-xs font-medium text-ink-muted">
-        Desliza dentro del diseño para recorrerlo completo ↕
+      <p className="mt-6 text-center text-sm">
+        <button type="button" onClick={() => onProbar(servicio)} className="font-medium text-accent hover:underline">
+          Ver todos los de {obtenerServicio(servicio).nombre} con mi nombre →
+        </button>
       </p>
     </section>
   );
 }
 
-/** Los ingenieros aprobados, con sus reseñas. Si aún no hay ninguno, no sale. */
+function TarjetaDiseno({
+  diseno: d,
+  empezando,
+  ocupado,
+  onQuiero,
+}: {
+  diseno: DisenoVitrina;
+  empezando: boolean;
+  ocupado: boolean;
+  onQuiero: () => void;
+}) {
+  const documento = useMemo(() => documentoDeDiseno(d, NEGOCIOS_EJEMPLO[d.base] ?? 'Tu negocio'), [d]);
+  if (!documento) return null;
+  const nombre = d.ingeniero.nombre;
+
+  return (
+    <article className="card flex flex-col overflow-hidden">
+      <MiniVista documento={documento} titulo={`Diseño ${d.nombre}`} alto={240} interactiva />
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-ink">{d.nombre}</p>
+          {d.nivel !== 'basica' && (
+            <span className="rounded-full bg-accent-alt/20 px-2 py-0.5 text-[11px] font-medium text-ink">
+              {etiquetaNivel(d.nivel)}
+            </span>
+          )}
+        </div>
+        {d.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{d.descripcion}</p>}
+        <div className="mt-3 flex items-center gap-2">
+          <FotoIngeniero nombre={nombre} foto={d.ingeniero.foto_url} tamano={28} />
+          <p className="min-w-0 text-xs text-ink-muted">
+            Lo construye <span className="font-medium text-ink">{nombre}</span>
+            <span className="block">{textoEstrellas(d.ingeniero.promedio, d.ingeniero.resenas)}</span>
+          </p>
+        </div>
+        {d.precio_desde !== null && (
+          <p className="mt-3 text-base font-semibold text-ink tabular-nums">desde {solesEnteros(d.precio_desde)}</p>
+        )}
+        <div className="mt-auto flex gap-2 pt-4">
+          <button type="button" onClick={onQuiero} disabled={ocupado} className="btn btn-primary flex-1">
+            {empezando ? 'Preparando…' : 'Lo quiero'}
+          </button>
+          {d.ingeniero.slug && (
+            <Link to={`/ing/${d.ingeniero.slug}`} className="btn btn-ghost">
+              Ver ingeniero
+            </Link>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/** Si ofrece el servicio. La tienda online cuenta como web. */
+const ofrece = (ing: IngenieroPublico, clave: Clave) =>
+  (ing.servicios ?? ['web']).includes(clave) || (clave === 'web' && (ing.servicios ?? []).includes('tienda-online'));
+
+/** Los ingenieros aprobados, con sus reseñas y filtro por servicio. Si aún no hay ninguno, no sale. */
 function Ingenieros() {
   const [lista, setLista] = useState<IngenieroPublico[]>([]);
+  const [filtro, setFiltro] = useState<Clave | ''>('');
 
   useEffect(() => {
     let vigente = true;
@@ -431,29 +664,54 @@ function Ingenieros() {
 
   if (lista.length === 0) return null;
 
+  const filtros = CLAVES.filter((c) => lista.some((i) => ofrece(i, c)));
+  const visibles = filtro ? lista.filter((i) => ofrece(i, filtro)) : lista;
+
   return (
-    <section id="ingenieros" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-center text-3xl sm:text-4xl">Conoce a los ingenieros</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
-          Cuando tu web te guste, eliges a uno de ellos para construirla. Sus clientes los califican al terminar.
-        </p>
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {lista.slice(0, 6).map((ing) => (
-            <TarjetaIngeniero
-              key={ing.id}
-              ingeniero={ing}
-              accion={
-                ing.slug ? (
-                  <Link to={`/ing/${ing.slug}`} className="btn btn-ghost w-full">
-                    Ver su página
-                  </Link>
-                ) : undefined
-              }
-            />
-          ))}
+    <section id="ingenieros" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 className="text-center text-3xl sm:text-4xl">Conoce a los ingenieros</h2>
+      <p className="mx-auto mt-3 max-w-2xl text-center text-ink-muted">
+        Mira su perfil, sus diseños y lo que dicen sus clientes. Sus clientes los califican al terminar.
+      </p>
+      {filtros.length > 1 && (
+        <div className="mt-8 flex flex-wrap justify-center gap-2" role="group" aria-label="Filtrar por servicio">
+          {[{ clave: '' as const, nombre: 'Todos', icono: '' }, ...filtros.map((c) => ({ clave: c, ...obtenerServicio(c) }))].map(
+            (f) => (
+              <button
+                key={f.clave || 'todos'}
+                type="button"
+                onClick={() => setFiltro(f.clave)}
+                aria-pressed={filtro === f.clave}
+                className={
+                  'rounded-full border px-3.5 py-1.5 text-sm transition-colors ' +
+                  (filtro === f.clave
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-line-strong bg-surface-raised text-ink hover:border-accent/50')
+                }
+              >
+                {f.icono && <span aria-hidden="true">{f.icono} </span>}
+                {f.nombre}
+              </button>
+            )
+          )}
         </div>
+      )}
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {visibles.slice(0, 6).map((ing) => (
+          <TarjetaIngeniero
+            key={ing.id}
+            ingeniero={ing}
+            accion={
+              ing.slug ? (
+                <Link to={`/ing/${ing.slug}`} className="btn btn-ghost w-full">
+                  Ver su página
+                </Link>
+              ) : undefined
+            }
+          />
+        ))}
       </div>
     </section>
   );
 }
+

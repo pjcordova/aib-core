@@ -89,7 +89,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
               AIB<span className="text-accent-alt">+</span>
             </h1>
             <p className="mt-1 text-xs tracking-wide text-ink-subtle">
-              {subtitulo ?? (mode === 'registro' ? 'Crea tu cuenta y mira tu web en un minuto' : 'La web de tu negocio')}
+              {subtitulo ?? (mode === 'registro' ? 'Crea tu cuenta y mira cómo quedaría tu proyecto' : 'Tecnología para tu negocio')}
             </p>
           </div>
 

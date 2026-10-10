@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { empezarSinCuenta, type ResultadoPrueba } from '../lib/invitaciones';
 import { Logo } from './ui/Primitives';
 
@@ -20,18 +20,21 @@ function empezarUnaVez(): Promise<ResultadoPrueba> {
 
 /**
  * «Pruébalo gratis» en la portada (/probar). Abre una sesión sin cuenta, como
- * la de una invitación, y lleva directo al cuestionario. Si por hoy ya no
- * quedan pruebas, ofrece crear una cuenta gratis.
+ * la de una invitación. Con ?servicio=crm (los botones de cada servicio) va
+ * directo a su cuestionario; sin él, elige el servicio en la bienvenida. Si
+ * por hoy ya no quedan pruebas, ofrece crear una cuenta gratis.
  */
 export function EmpezarPrueba() {
   const navigate = useNavigate();
+  const [parametros] = useSearchParams();
+  const servicio = parametros.get('servicio');
   const [resultado, setResultado] = useState<ResultadoPrueba | null>(null);
 
   useEffect(() => {
     let vigente = true;
     void empezarUnaVez().then((r) => {
       if (!vigente) return;
-      if (r === 'ok') navigate('/mi-web', { replace: true, state: { directo: true } });
+      if (r === 'ok') navigate('/mi-web', { replace: true, state: servicio ? { clave: servicio } : null });
       // Con una cuenta abierta no hace falta probar sin cuenta: a su app.
       else if (r === 'con_cuenta') navigate('/', { replace: true });
       else setResultado(r);
@@ -39,7 +42,7 @@ export function EmpezarPrueba() {
     return () => {
       vigente = false;
     };
-  }, [navigate]);
+  }, [navigate, servicio]);
 
   if (!resultado) {
     return (
@@ -62,7 +65,7 @@ export function EmpezarPrueba() {
         </h1>
         <p className="mt-3 text-sm text-ink-muted">
           {lleno
-            ? 'Crea tu cuenta gratis con tu correo y mira tu web igual, en un minuto.'
+            ? 'Crea tu cuenta gratis con tu correo y mira igual cómo quedaría, en un minuto.'
             : 'Revisa tu conexión y vuelve a intentarlo en un momento.'}
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

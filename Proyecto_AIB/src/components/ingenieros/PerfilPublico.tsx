@@ -2,11 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { textoEstrellas, textoServicios } from '../../lib/ingenieros';
-import { empezarConIngeniero, perfilPublico, type DisenoPublico, type PerfilPublico as Perfil } from '../../lib/perfilPublico';
-import { basePropia, etiquetaNivel } from '../../lib/plantillaPropia';
-import { CATEGORIAS_NEGOCIO, renderizarPlantilla } from '../../lib/plantillas';
+import {
+  documentoDeDiseno,
+  empezarConfirmando,
+  perfilPublico,
+  type DisenoPublico,
+  type PerfilPublico as Perfil,
+} from '../../lib/perfilPublico';
+import { etiquetaNivel } from '../../lib/plantillaPropia';
+import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { iconoDeClave, nombreDeClave, solesEnteros } from '../../lib/servicios';
-import { obtenerPlantillaBase } from '../../plantillas';
 import { MiniVista } from '../panel/MiniVista';
 import { PiePagina } from '../ui/PiePagina';
 import { Wordmark } from '../ui/Primitives';
@@ -16,18 +21,16 @@ import { FotoIngeniero } from './TarjetaIngeniero';
 // Página pública del ingeniero (/ing/:slug)
 // ---------------------------------------------------------------------------
 // La que comparte con sus clientes: quién es, qué ofrece, sus diseños con
-// precio y lo que dicen sus clientes. «Quiero mi web con…» abre la prueba sin
-// cuenta atada a él: ve solo sus diseños y el encargo le llega directo.
+// precio y lo que dicen sus clientes. «Trabajar con…» (o «Lo quiero» en un
+// diseño) abre la prueba sin cuenta atada a él: ve solo sus servicios y sus
+// diseños, y el encargo le llega directo.
 // ---------------------------------------------------------------------------
 
 const etiquetaRubro = (v: string) => CATEGORIAS_NEGOCIO.find((c) => c.valor === v)?.etiqueta ?? v;
 
-/** El diseño con un negocio de ejemplo, como lo vería un cliente. */
-function documentoDe(d: DisenoPublico): string | null {
-  const base = d.tipo === 'propia' ? basePropia(d) : obtenerPlantillaBase(d.base);
-  if (!base) return null;
-  return renderizarPlantilla(base, base.ejemplo, { empresa: 'Tu negocio', logo: null, paleta: null });
-}
+/** Solo hace webs (o tiendas): el botón lo dice y lleva directo a la web. */
+const soloWeb = (p: Perfil) =>
+  p.servicios_otros.length === 0 && p.servicios.every((s) => s === 'web' || s === 'tienda-online');
 
 export function PerfilPublico() {
   const { slug = '' } = useParams();
@@ -53,21 +56,22 @@ export function PerfilPublico() {
 
   const primerNombre = perfil?.nombre.split(/\s+/)[0] ?? '';
 
-  const empezar = async () => {
+  /**
+   * Abre la prueba atada a este ingeniero. `clave`: el servicio con el que
+   * empieza («Lo quiero» en un diseño); sin ella elige entre los suyos.
+   */
+  const empezar = async (clave?: string) => {
     if (!perfil) return;
     setEmpezando(true);
     setError('');
-    let r = await empezarConIngeniero(slug);
-    if (r === 'otra') {
-      if (!window.confirm(`Ya tienes una prueba abierta en este navegador. ¿Empezar una nueva con ${primerNombre}?`)) {
-        setEmpezando(false);
-        return;
-      }
-      await signOut();
-      r = await empezarConIngeniero(slug);
+    const r = await empezarConfirmando(slug, primerNombre, signOut);
+    if (r === 'cancelado') {
+      setEmpezando(false);
+      return;
     }
     if (r === 'ok') {
-      navigate('/mi-web', { state: { directo: true } });
+      const servicio = clave ?? (soloWeb(perfil) ? 'web' : undefined);
+      navigate('/mi-web', { state: servicio ? { clave: servicio } : null });
       return;
     }
     if (r === 'con_cuenta') {
@@ -104,9 +108,11 @@ export function PerfilPublico() {
     );
   }
 
+  // Si hace más que webs, el cliente elige después cuál de sus servicios quiere.
+  const textoBoton = soloWeb(perfil) ? `Quiero mi web con ${primerNombre}` : `Trabajar con ${primerNombre}`;
   const boton = (
     <button type="button" onClick={() => void empezar()} disabled={empezando} className="btn btn-primary px-6 py-3 text-base">
-      {empezando ? 'Preparando…' : `Quiero mi web con ${primerNombre}`}
+      {empezando ? 'Preparando…' : textoBoton}
     </button>
   );
 
@@ -119,7 +125,7 @@ export function PerfilPublico() {
           </Link>
           <button type="button" onClick={() => void empezar()} disabled={empezando} className="btn btn-primary">
             <span className="sm:hidden">Empezar</span>
-            <span className="hidden sm:inline">Quiero mi web con {primerNombre}</span>
+            <span className="hidden sm:inline">{textoBoton}</span>
           </button>
         </div>
       </header>
@@ -166,7 +172,7 @@ export function PerfilPublico() {
                 )}
               </div>
               <p className="mt-2 text-xs text-ink-subtle">
-                Gratis y sin crear cuenta: respondes unas preguntas y en un minuto ves tu web.
+                Gratis y sin crear cuenta: respondes unas preguntas y en un minuto ves cómo quedaría.
               </p>
               {error && (
                 <p role="alert" className="mt-2 text-sm text-negative">
@@ -185,7 +191,7 @@ export function PerfilPublico() {
               <p className="mt-2 text-ink-muted">Cada diseño saldrá con tu nombre, tus colores y tus textos.</p>
               <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {perfil.disenos.map((d) => (
-                  <TarjetaDiseno key={d.id} diseno={d} />
+                  <TarjetaDiseno key={d.id} diseno={d} empezando={empezando} onQuiero={() => void empezar(d.servicio)} />
                 ))}
               </div>
             </div>
@@ -238,9 +244,9 @@ export function PerfilPublico() {
         {/* ------------------------------------------------------ llamada final */}
         <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
           <div className="rounded-3xl bg-accent px-6 py-12 text-center text-white">
-            <h2 className="text-3xl text-white">¿Empezamos tu web?</h2>
+            <h2 className="text-3xl text-white">{soloWeb(perfil) ? '¿Empezamos tu web?' : '¿Empezamos tu proyecto?'}</h2>
             <p className="mx-auto mt-2 max-w-md text-white/80">
-              Mírala gratis en un minuto. Si te gusta, {primerNombre} la construye contigo.
+              Míralo gratis en un minuto. Si te gusta, {primerNombre} lo construye contigo.
             </p>
             <button
               type="button"
@@ -248,7 +254,7 @@ export function PerfilPublico() {
               disabled={empezando}
               className="btn mt-6 bg-accent-alt px-6 py-3 text-base text-ink hover:brightness-105"
             >
-              {empezando ? 'Preparando…' : `Quiero mi web con ${primerNombre}`}
+              {empezando ? 'Preparando…' : textoBoton}
             </button>
           </div>
         </section>
@@ -259,8 +265,17 @@ export function PerfilPublico() {
   );
 }
 
-function TarjetaDiseno({ diseno: d }: { diseno: DisenoPublico }) {
-  const documento = useMemo(() => documentoDe(d), [d]);
+function TarjetaDiseno({
+  diseno: d,
+  empezando,
+  onQuiero,
+}: {
+  diseno: DisenoPublico;
+  empezando: boolean;
+  /** Empieza con este ingeniero y el servicio del diseño. */
+  onQuiero: () => void;
+}) {
+  const documento = useMemo(() => documentoDeDiseno(d), [d]);
   if (!documento) return null;
   return (
     <article className="card overflow-hidden">
@@ -280,6 +295,9 @@ function TarjetaDiseno({ diseno: d }: { diseno: DisenoPublico }) {
         {d.precio_desde !== null && (
           <p className="mt-3 text-base font-semibold text-ink tabular-nums">desde {solesEnteros(d.precio_desde)}</p>
         )}
+        <button type="button" onClick={onQuiero} disabled={empezando} className="btn btn-primary mt-4 w-full">
+          Lo quiero
+        </button>
       </div>
     </article>
   );

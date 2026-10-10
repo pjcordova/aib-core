@@ -143,6 +143,19 @@ function mensajeDeError(codigo: string | undefined, mensaje: string): string {
   return mensaje;
 }
 
+/**
+ * Las plantillas de la biblioteca que ya tiene algún ingeniero publicadas: el
+ * administrador no las vuelve a añadir (saldrían repetidas en la portada).
+ */
+export async function basesDeBibliotecaEnUso(): Promise<string[]> {
+  const { data, error } = await supabase.from('plantillas').select('base').eq('tipo', 'biblioteca').eq('activa', true);
+  if (error) {
+    console.warn('[AIB+] No se pudo leer la biblioteca en uso:', error.message);
+    return [];
+  }
+  return [...new Set((data ?? []).map((f) => f.base as string))];
+}
+
 /** Añade una plantilla de la biblioteca base al catálogo del ingeniero. */
 export async function anadirPlantilla(base: PlantillaBase): Promise<{ error: string | null }> {
   const {

@@ -405,6 +405,7 @@ export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEm
         onElegir={(c) => void elegirPlantilla(c)}
         onAMedida={() => void generarConIA()}
         conPrecios
+        mostrarAutor={!conSuIngeniero}
         textoAMedida="Que la IA arme una vista previa a tu medida. Tarda cerca de un minuto."
       />
     );

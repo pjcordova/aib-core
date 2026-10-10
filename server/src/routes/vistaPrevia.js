@@ -27,8 +27,8 @@ const TEXTOS = {
 };
 
 const GENERICO = {
-  titulo: 'AIB+ · Mira cómo se vería la web de tu negocio',
-  descripcion: 'Respondes unas preguntas y en un minuto ves una primera versión con tu nombre y tus colores.',
+  titulo: 'AIB+ · Tecnología para tu negocio, hecha por ingenieros',
+  descripcion: 'Webs, tiendas online, CRM, ERP, automatizaciones y apps. Mira gratis cómo quedaría con tu nombre y tus colores.',
 };
 
 const escapar = (texto) =>
@@ -112,7 +112,7 @@ function enviarTarjeta(req, res, titulo, descripcion) {
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="AIB+: la página web de tu negocio, lista para ver en un minuto">
+<meta property="og:image:alt" content="AIB+: tecnología para tu negocio, hecha por ingenieros">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body><p><a href="${escapar(req.path)}">${escapar(titulo)}</a></p></body>

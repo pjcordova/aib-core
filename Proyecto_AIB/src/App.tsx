@@ -30,6 +30,19 @@ import { usePerfil } from './hooks/usePerfil';
 
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 
+const TIPOS: TipoServicio[] = ['web', 'crm', 'erp', 'automatizacion', 'app-movil'];
+
+/**
+ * El servicio con el que llega desde la portada o la página de un ingeniero
+ * ({ clave: 'crm' } o { clave: 'otro:Chatbots' }). Sin él, elige en la bienvenida.
+ */
+function servicioDeLaNavegacion(estado: unknown): { tipo: TipoServicio | null; otro: string | null } {
+  const clave = (estado as { clave?: unknown } | null)?.clave;
+  if (typeof clave !== 'string') return { tipo: null, otro: null };
+  if (clave.startsWith('otro:') && clave.length > 7) return { tipo: 'otro', otro: clave.slice(5) };
+  return TIPOS.includes(clave as TipoServicio) ? { tipo: clave as TipoServicio, otro: null } : { tipo: null, otro: null };
+}
+
 export default function Home() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
@@ -40,14 +53,13 @@ export default function Home() {
   );
   // Sin sesión se ve la portada; el login aparece al pulsar «Ingresar» o «Pruébalo gratis».
   // «Crear cuenta gratis» desde /probar llega con { acceso: 'registro' }; quien
-  // acaba de empezar una prueba sin cuenta, con { directo: true }.
+  // acaba de empezar una prueba con un servicio ya elegido, con { clave }.
   const [acceso, setAcceso] = useState<'login' | 'registro' | null>(() => {
     const estado = location.state as { acceso?: unknown } | null;
     return estado?.acceso === 'registro' || estado?.acceso === 'login' ? estado.acceso : null;
   });
-  const [tipo, setTipo] = useState<TipoServicio | null>(() =>
-    (location.state as { directo?: boolean } | null)?.directo === true ? 'web' : null
-  );
+  const [inicial] = useState(() => servicioDeLaNavegacion(location.state));
+  const [tipo, setTipo] = useState<TipoServicio | null>(inicial.tipo);
   // Lo que trae la navegación se usa una sola vez: si se quedara en el
   // historial, al recargar volvería a saltarse la bienvenida.
   const navigate = useNavigate();
@@ -55,7 +67,7 @@ export default function Home() {
     if (location.state) navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
   // Con tipo 'otro': el servicio que escribió su ingeniero ("Chatbots").
-  const [otro, setOtro] = useState<string | null>(null);
+  const [otro, setOtro] = useState<string | null>(inicial.otro);
   // Qué servicios puede pedir: los de su ingeniero, o los de la plataforma.
   const [disponibles, setDisponibles] = useState<ServiciosCliente | null>(null);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
@@ -236,6 +248,12 @@ export default function Home() {
     return ok;
   };
 
+  // Si llegó con un servicio que su ingeniero no ofrece (por ejemplo, desde un
+  // botón de la portada), elige entre los que sí.
+  const ofrecido = (t: TipoServicio, o: string | null) =>
+    !disponibles || (t === 'otro' ? disponibles.otros.includes(o ?? '') : disponibles.servicios.includes(t as never));
+  const tipoActivo = tipo && ofrecido(tipo, otro) ? tipo : null;
+
   // Los servicios que puede pedir (la web, mientras se averigua).
   const servicios = SERVICIOS.filter((s) => (disponibles?.servicios ?? ['web']).includes(s.id as never));
   // La vista previa reabierta de otro servicio lleva sus propios textos.
@@ -275,13 +293,13 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4 py-1">
             {esInvitado ? (
               <Link to="/" aria-label="Ir a la página principal de AIB+">
-                <Wordmark subtitle="La web de tu negocio" />
+                <Wordmark subtitle="Tecnología para tu negocio" />
               </Link>
             ) : (
-              <Wordmark subtitle="La web de tu negocio" />
+              <Wordmark subtitle="Tecnología para tu negocio" />
             )}
             <div className="flex items-center gap-3">
-              {(tipo || abierto) && (
+              {(tipoActivo || abierto) && (
                 <button type="button" onClick={reiniciar} className="btn btn-ghost">
                   {esInvitado ? (
                     'Mis diseños'
@@ -369,17 +387,17 @@ export default function Home() {
                 />
               )}
             </>
-          ) : tipo === 'web' ? (
+          ) : tipoActivo === 'web' ? (
             <FlujoWeb
               onGuardado={refrescarLista}
               empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
               elegirIngeniero={!vinoConSuIngeniero}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
             />
-          ) : tipo ? (
+          ) : tipoActivo ? (
             <FlujoServicio
-              key={claveServicio(tipo, otro)}
-              tipo={tipo}
+              key={claveServicio(tipoActivo, otro)}
+              tipo={tipoActivo}
               otro={otro ?? undefined}
               empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
               conSuIngeniero={vinoConSuIngeniero}

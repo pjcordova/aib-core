@@ -8,6 +8,9 @@
 import { supabase } from './supabase';
 import type { ResenaPublica } from './ingenieros';
 import type { FilaPlantilla } from './catalogo';
+import { basePropia } from './plantillaPropia';
+import { renderizarPlantilla } from './plantillas';
+import { obtenerPlantillaBase } from '../plantillas';
 
 export type DisenoPublico = Pick<
   FilaPlantilla,
@@ -93,6 +96,35 @@ export async function empezarConIngeniero(slug: string): Promise<ResultadoEmpeza
   if (abrioSesion) await supabase.auth.signOut();
   if (error) console.error('[AIB+] No se pudo empezar con el ingeniero:', error.message);
   return estado === 'otra' || estado === 'lleno' || estado === 'no_existe' ? estado : 'error';
+}
+
+/**
+ * Lo mismo, pero si ya tenía otra prueba en este navegador le pregunta antes
+ * de cambiarla por una con este ingeniero. 'cancelado': prefirió seguir con
+ * la que tenía.
+ */
+export async function empezarConfirmando(
+  slug: string,
+  nombre: string,
+  cerrarSesion: () => Promise<unknown>
+): Promise<ResultadoEmpezar | 'cancelado'> {
+  const r = await empezarConIngeniero(slug);
+  if (r !== 'otra') return r;
+  if (!window.confirm(`Ya tienes una prueba abierta en este navegador. ¿Empezar una nueva con ${nombre}?`)) {
+    return 'cancelado';
+  }
+  await cerrarSesion();
+  return empezarConIngeniero(slug);
+}
+
+/**
+ * Un diseño publicado tal como lo vería un cliente: con un negocio de
+ * ejemplo y los colores del ingeniero. null si su plantilla ya no existe.
+ */
+export function documentoDeDiseno(d: DisenoPublico, empresa = 'Tu negocio'): string | null {
+  const base = d.tipo === 'propia' ? basePropia(d) : obtenerPlantillaBase(d.base);
+  if (!base) return null;
+  return renderizarPlantilla(base, base.ejemplo, { empresa, logo: null, paleta: null });
 }
 
 /** El ingeniero cambia la dirección de su página. */

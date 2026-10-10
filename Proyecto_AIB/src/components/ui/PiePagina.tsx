@@ -33,7 +33,7 @@ export function PiePagina({
               <Wordmark />
             </Link>
             <p className="mt-4 max-w-sm text-sm text-ink-muted">
-              La web de tu negocio, lista para ver en un minuto y construida por un ingeniero de verdad.
+              Tecnología para tu negocio: mírala gratis en un minuto y constrúyela con un ingeniero de verdad.
             </p>
             <p className="mt-4 text-sm text-ink-muted">
               Una plataforma desarrollada por <strong className="font-semibold text-ink">Cordova Solutions</strong>.
@@ -51,8 +51,8 @@ export function PiePagina({
                     </a>
                   </li>
                   <li>
-                    <a href="#ejemplos" className={enlace}>
-                      Ejemplos de diseños
+                    <a href="#plantillas" className={enlace}>
+                      Diseños de los ingenieros
                     </a>
                   </li>
                   <li>

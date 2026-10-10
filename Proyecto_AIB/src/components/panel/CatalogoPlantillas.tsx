@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   listarMisPlantillas,
   anadirPlantilla,
+  basesDeBibliotecaEnUso,
   actualizarPlantilla,
   quitarPlantilla,
   type PlantillaDelCatalogo,
@@ -68,6 +69,8 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
   const [servicios, setServicios] = useState<ServicioDelIngeniero[]>([]);
   const [formularios, setFormularios] = useState<Record<string, PreguntaPropia[]>>({});
   const [editandoFormulario, setEditandoFormulario] = useState<ServicioDelIngeniero | null>(null);
+  // Las de la biblioteca que ya publica algún ingeniero.
+  const [enUso, setEnUso] = useState<string[]>([]);
 
   useEffect(() => {
     let activo = true;
@@ -84,11 +87,14 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
 
   useEffect(() => {
     let activo = true;
-    void Promise.all([misServicios(esAdmin), misFormularios()]).then(([s, f]) => {
-      if (!activo) return;
-      setServicios(s);
-      setFormularios(f);
-    });
+    void Promise.all([misServicios(esAdmin), misFormularios(), esAdmin ? basesDeBibliotecaEnUso() : []]).then(
+      ([s, f, u]) => {
+        if (!activo) return;
+        setServicios(s);
+        setFormularios(f);
+        setEnUso(u);
+      }
+    );
     return () => {
       activo = false;
     };
@@ -121,7 +127,9 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
     });
   }, [plantillas, filtroServicio, filtroTipo, filtroEstilo, busqueda]);
 
-  const disponibles = PLANTILLAS_BASE.filter((b) => !plantillas.some((p) => p.fila.base === b.id));
+  const disponibles = PLANTILLAS_BASE.filter(
+    (b) => !plantillas.some((p) => p.fila.base === b.id) && !enUso.includes(b.id)
+  );
 
   /* ------------------------------------------------------------ estados */
 
