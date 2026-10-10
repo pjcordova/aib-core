@@ -11,6 +11,15 @@ import {
   type EncargoPendiente,
   type ResumenHoy,
 } from '../../lib/hoy';
+import {
+  NOMBRE_PLAN,
+  cuando,
+  diasHasta,
+  mensajePropuestaPorVencer,
+  mensajeResena,
+  misRecordatorios,
+  type MisRecordatorios,
+} from '../../lib/recordatorios';
 import { AvatarAbi } from './AvatarAbi';
 import { ChatAbi } from './ChatAbi';
 
@@ -50,6 +59,8 @@ export function HoyPanel({
   onVerPlan: () => void;
 }) {
   const [resumen, setResumen] = useState<ResumenHoy | null>(null);
+  // Reseñas por pedir, propuestas por vencer y su plan (supabase_recordatorios.sql).
+  const [recordatorios, setRecordatorios] = useState<MisRecordatorios | null>(null);
   // Sube cuando ABI cambia algo (una etapa, una invitación): se vuelve a leer.
   const [version, setVersion] = useState(0);
 
@@ -57,6 +68,9 @@ export function HoyPanel({
     let vigente = true;
     void cargarHoy().then((r) => {
       if (vigente) setResumen(r);
+    });
+    void misRecordatorios().then((r) => {
+      if (vigente) setRecordatorios(r);
     });
     return () => {
       vigente = false;
@@ -139,6 +153,71 @@ export function HoyPanel({
       ) : null}
 
       <div className="space-y-8">
+        {/* ---------------------------------------------------- recordatorios */}
+        {recordatorios &&
+          (recordatorios.plan || recordatorios.resenas.length > 0 || recordatorios.propuestas.length > 0) && (
+            <Seccion
+              titulo="Recordatorios"
+              nota="Los mensajes van desde tu WhatsApp: tú decides cuándo enviarlos."
+            >
+              {recordatorios.plan && (
+                <Tarjeta>
+                  <div className="min-w-0 grow basis-56">
+                    <p className="font-semibold text-ink">
+                      Tu plan {NOMBRE_PLAN[recordatorios.plan.plan] ?? recordatorios.plan.plan} vence{' '}
+                      {cuando(recordatorios.plan.dias)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-subtle">
+                      Renuévalo para no perder ABI{recordatorios.plan.plan === 'negocio' ? ' ni a tu equipo' : ''}.
+                    </p>
+                  </div>
+                  <button type="button" onClick={onVerPlan} className="btn btn-primary !px-3 !py-1.5 text-xs">
+                    Renovar
+                  </button>
+                </Tarjeta>
+              )}
+              {recordatorios.propuestas.map((p) => {
+                const dias = diasHasta(p.validaHasta);
+                return (
+                  <Tarjeta key={`p-${p.token}`}>
+                    <div className="min-w-0 grow basis-56">
+                      <p className="truncate font-semibold text-ink">{p.negocio}</p>
+                      <p className="mt-0.5 text-xs text-ink-subtle">
+                        Su propuesta vence {cuando(dias)} y {p.cliente ?? 'tu cliente'} aún no responde.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {p.whatsapp && (
+                        <BotonWhatsapp
+                          href={enlaceWhatsapp(p.whatsapp, mensajePropuestaPorVencer(p, dias))}
+                          texto="Recordárselo"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onEncargos({ abrir: p.proyectoId, buscar: p.negocio })}
+                        className="btn btn-ghost !px-3 !py-1.5 text-xs"
+                      >
+                        Abrir encargo
+                      </button>
+                    </div>
+                  </Tarjeta>
+                );
+              })}
+              {recordatorios.resenas.map((r) => (
+                <Tarjeta key={`r-${r.token}`}>
+                  <div className="min-w-0 grow basis-56">
+                    <p className="truncate font-semibold text-ink">{r.negocio}</p>
+                    <p className="mt-0.5 text-xs text-ink-subtle">
+                      Listo hace {tiempoDesde(r.publicadaEn)}: pídele su reseña{r.cliente ? ` a ${r.cliente}` : ''}.
+                    </p>
+                  </div>
+                  {r.whatsapp && <BotonWhatsapp href={enlaceWhatsapp(r.whatsapp, mensajeResena(r))} texto="Pedir reseña" />}
+                </Tarjeta>
+              ))}
+            </Seccion>
+          )}
+
         {/* ------------------------------------------------ esperan respuesta */}
         {r.totalEsperando > 0 && (
           <Seccion

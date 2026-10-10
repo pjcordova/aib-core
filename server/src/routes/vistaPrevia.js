@@ -88,6 +88,22 @@ async function vistaPropuesta(req, res) {
   enviarTarjeta(req, res, titulo, descripcion);
 }
 
+/** El enlace para dejar la reseña (/resena/:token). */
+async function vistaResena(req, res) {
+  const token = String(req.params.token ?? '');
+  let datos = null;
+  if (/^[0-9a-f]{32}$/.test(token)) {
+    try {
+      datos = await consultarComo(config.supabaseAnonKey, 'rpc/vista_previa_resena', { cuerpo: { p_token: token } });
+    } catch (error) {
+      console.warn('[AIB+] Vista previa de la reseña sin datos:', error.message);
+    }
+  }
+  const titulo = datos?.ingeniero ? `¿Cómo te fue con ${datos.ingeniero}?` : '¿Cómo te fue con tu ingeniero?';
+  const descripcion = `Califica${datos?.negocio ? ` el proyecto de ${datos.negocio}` : ' tu proyecto'} en un minuto. Tu opinión ayuda a otros negocios a elegir.`;
+  enviarTarjeta(req, res, titulo, descripcion);
+}
+
 function enviarTarjeta(req, res, titulo, descripcion) {
   const origen = `${req.protocol}://${req.get('host')}`;
   const url = `${origen}${req.path}`;
@@ -123,5 +139,6 @@ router.get('/i/:token', (req, res) => vistaPrevia('invitacion', req, res));
 router.get('/ver/:token', (req, res) => vistaPrevia('maqueta', req, res));
 router.get('/ing/:slug', vistaPerfil);
 router.get('/propuesta/:token', vistaPropuesta);
+router.get('/resena/:token', vistaResena);
 
 module.exports = router;

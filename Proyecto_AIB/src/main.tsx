@@ -15,6 +15,7 @@ import { UnirseEquipo } from './components/ingenieros/UnirseEquipo';
 import { Ingresar } from './components/Ingresar';
 import { PerfilPublico } from './components/ingenieros/PerfilPublico';
 import { PaginaPropuesta } from './components/propuestas/PaginaPropuesta';
+import { PaginaResena } from './components/PaginaResena';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -60,6 +61,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/ing/:slug" element={<PerfilPublico />} />
             {/* La propuesta que el ingeniero le manda al cliente, para aceptarla sin cuenta. */}
             <Route path="/propuesta/:token" element={<PaginaPropuesta />} />
+            {/* La reseña que deja el cliente con el enlace de su ingeniero, sin cuenta. */}
+            <Route path="/resena/:token" element={<PaginaResena />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}
             <Route path="/dashboard/legado" element={<DashboardIngeniero />} />
             {/* Cualquier otra ruta vuelve al inicio en vez de dejar la página en blanco. */}

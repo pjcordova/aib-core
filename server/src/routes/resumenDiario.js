@@ -5,6 +5,13 @@
 // administrador por WhatsApp. Después, a cada ingeniero con los avisos
 // activados, el suyo (resumenes_ingenieros): solo lo que lleva él. A quien no
 // tiene nada pendiente o lo desactivó en los ajustes de ABI no le llega nada.
+//
+// Después, los recordatorios del día (recordatorios_del_dia, en
+// supabase_recordatorios.sql): pedir una reseña, una propuesta que vence
+// mañana, el plan que vence. Por CallMeBot pasa lo mínimo (el negocio y el
+// motivo, nunca el nombre ni el número del cliente): el mensaje para el
+// cliente lo manda el ingeniero con un toque desde «Hoy», en su panel.
+//
 // Con ?prueba=1 devuelve los textos sin enviarlos (nunca números ni claves).
 
 const crypto = require('crypto');
@@ -135,6 +142,78 @@ async function resumenDelAdministrador(prueba) {
   return { enviado: true };
 }
 
+const NOMBRE_PLAN = { pro: 'Pro', negocio: 'Negocio' };
+
+const cuando = (dias) => (dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`);
+
+function fechaLima(iso) {
+  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', timeZone: 'America/Lima' });
+}
+
+/** El WhatsApp de recordatorios de un ingeniero, o null si no hay nada. */
+function componerRecordatorios(d) {
+  const lineas = [
+    ...(d.resenas ?? []).map((r) => `• ${r.negocio} ya lleva 2 días listo: pídele su reseña a tu cliente.`),
+    ...(d.propuestas ?? []).map((p) => `• La propuesta de ${p.negocio} vence mañana y tu cliente aún no responde.`),
+    ...(d.plan
+      ? [
+          `• Tu plan ${NOMBRE_PLAN[d.plan.plan] ?? d.plan.plan} vence ${cuando(d.plan.dias)} (${fechaLima(d.plan.vence_en)}). Renuévalo en «Mi plan» para no perder ABI.`,
+        ]
+      : []),
+    ...(d.planes_de_otros?.length
+      ? [
+          `• Planes por vencer: ${d.planes_de_otros
+            .map((p) => `${p.nombre.split(' ')[0]} (${NOMBRE_PLAN[p.plan] ?? p.plan}) ${cuando(p.dias)}`)
+            .join('; ')}.`,
+        ]
+      : []),
+  ];
+  if (lineas.length === 0) return null;
+  const conCliente = (d.resenas?.length ?? 0) + (d.propuestas?.length ?? 0) > 0;
+  return [
+    `🔔 ${d.nombre ? `${d.nombre}, t` : 'T'}us recordatorios de hoy`,
+    lineas.join('\n'),
+    conCliente
+      ? `Envíale el mensaje a tu cliente con un toque desde «Hoy»: ${config.appUrl}/dashboard`
+      : `Tu panel: ${config.appUrl}/dashboard`,
+  ].join('\n\n');
+}
+
+/** Los recordatorios del día, a cada ingeniero por su WhatsApp y al administrador por el del servidor. */
+async function recordatorios(prueba) {
+  const r = await consultarComo(config.supabaseAnonKey, 'rpc/recordatorios_del_dia', {
+    cuerpo: { p_clave: config.cronSecret },
+  });
+  if (r?.estado !== 'ok') {
+    console.error('[AIB+] Recordatorios: la base de datos rechazó la clave.');
+    return { error: 'La clave no coincide con la de la base de datos.' };
+  }
+
+  const salida = { enviados: 0, sin_whatsapp: 0, fallidos: 0, ...(prueba ? { textos: [] } : {}) };
+  for (const d of r.destinatarios ?? []) {
+    const texto = componerRecordatorios(d);
+    if (!texto) continue;
+    if (prueba) {
+      salida.textos.push({ nombre: d.nombre ?? (d.es_admin ? 'Administrador' : 'Ingeniero'), texto });
+      continue;
+    }
+    // El administrador, por el WhatsApp del servidor; los demás, si activaron el suyo.
+    const destino = d.es_admin ? null : d.whatsapp && d.apikey ? { telefono: d.whatsapp, apikey: d.apikey } : undefined;
+    if (destino === undefined || (destino === null && !whatsappConfigurado())) {
+      salida.sin_whatsapp += 1;
+      continue;
+    }
+    try {
+      await enviarWhatsapp(texto, destino ?? undefined);
+      salida.enviados += 1;
+    } catch (error) {
+      salida.fallidos += 1;
+      console.error(`[AIB+] No se pudieron mandar los recordatorios a ${d.nombre ?? 'un ingeniero'}:`, error.message);
+    }
+  }
+  return salida;
+}
+
 router.get('/abi/resumen-diario', async (req, res, next) => {
   if (!config.cronSecret) {
     return res.status(503).json({ success: false, error: 'Falta CRON_SECRET en el servidor.' });
@@ -147,9 +226,14 @@ router.get('/abi/resumen-diario', async (req, res, next) => {
     const prueba = req.query.prueba === '1';
     const admin = await resumenDelAdministrador(prueba);
     const ingenieros = await resumenesDeIngenieros(prueba);
+    // Un fallo aquí no tumba los resúmenes, que ya salieron.
+    const avisos = await recordatorios(prueba).catch((error) => {
+      console.error('[AIB+] No se pudieron preparar los recordatorios:', error.message);
+      return { error: error.message };
+    });
     if (admin.error && ingenieros.error) return res.status(500).json({ success: false, error: admin.error });
-    // Lo del administrador, como antes, más lo de los demás ingenieros.
-    return res.json({ success: !admin.error, ...admin, ingenieros });
+    // Lo del administrador, como antes, más lo de los demás ingenieros y los recordatorios.
+    return res.json({ success: !admin.error, ...admin, ingenieros, recordatorios: avisos });
   } catch (error) {
     return next(error);
   }

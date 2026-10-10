@@ -27,6 +27,7 @@ import { ChipEstado, EditorSeguimiento } from './SeguimientoEncargo';
 import { conAnimaciones } from '../lib/animaciones';
 import { ResponsableEncargo } from './panel/ResponsableEncargo';
 import { PropuestaEncargo } from './propuestas/PropuestaEncargo';
+import { ResenaEncargo } from './ResenaEncargo';
 import { miEquipo, type MiEquipo } from '../lib/planes';
 
 // ---------------------------------------------------------------------------
@@ -446,6 +447,7 @@ function DetalleEncargo({
         />
       )}
       <PropuestaEncargo encargo={detalle} />
+      <ResenaEncargo encargo={detalle} publicada={cambios.at(-1)?.estado === 'publicada'} />
       <EditorSeguimiento encargo={detalle} cambios={cambios} onCambio={onCambio} />
       {!doc ? (
         <SinDocumentacion

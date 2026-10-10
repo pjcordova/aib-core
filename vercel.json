@@ -41,6 +41,15 @@
           "value": "noindex, nofollow"
         }
       ]
+    },
+    {
+      "source": "/resena/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -87,6 +96,17 @@
     },
     {
       "source": "/propuesta/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|SkypeUriPreview|Pinterestbot|redditbot|Iframely|Embedly).*"
+        }
+      ],
+      "destination": "/api"
+    },
+    {
+      "source": "/resena/:token",
       "has": [
         {
           "type": "header",
