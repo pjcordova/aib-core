@@ -91,6 +91,7 @@ BEGIN
     WHEN 'documentacion' THEN 6
     WHEN 'prototipo' THEN 25
     WHEN 'abi' THEN 5  -- una pregunta a ABI (puede consultar varias veces tus datos)
+    WHEN 'diseno' THEN 20  -- un diseño hecho por IA para el catálogo del ingeniero (~17 ¢)
   END;
   IF coste IS NULL THEN
     RETURN 'tipo_desconocido';

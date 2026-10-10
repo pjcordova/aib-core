@@ -30,11 +30,11 @@ export const PASOS: Record<
     corto: 'tu foto y tu presentación',
   },
   diseno: {
-    titulo: 'Sube tu primer diseño',
-    detalle: 'Tus diseños salen en la portada con tu nombre: es lo que hace que un cliente te elija.',
-    boton: 'Subir un diseño',
+    titulo: 'Crea tu primer diseño',
+    detalle: 'Tus diseños salen en la portada con tu nombre: es lo que hace que un cliente te elija. Con IA lo tienes en un par de minutos.',
+    boton: 'Crear un diseño',
     destino: 'catalogo',
-    corto: 'subir un diseño',
+    corto: 'crear tu primer diseño con IA',
   },
   precio: {
     titulo: 'Ponle precio a tus diseños',
@@ -83,7 +83,7 @@ export async function primerosPasosIngenieros(): Promise<Map<string, Paso[]>> {
   return new Map(((data as { id: string; pasos: unknown }[] | null) ?? []).map((f) => [f.id, leer(f.pasos)] as const));
 }
 
-/** «subir un diseño, ponerle precio a tus diseños y activar tus avisos por WhatsApp». */
+/** «crear tu primer diseño con IA, ponerle precio a tus diseños y activar tus avisos por WhatsApp». */
 export function textoFaltantes(pasos: Paso[]): string {
   const faltan = pasos.filter((p) => !p.hecho).map((p) => PASOS[p.clave].corto);
   return faltan.length <= 1 ? (faltan[0] ?? '') : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;

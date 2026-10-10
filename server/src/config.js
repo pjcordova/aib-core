@@ -60,6 +60,9 @@ const config = {
     plantilla: 4000,
     // Unas pocas preguntas en JSON para el formulario de un ingeniero.
     sugerencias: 2000,
+    // Un diseño completo (HTML + estilos) para el catálogo de un ingeniero:
+    // ronda los 8-10k. Con margen para los elaborados.
+    diseno: 16000,
   },
 
   // ABI, el asistente del ingeniero (src/abi.js). Lleva su propio modelo: es

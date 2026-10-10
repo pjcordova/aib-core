@@ -154,13 +154,13 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
         <div>
           <h2 className="text-2xl font-semibold">{esAdmin ? 'Catálogo de plantillas' : 'Mis plantillas'}</h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-            Sube diseños para cada servicio que ofreces: tus clientes los ven con su nombre y sus colores antes de elegirte.
+            Crea con IA o sube diseños para cada servicio que ofreces: tus clientes los ven con su nombre y sus colores antes de elegirte.
             Los publicados los ven los clientes de tu enlace y los de la plataforma; las premium, solo el cliente al que se
             las habilites en su invitación.
           </p>
         </div>
         <button type="button" onClick={() => subirPara()} className="btn btn-primary">
-          Subir mi diseño
+          ✨ Nuevo diseño
         </button>
       </header>
 
@@ -225,7 +225,7 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
           <p className="mt-1 text-sm text-ink-muted">
             {esAdmin
               ? 'Sube tu diseño o añade uno de la biblioteca de abajo.'
-              : 'Sube tu primer diseño con «Subir mi diseño». Mientras no tengas ninguno, los clientes de tu enlace ven los diseños de AIB+.'}
+              : 'Crea tu primer diseño con IA en «Nuevo diseño»: lo describes y en un par de minutos lo tienes. Mientras no tengas ninguno, los clientes de tu enlace ven los diseños de AIB+.'}
           </p>
         </div>
       ) : visibles.length === 0 ? (
@@ -389,7 +389,7 @@ function TusServicios({
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={() => onSubir(s.clave)} className="btn btn-ghost !px-3 !py-1 text-xs">
-                  + Diseño
+                  + Diseño con IA
                 </button>
                 <button type="button" onClick={() => onPreguntas(s)} className="btn btn-ghost !px-3 !py-1 text-xs">
                   {preguntas > 0 ? 'Editar preguntas' : 'Añadir preguntas'}

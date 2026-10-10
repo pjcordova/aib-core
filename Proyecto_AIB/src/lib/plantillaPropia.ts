@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 
 import Mustache from 'mustache';
-import type { CategoriaNegocio, PlantillaBase, RolColor } from './plantillas';
+import { estilosDePaleta, type CategoriaNegocio, type PlantillaBase, type RolColor } from './plantillas';
 
 export type NivelPlantilla = 'basica' | 'elaborada' | 'premium';
 
@@ -202,6 +202,45 @@ export function basePropia(fila: FilaPropia): PlantillaBase {
 
 /** Solo los colores: para cambiar la paleta de una maqueta ya guardada. */
 export const BASE_COLORES_PROPIA = { id: 'propia', colores: COLORES_PROPIA, secciones: [] } as unknown as PlantillaBase;
+
+/**
+ * El bloque :root con las variables de AIB+ para dos colores, con sus tonos
+ * calculados igual que cuando el cliente pone los suyos.
+ */
+export function variablesDeColor(paleta: { primario: string; secundario: string }): string {
+  return estilosDePaleta(BASE_COLORES_PROPIA, paleta).match(/^:root\{[^}]*\}/)?.[0] ?? '';
+}
+
+/**
+ * Deja como colores por defecto del diseño los que eligió el ingeniero: el
+ * catálogo y su página lo enseñan con ellos. Cambia el primer :root con las
+ * variables de AIB+ (o lo añade al inicio si no hay).
+ */
+export function fijarColores(css: string, paleta: { primario: string; secundario: string }): string {
+  const bloque = variablesDeColor(paleta);
+  const existente = /:root\s*\{[^}]*--aib-primario[^}]*\}/;
+  return existente.test(css) ? css.replace(existente, () => bloque) : `${bloque}\n${css}`;
+}
+
+/** El diseño otra vez como una página completa: para descargarlo o pedirle un cambio a la IA. */
+export function documentoCompleto(diseno: DisenoPropio, titulo = '{{negocio}}'): string {
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${titulo}</title>
+${diseno.fuentes.map((f) => `<link rel="stylesheet" href="${f}">`).join('\n')}
+<style>
+${diseno.css}
+</style>
+</head>
+<body>
+${diseno.html}
+</body>
+</html>
+`;
+}
 
 /** Página de ejemplo para descargar desde el panel, con todos los huecos. */
 export const EJEMPLO_PLANTILLA = `<!doctype html>

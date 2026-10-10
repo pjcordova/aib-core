@@ -10,7 +10,7 @@ const { generateText } = require('../claude');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
 const { cobrarCuota } = require('../cuota');
-const { consultarComo } = require('../supabaseUsuario');
+const { soloIngeniero } = require('../soloIngeniero');
 
 const router = Router();
 
@@ -39,16 +39,7 @@ const ESQUEMA = {
   additionalProperties: false,
 };
 
-async function soloIngeniero(req, res, next) {
-  try {
-    const es = await consultarComo(req.tokenUsuario, 'rpc/es_ingeniero', { cuerpo: {} });
-    if (es === true) return next();
-    return res.status(403).json({ success: false, error: 'Solo los ingenieros arman formularios.' });
-  } catch (error) {
-    console.error('[AIB+] No se pudo comprobar el rol para sugerir preguntas:', error.message);
-    return res.status(503).json({ success: false, error: 'No pudimos comprobar tu cuenta. Inténtalo de nuevo.' });
-  }
-}
+const soloIngenieros = soloIngeniero('Solo los ingenieros arman formularios.');
 
 const texto = (v, max) => (typeof v === 'string' ? v.replace(/[<>{}]/g, '').replace(/\s+/g, ' ').trim().slice(0, max) : '');
 
@@ -67,7 +58,7 @@ function limpiar(preguntas, maximo) {
     .slice(0, maximo);
 }
 
-router.post('/formularios/sugerir', limitar, requireAuth, soloIngeniero, cobrarCuota('preguntas'), async (req, res, next) => {
+router.post('/formularios/sugerir', limitar, requireAuth, soloIngenieros, cobrarCuota('preguntas'), async (req, res, next) => {
   try {
     const servicio = texto(req.body?.servicio, 60);
     if (servicio.length < 2) {

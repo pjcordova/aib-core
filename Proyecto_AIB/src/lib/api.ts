@@ -26,6 +26,7 @@ const TIMEOUT_MS = {
   web: 120_000, // Una maqueta web ronda los 40 s; dejamos margen.
   plantilla: 90_000, // Solo textos: ronda los 20-30 s.
   abi: 150_000, // Puede consultar varias veces tus datos antes de responder.
+  diseno: 270_000, // Una página completa: uno o dos minutos, a veces más.
 } as const;
 
 export class ApiError extends Error {
@@ -267,6 +268,42 @@ export async function sugerirPreguntas(servicio: string, maximo: number, yaHecha
     throw new ApiError(data.error ?? 'No llegaron las preguntas.', 502, true);
   }
   return data.preguntas;
+}
+
+/**
+ * Un diseño hecho por la IA para el catálogo del ingeniero. Sin `anterior`,
+ * uno nuevo a partir de su idea; con `anterior` (la página completa) y
+ * `cambio`, el mismo diseño con ese cambio.
+ */
+export interface PedidoDiseno {
+  servicio: string;
+  idea?: string;
+  rubro?: string;
+  estilo?: string;
+  nivel?: string;
+  /** El bloque :root con sus colores (variablesDeColor). */
+  colores?: string;
+  anterior?: string;
+  cambio?: string;
+}
+
+export interface DisenoDeIa {
+  /** La página completa: se limpia con prepararDiseno antes de usarla. */
+  html: string;
+  nombre: string;
+  descripcion: string;
+}
+
+export async function crearDiseno(pedido: PedidoDiseno): Promise<DisenoDeIa> {
+  const data = await post<{ success: boolean; html?: string; nombre?: string; descripcion?: string; error?: string }>(
+    '/api/disenos/crear',
+    pedido,
+    TIMEOUT_MS.diseno
+  );
+  if (!data.success || !data.html) {
+    throw new ApiError(data.error ?? 'No llegó el diseño.', 502, true);
+  }
+  return { html: data.html, nombre: data.nombre ?? '', descripcion: data.descripcion ?? '' };
 }
 
 /**
