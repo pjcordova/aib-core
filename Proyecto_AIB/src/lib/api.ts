@@ -247,6 +247,28 @@ export async function rellenarPlantilla<T>(
   return { textos: data.textos, usage: data.usage };
 }
 
+export interface PreguntaSugerida {
+  titulo: string;
+  tipo: 'texto' | 'opcion' | 'multiple';
+  opciones?: string[];
+}
+
+/**
+ * Preguntas que AIB+ propone para el formulario de un servicio del ingeniero.
+ * `yaHechas`: las que ya están, para que no las repita.
+ */
+export async function sugerirPreguntas(servicio: string, maximo: number, yaHechas: string[]): Promise<PreguntaSugerida[]> {
+  const data = await post<{ success: boolean; preguntas?: PreguntaSugerida[]; error?: string }>(
+    '/api/formularios/sugerir',
+    { servicio, maximo, yaHechas },
+    TIMEOUT_MS.plantilla
+  );
+  if (!data.success || !data.preguntas) {
+    throw new ApiError(data.error ?? 'No llegaron las preguntas.', 502, true);
+  }
+  return data.preguntas;
+}
+
 /**
  * Lo que ABI propone. Nada de esto está hecho todavía: el panel lo enseña
  * como una tarjeta y lo hace el ingeniero con su botón (y con sus permisos).

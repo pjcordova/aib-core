@@ -13,6 +13,7 @@ export type DisenoPublico = Pick<
   FilaPlantilla,
   | 'id'
   | 'tipo'
+  | 'servicio'
   | 'base'
   | 'nombre'
   | 'descripcion'

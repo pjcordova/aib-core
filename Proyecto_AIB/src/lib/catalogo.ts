@@ -29,6 +29,8 @@ export interface FilaPlantilla {
   created_at: string;
   /** 'biblioteca': una de AIB+ (base = su id). 'propia': la subió el ingeniero (base = 'propia'). */
   tipo: 'biblioteca' | 'propia';
+  /** Para qué servicio es: 'web', 'crm'… u 'otro:<nombre>' (ver claveServicio). */
+  servicio: string;
   nivel: NivelPlantilla;
   descripcion: string | null;
   /** El diseño de las propias. En el catálogo del cliente llega aparte (conContenido). */
@@ -66,7 +68,7 @@ function faltaTabla(codigo: string | undefined): boolean {
 /** Une filas con su plantilla base; descarta las que apuntan a una que ya no existe. */
 function conBase(filas: FilaPlantilla[]): PlantillaDelCatalogo[] {
   return filas.flatMap((fila) => {
-    const f = { ...fila, tipo: fila.tipo ?? 'biblioteca', nivel: fila.nivel ?? 'basica' };
+    const f = { ...fila, tipo: fila.tipo ?? 'biblioteca', nivel: fila.nivel ?? 'basica', servicio: fila.servicio ?? 'web' };
     if (f.tipo === 'propia') return [{ fila: f, base: basePropia(f) }];
     const base = obtenerPlantillaBase(f.base);
     return base ? [{ fila: f, base }] : [];
@@ -101,6 +103,7 @@ export async function listarMisPlantillas(): Promise<{
 
 /** Lo que el ingeniero completa al subir su propio diseño. */
 export interface DatosPropia {
+  servicio: string;
   nombre: string;
   descripcion: string;
   categoria: CategoriaNegocio;
@@ -169,6 +172,7 @@ export async function actualizarPlantilla(
     Pick<
       FilaPlantilla,
       | 'activa'
+      | 'servicio'
       | 'etiquetas'
       | 'nombre'
       | 'estilo'
@@ -285,7 +289,7 @@ export function emparejar(
   const texto = normalizar(`${cliente.empresa} ${cliente.rubro}`);
 
   return candidatas
-    .filter((c) => c.fila.categoria === cliente.categoria)
+    .filter((c) => c.fila.servicio === 'web' && c.fila.categoria === cliente.categoria)
     .map((c) => {
       let puntos = 10;
       if (c.fila.estilo === cliente.estilo) puntos += 5;
@@ -297,6 +301,36 @@ export function emparejar(
       }
       // Desempate por lo que ya demostró funcionar con otros clientes y por
       // las estrellas de quien la construye.
+      const tasa = c.fila.veces_mostrada > 0 ? c.fila.veces_aceptada / c.fila.veces_mostrada : 0;
+      const estrellas = c.fila.ingeniero?.promedio ? Number(c.fila.ingeniero.promedio) / 10 : 0;
+      return { c, puntos: puntos + tasa + estrellas };
+    })
+    .sort((a, b) => b.puntos - a.puntos)
+    .slice(0, maximo)
+    .map(({ c }) => c);
+}
+
+/**
+ * Las plantillas de un servicio que no es la web (CRM, ERP…). No se filtra
+ * por tipo de negocio: un CRM sirve igual a una pastelería que a un taller.
+ * Ordena por lo que ya demostró funcionar, las estrellas de quien la
+ * construye y las etiquetas que coinciden con lo que contó el cliente.
+ */
+export function plantillasDeServicio(
+  candidatas: PlantillaDelCatalogo[],
+  clave: string,
+  cliente: { rubro: string; empresa: string },
+  maximo = 6
+): PlantillaDelCatalogo[] {
+  const texto = normalizar(`${cliente.empresa} ${cliente.rubro}`);
+
+  return candidatas
+    .filter((c) => c.fila.servicio === clave)
+    .map((c) => {
+      let puntos = 0;
+      for (const etiqueta of c.fila.etiquetas) {
+        if (texto.includes(normalizar(etiqueta).replace(/-/g, ' '))) puntos += 2;
+      }
       const tasa = c.fila.veces_mostrada > 0 ? c.fila.veces_aceptada / c.fila.veces_mostrada : 0;
       const estrellas = c.fila.ingeniero?.promedio ? Number(c.fila.ingeniero.promedio) / 10 : 0;
       return { c, puntos: puntos + tasa + estrellas };

@@ -61,6 +61,11 @@ interface Props {
   conSeguimiento?: boolean;
   /** Precio de la prueba de precio que le tocó al cliente, si hay una activa. */
   precio?: number | null;
+  /**
+   * La plantilla de otro servicio (CRM, ERP…), no una web: cambian los
+   * textos. Su nombre es el que se muestra ("CRM", "Chatbots"…).
+   */
+  servicio?: { nombre: string; icono: string };
 }
 
 /**
@@ -83,6 +88,7 @@ export function WebPreview({
   proyectoId,
   conSeguimiento = false,
   precio = null,
+  servicio,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
@@ -301,7 +307,7 @@ export function WebPreview({
         <div className="min-w-0">
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
-              🌐 Maqueta web
+              {servicio ? `${servicio.icono} Vista previa · ${servicio.nombre}` : '🌐 Maqueta web'}
             </span>
             {plantilla && (
               <span className="text-[11px] text-ink-subtle">Basada en «{plantilla}»</span>
@@ -309,7 +315,7 @@ export function WebPreview({
             <IndicadorGuardado estado={guardado} />
           </div>
           <h2 className="truncate text-xl font-semibold" title={ficha.empresa}>
-            Así se vería la web de {ficha.empresa}
+            {servicio ? `Así se vería: ${servicio.nombre} para ${ficha.empresa}` : `Así se vería la web de ${ficha.empresa}`}
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
             {puedeEditar
@@ -406,7 +412,7 @@ export function WebPreview({
                   Probar otra versión
                 </button>
               )}
-              {onAceptar && !aceptado && (
+              {onAceptar && !aceptado && !servicio && (
                 <button
                   type="button"
                   onClick={() => {
@@ -487,7 +493,7 @@ export function WebPreview({
       )}
 
       {compartiendo && puedeCompartir && !editando && proyectoId && (
-        <CompartirMaqueta proyectoId={proyectoId} empresa={ficha.empresa} />
+        <CompartirMaqueta proyectoId={proyectoId} empresa={ficha.empresa} deServicio={!!servicio} />
       )}
 
       {editando && (
@@ -571,7 +577,7 @@ export function WebPreview({
             <span className="h-2.5 w-2.5 rounded-full bg-positive/70" />
           </span>
           <span className="mx-auto truncate rounded-md bg-surface-deep/70 px-3 py-0.5 text-[11px] text-ink-subtle">
-            {vista === 'codigo' ? 'index.html' : dominioDe(ficha.empresa)}
+            {vista === 'codigo' ? 'index.html' : `${servicio ? 'app.' : ''}${dominioDe(ficha.empresa)}`}
           </span>
         </div>
 
@@ -592,7 +598,7 @@ export function WebPreview({
           <div className="flex justify-center bg-surface-deep/60">
             <iframe
               ref={marco}
-              title={`Maqueta web de ${ficha.empresa}`}
+              title={`${servicio ? `Vista previa (${servicio.nombre})` : 'Maqueta web'} de ${ficha.empresa}`}
               srcDoc={documentoEnPantalla}
               onLoad={editando ? pedirHuecos : undefined}
               sandbox="allow-scripts"
@@ -612,7 +618,7 @@ export function WebPreview({
         </p>
       )}
 
-      {puedeCompartir && !editando && proyectoId && <ComentarioMaqueta proyectoId={proyectoId} />}
+      {puedeCompartir && !editando && proyectoId && <ComentarioMaqueta proyectoId={proyectoId} deServicio={!!servicio} />}
     </div>
   );
 }

@@ -6,13 +6,15 @@ type Estado = 'cargando' | 'sin-enlace' | 'creando' | 'con-enlace' | 'desactivan
 interface Props {
   proyectoId: string;
   empresa: string;
+  /** La vista previa de un CRM, un ERP…, no una web. */
+  deServicio?: boolean;
 }
 
 /**
  * Enlace para que el cliente enseñe su maqueta a otra persona. Se crea solo
  * cuando lo pide, porque a partir de ahí cualquiera con el enlace la ve.
  */
-export function CompartirMaqueta({ proyectoId, empresa }: Props) {
+export function CompartirMaqueta({ proyectoId, empresa, deServicio = false }: Props) {
   const [estado, setEstado] = useState<Estado>('cargando');
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function CompartirMaqueta({ proyectoId, empresa }: Props) {
     }
   };
 
-  const mensajeWhatsapp = `Mira cómo quedaría la web de ${empresa}: ${url}`;
+  const mensajeWhatsapp = `Mira cómo quedaría ${deServicio ? 'el proyecto' : 'la web'} de ${empresa}: ${url}`;
 
   return (
     <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 p-4">

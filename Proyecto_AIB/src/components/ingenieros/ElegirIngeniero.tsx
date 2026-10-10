@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { elegirIngeniero, ingenierosDisponibles, type IngenieroPublico } from '../../lib/ingenieros';
+import type { TipoServicio } from '../../lib/servicios';
 import { TarjetaIngeniero } from './TarjetaIngeniero';
+
+/** Si ofrece el servicio. La tienda online cuenta como web. */
+function ofrece(ing: IngenieroPublico, servicio: TipoServicio): boolean {
+  const suyos = ing.servicios ?? ['web'];
+  return suyos.includes(servicio) || (servicio === 'web' && suyos.includes('tienda-online'));
+}
 
 /**
  * Antes de dejar su contacto, el cliente elige quién le construye la web,
@@ -11,12 +18,15 @@ import { TarjetaIngeniero } from './TarjetaIngeniero';
 export function ElegirIngeniero({
   proyectoId,
   rubro,
+  servicio = 'web',
   onElegido,
   onCancelar,
 }: {
   proyectoId: string;
   /** El rubro de su negocio, para destacar a quien lo trabaja. */
   rubro?: string;
+  /** Solo salen quienes ofrecen este servicio. */
+  servicio?: TipoServicio;
   /** Con el nombre elegido, o null si no hubo que elegir. */
   onElegido: (nombre: string | null) => void;
   onCancelar: () => void;
@@ -27,8 +37,9 @@ export function ElegirIngeniero({
 
   useEffect(() => {
     let vigente = true;
-    void ingenierosDisponibles().then((l) => {
+    void ingenierosDisponibles().then((todos) => {
       if (!vigente) return;
+      const l = todos.filter((i) => ofrece(i, servicio));
       if (l.length === 0) {
         onElegido(null);
         return;
@@ -41,7 +52,7 @@ export function ElegirIngeniero({
     };
     // Se carga una vez al abrir; onElegido cambia de identidad en cada render del padre.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rubro]);
+  }, [rubro, servicio]);
 
   useEffect(() => {
     const alPulsar = (e: KeyboardEvent) => {
@@ -73,7 +84,7 @@ export function ElegirIngeniero({
       <div className="card animate-fade-up max-h-[92vh] w-full max-w-4xl overflow-y-auto p-6 sm:p-8">
         <p className="text-xs font-medium tracking-widest text-accent uppercase">Paso 1 de 2</p>
         <h2 id="titulo-elegir-ingeniero" className="mt-1.5 text-2xl text-balance">
-          Elige al ingeniero que construirá tu web
+          Elige al ingeniero que construirá {servicio === 'web' ? 'tu web' : 'tu proyecto'}
         </h2>
         <p className="mt-1.5 text-sm text-ink-muted">
           Mira su perfil, los rubros con los que trabaja y lo que dicen sus clientes. Recibirá tu proyecto con todo lo que
@@ -112,7 +123,7 @@ export function ElegirIngeniero({
 
         <div className="mt-6 flex justify-end">
           <button type="button" onClick={onCancelar} disabled={eligiendo !== null} className="btn btn-ghost">
-            Volver a mi web
+            {servicio === 'web' ? 'Volver a mi web' : 'Volver'}
           </button>
         </div>
       </div>

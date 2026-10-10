@@ -5,7 +5,8 @@ import { enviarComentario, MAX_COMENTARIO, REACCIONES, type Reaccion } from '../
  * "¿Qué te parece tu web?" debajo de la maqueta. Una reacción con un clic y,
  * si quiere, qué le faltó. Le llega al ingeniero en su panel.
  */
-export function ComentarioMaqueta({ proyectoId }: { proyectoId: string }) {
+/** `deServicio`: la vista previa de un CRM, un ERP…, no una web. */
+export function ComentarioMaqueta({ proyectoId, deServicio = false }: { proyectoId: string; deServicio?: boolean }) {
   const [reaccion, setReaccion] = useState<Reaccion | null>(null);
   const [texto, setTexto] = useState('');
   const [estado, setEstado] = useState<'inactivo' | 'enviando' | 'enviado' | 'fallo'>('inactivo');
@@ -40,7 +41,7 @@ export function ComentarioMaqueta({ proyectoId }: { proyectoId: string }) {
   return (
     <section className="card mt-5 p-5" aria-labelledby="titulo-comentario">
       <h3 id="titulo-comentario" className="font-semibold text-ink">
-        ¿Qué te parece tu web?
+        {deServicio ? '¿Qué te parece?' : '¿Qué te parece tu web?'}
       </h3>
       <p className="mt-1 text-sm text-ink-muted">Tu opinión nos ayuda a mejorarla. Solo la ve el ingeniero.</p>
 

@@ -5,7 +5,7 @@ import { textoEstrellas, textoServicios } from '../../lib/ingenieros';
 import { empezarConIngeniero, perfilPublico, type DisenoPublico, type PerfilPublico as Perfil } from '../../lib/perfilPublico';
 import { basePropia, etiquetaNivel } from '../../lib/plantillaPropia';
 import { CATEGORIAS_NEGOCIO, renderizarPlantilla } from '../../lib/plantillas';
-import { solesEnteros } from '../../lib/servicios';
+import { iconoDeClave, nombreDeClave, solesEnteros } from '../../lib/servicios';
 import { obtenerPlantillaBase } from '../../plantillas';
 import { MiniVista } from '../panel/MiniVista';
 import { PiePagina } from '../ui/PiePagina';
@@ -182,7 +182,7 @@ export function PerfilPublico() {
           <section id="disenos" className="scroll-mt-24 border-y border-line bg-surface-raised/60">
             <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
               <h2 className="text-3xl">Sus diseños</h2>
-              <p className="mt-2 text-ink-muted">Tu web saldrá con tu nombre, tus colores y tus textos.</p>
+              <p className="mt-2 text-ink-muted">Cada diseño saldrá con tu nombre, tus colores y tus textos.</p>
               <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {perfil.disenos.map((d) => (
                   <TarjetaDiseno key={d.id} diseno={d} />
@@ -273,7 +273,10 @@ function TarjetaDiseno({ diseno: d }: { diseno: DisenoPublico }) {
           )}
         </div>
         {d.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{d.descripcion}</p>}
-        <p className="mt-1 text-xs text-ink-subtle">{etiquetaRubro(d.categoria)}</p>
+        <p className="mt-1 text-xs text-ink-subtle">
+          {/* Los de otros servicios (CRM, ERP…) dicen cuál; las webs, su rubro. */}
+          {d.servicio && d.servicio !== 'web' ? `${iconoDeClave(d.servicio)} ${nombreDeClave(d.servicio)}` : etiquetaRubro(d.categoria)}
+        </p>
         {d.precio_desde !== null && (
           <p className="mt-3 text-base font-semibold text-ink tabular-nums">desde {solesEnteros(d.precio_desde)}</p>
         )}

@@ -7,8 +7,15 @@ import {
   type PlantillaDelCatalogo,
 } from '../../lib/catalogo';
 import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type PlantillaBase } from '../../lib/plantillas';
-import { PREGUNTAS_WEB, etiquetaDe, solesEnteros } from '../../lib/servicios';
+import { PREGUNTAS_WEB, etiquetaDe, iconoDeClave, nombreDeClave, solesEnteros } from '../../lib/servicios';
+import {
+  misFormularios,
+  misServicios,
+  type PreguntaPropia,
+  type ServicioDelIngeniero,
+} from '../../lib/formularios';
 import { PLANTILLAS_BASE } from '../../plantillas';
+import { EditorFormulario } from './EditorFormulario';
 import { MiniVista } from './MiniVista';
 import { SubirDiseno } from './SubirDiseno';
 import { NIVELES, type NivelPlantilla } from '../../lib/plantillaPropia';
@@ -48,12 +55,19 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
 
+  const [filtroServicio, setFiltroServicio] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroEstilo, setFiltroEstilo] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [ampliada, setAmpliada] = useState<PlantillaBase | null>(null);
   // 'nuevo': subiendo un diseño; una plantilla: editando esa.
   const [subiendo, setSubiendo] = useState<PlantillaDelCatalogo | 'nuevo' | null>(null);
+  const [servicioNuevo, setServicioNuevo] = useState<string | undefined>(undefined);
+
+  // Lo que ofrece y sus preguntas por servicio.
+  const [servicios, setServicios] = useState<ServicioDelIngeniero[]>([]);
+  const [formularios, setFormularios] = useState<Record<string, PreguntaPropia[]>>({});
+  const [editandoFormulario, setEditandoFormulario] = useState<ServicioDelIngeniero | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -68,6 +82,23 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
     };
   }, [version]);
 
+  useEffect(() => {
+    let activo = true;
+    void Promise.all([misServicios(esAdmin), misFormularios()]).then(([s, f]) => {
+      if (!activo) return;
+      setServicios(s);
+      setFormularios(f);
+    });
+    return () => {
+      activo = false;
+    };
+  }, [esAdmin]);
+
+  const subirPara = (clave?: string) => {
+    setServicioNuevo(clave);
+    setSubiendo('nuevo');
+  };
+
   const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
   const accion = async (promesa: Promise<{ error: string | null }>) => {
@@ -80,6 +111,7 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
   const visibles = useMemo(() => {
     const termino = busqueda.replace(/^#/, '').trim().toLowerCase();
     return plantillas.filter(({ fila }) => {
+      if (filtroServicio && fila.servicio !== filtroServicio) return false;
       if (filtroTipo && fila.categoria !== filtroTipo) return false;
       if (filtroEstilo && fila.estilo !== filtroEstilo) return false;
       if (termino && !fila.etiquetas.some((e) => e.includes(termino)) && !fila.nombre.toLowerCase().includes(termino)) {
@@ -87,7 +119,7 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
       }
       return true;
     });
-  }, [plantillas, filtroTipo, filtroEstilo, busqueda]);
+  }, [plantillas, filtroServicio, filtroTipo, filtroEstilo, busqueda]);
 
   const disponibles = PLANTILLAS_BASE.filter((b) => !plantillas.some((p) => p.fila.base === b.id));
 
@@ -114,11 +146,12 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
         <div>
           <h2 className="text-2xl font-semibold">{esAdmin ? 'Catálogo de plantillas' : 'Mis plantillas'}</h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-            Tus diseños publicados los ven los clientes de tu enlace y, en la plataforma, todos los clientes de ese tipo
-            de negocio. Las premium solo las ve el cliente al que se las habilites en su invitación.
+            Sube diseños para cada servicio que ofreces: tus clientes los ven con su nombre y sus colores antes de elegirte.
+            Los publicados los ven los clientes de tu enlace y los de la plataforma; las premium, solo el cliente al que se
+            las habilites en su invitación.
           </p>
         </div>
-        <button type="button" onClick={() => setSubiendo('nuevo')} className="btn btn-primary">
+        <button type="button" onClick={() => subirPara()} className="btn btn-primary">
           Subir mi diseño
         </button>
       </header>
@@ -129,9 +162,28 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
         </p>
       )}
 
+      {/* ------------------------------------------------- por servicio */}
+      {servicios.length > 0 && (
+        <TusServicios
+          servicios={servicios}
+          plantillas={plantillas}
+          formularios={formularios}
+          onSubir={subirPara}
+          onPreguntas={setEditandoFormulario}
+        />
+      )}
+
       {/* --------------------------------------------------------- filtros */}
       {plantillas.length > 0 && (
         <div className="mb-6 space-y-3">
+          {servicios.length > 1 && (
+            <Filtros
+              titulo="Servicio"
+              valor={filtroServicio}
+              onCambio={setFiltroServicio}
+              opciones={servicios.map((s) => ({ valor: s.clave, etiqueta: s.nombre }))}
+            />
+          )}
           <Filtros
             titulo="Tipo"
             valor={filtroTipo}
@@ -221,9 +273,22 @@ export function CatalogoPlantillas({ esAdmin }: { esAdmin: boolean }) {
       )}
 
       {ampliada && <VistaAmpliada base={ampliada} onCerrar={() => setAmpliada(null)} />}
+      {editandoFormulario && (
+        <EditorFormulario
+          servicio={editandoFormulario}
+          iniciales={formularios[editandoFormulario.clave] ?? []}
+          onCerrar={() => setEditandoFormulario(null)}
+          onGuardado={(preguntas) => {
+            setFormularios((prev) => ({ ...prev, [editandoFormulario.clave]: preguntas }));
+            setEditandoFormulario(null);
+          }}
+        />
+      )}
       {subiendo && (
         <SubirDiseno
           existente={subiendo === 'nuevo' ? undefined : subiendo}
+          servicios={servicios}
+          servicioInicial={subiendo === 'nuevo' ? servicioNuevo : undefined}
           onCerrar={() => setSubiendo(null)}
           onListo={() => {
             setSubiendo(null);
@@ -271,6 +336,65 @@ function Filtros({
   );
 }
 
+/**
+ * Cada servicio que ofrece, con cuántos diseños publicados tiene y sus
+ * preguntas propias. Un servicio sin diseños no se ve en la plataforma: el
+ * cliente recibe una vista previa hecha por IA.
+ */
+function TusServicios({
+  servicios,
+  plantillas,
+  formularios,
+  onSubir,
+  onPreguntas,
+}: {
+  servicios: ServicioDelIngeniero[];
+  plantillas: PlantillaDelCatalogo[];
+  formularios: Record<string, PreguntaPropia[]>;
+  onSubir: (clave: string) => void;
+  onPreguntas: (s: ServicioDelIngeniero) => void;
+}) {
+  return (
+    <div className="mb-8">
+      <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-subtle uppercase">Tus servicios</h3>
+      <p className="mb-4 text-sm text-ink-muted">
+        Para cada uno: tus diseños y tus preguntas para el cliente. ¿Ofreces algo más? Márcalo en «Mi perfil».
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {servicios.map((s) => {
+          const publicados = plantillas.filter((p) => p.fila.servicio === s.clave && p.fila.activa).length;
+          const preguntas = formularios[s.clave]?.length ?? 0;
+          return (
+            <div key={s.clave} className="rounded-xl border border-line bg-surface-raised p-4">
+              <p className="font-semibold text-ink">
+                <span aria-hidden="true">{s.icono}</span> {s.nombre}
+              </p>
+              <p className={'mt-1 text-xs ' + (publicados > 0 ? 'text-ink-muted' : 'text-caution')}>
+                {publicados > 0
+                  ? `${publicados} ${publicados === 1 ? 'diseño publicado' : 'diseños publicados'}`
+                  : s.clave === 'web'
+                    ? 'Sin diseños: tus clientes ven los de AIB+'
+                    : 'Sin diseños: tus clientes verán una vista previa hecha por IA'}
+              </p>
+              <p className="text-xs text-ink-muted">
+                {preguntas > 0 ? `${preguntas} ${preguntas === 1 ? 'pregunta tuya' : 'preguntas tuyas'}` : 'Solo las preguntas de AIB+'}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => onSubir(s.clave)} className="btn btn-ghost !px-3 !py-1 text-xs">
+                  + Diseño
+                </button>
+                <button type="button" onClick={() => onPreguntas(s)} className="btn btn-ghost !px-3 !py-1 text-xs">
+                  {preguntas > 0 ? 'Editar preguntas' : 'Añadir preguntas'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TarjetaPlantilla({
   plantilla,
   onVer,
@@ -310,8 +434,11 @@ function TarjetaPlantilla({
           <div className="min-w-0">
             <p className="truncate font-semibold text-ink">{fila.nombre}</p>
             <p className="mt-0.5 text-xs text-ink-subtle">
-              {fila.tipo === 'propia' ? 'Tu diseño' : 'Biblioteca AIB+'} · {etiquetaCategoria(fila.categoria)} ·{' '}
-              {etiquetaDe(ESTILOS, fila.estilo)}
+              {fila.tipo === 'propia' ? 'Tu diseño' : 'Biblioteca AIB+'} ·{' '}
+              {fila.servicio === 'web'
+                ? etiquetaCategoria(fila.categoria)
+                : `${iconoDeClave(fila.servicio)} ${nombreDeClave(fila.servicio)}`}{' '}
+              · {etiquetaDe(ESTILOS, fila.estilo)}
             </p>
           </div>
           <button

@@ -58,6 +58,8 @@ const config = {
     web: 7000,
     // Solo textos en JSON: ronda los 1.000 tokens. El techo deja margen.
     plantilla: 4000,
+    // Unas pocas preguntas en JSON para el formulario de un ingeniero.
+    sugerencias: 2000,
   },
 
   // ABI, el asistente del ingeniero (src/abi.js). Lleva su propio modelo: es

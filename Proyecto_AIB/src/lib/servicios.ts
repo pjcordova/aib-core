@@ -5,71 +5,90 @@
 // se ofrecen, qué preguntas tiene cada uno y con qué opciones. Añadir un
 // servicio o cambiar una pregunta es editar este archivo, no los componentes.
 //
-// Hoy solo el módulo web tiene su propio cuestionario. ERP y Automatización
-// siguen con el discovery guiado por IA hasta que tengan el suyo.
+// La web tiene su propio módulo (FlujoWeb). El resto de servicios comparten
+// FlujoServicio: las preguntas base de AIB+ que están aquí, más las que añade
+// cada ingeniero (supabase_formularios_servicio.sql).
 // ---------------------------------------------------------------------------
 
-export type TipoServicio = 'web' | 'erp' | 'automatizacion';
-
-/** `modulo`: preguntas fijas de este archivo. `ia`: discovery generado por IA. */
-export type FlujoServicio = 'modulo' | 'ia';
+/**
+ * 'otro': un servicio que el ingeniero escribió a mano (su nombre va aparte,
+ * en `servicio_otro`). La tienda online se pide como página web.
+ */
+export type TipoServicio = 'web' | 'crm' | 'erp' | 'automatizacion' | 'app-movil' | 'otro';
 
 export interface Servicio {
   id: TipoServicio;
   nombre: string;
   descripcion: string;
   icono: string;
-  flujo: FlujoServicio;
-  /** Ejemplos que se proponen al describir la idea (solo flujo `ia`). */
-  ejemplos: string[];
 }
 
 export const SERVICIOS: Servicio[] = [
   {
     id: 'web',
     nombre: 'Página web',
-    descripcion: 'Tu web corporativa, landing o tienda: te enseñamos cómo se vería.',
+    descripcion: 'Tu web corporativa, landing o tienda online: te enseñamos cómo se vería.',
     icono: '🌐',
-    flujo: 'modulo',
-    ejemplos: [],
+  },
+  {
+    id: 'crm',
+    nombre: 'CRM',
+    descripcion: 'Tus clientes, ventas y seguimientos ordenados en un solo lugar.',
+    icono: '🤝',
   },
   {
     id: 'erp',
     nombre: 'ERP',
     descripcion: 'Un sistema para ordenar ventas, inventario, facturación o personal.',
     icono: '📊',
-    flujo: 'ia',
-    ejemplos: [
-      'Un ERP para restaurantes con facturación e inventario',
-      'Control de almacén y compras para una distribuidora',
-      'Gestión de planillas y asistencia del personal',
-    ],
   },
   {
     id: 'automatizacion',
     nombre: 'Automatización',
-    descripcion: 'Que las tareas repetitivas se hagan solas: reportes, correos, datos.',
+    descripcion: 'Que las tareas repetitivas se hagan solas: reportes, mensajes, datos.',
     icono: '⚡',
-    flujo: 'ia',
-    ejemplos: [
-      'Enviar reportes de ventas automáticos cada lunes',
-      'Pasar los pedidos del correo a una hoja de cálculo',
-      'Avisar por WhatsApp cuando un stock baje del mínimo',
-    ],
+  },
+  {
+    id: 'app-movil',
+    nombre: 'App móvil',
+    descripcion: 'Una app para tus clientes o tu equipo, en Android y iPhone.',
+    icono: '📱',
+  },
+  {
+    id: 'otro',
+    nombre: 'Otro servicio',
+    descripcion: 'Un servicio a medida que ofrece tu ingeniero.',
+    icono: '🧩',
   },
 ];
 
-export function obtenerServicio(id: TipoServicio): Servicio {
-  const servicio = SERVICIOS.find((s) => s.id === id);
-  if (!servicio) throw new Error(`Servicio desconocido: ${id}`);
-  return servicio;
+/** Los encargos guardados antes de los servicios nuevos pueden traer otro valor. */
+export function obtenerServicio(id: TipoServicio | string): Servicio {
+  return SERVICIOS.find((s) => s.id === id) ?? SERVICIOS[SERVICIOS.length - 1];
+}
+
+/**
+ * La clave con la que se guardan las plantillas y las preguntas de un
+ * servicio: el tipo, o 'otro:<nombre>' para los escritos a mano.
+ */
+export function claveServicio(tipo: TipoServicio, otro?: string | null): string {
+  return tipo === 'otro' ? `otro:${otro ?? ''}` : tipo;
+}
+
+/** Nombre para mostrar de una clave: "CRM", "Chatbots"… */
+export function nombreDeClave(clave: string): string {
+  return clave.startsWith('otro:') ? clave.slice(5) : obtenerServicio(clave).nombre;
+}
+
+export function iconoDeClave(clave: string): string {
+  return obtenerServicio(clave.startsWith('otro:') ? 'otro' : clave).icono;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Preguntas                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export type TipoPregunta = 'negocio' | 'logo' | 'paleta' | 'opcion' | 'multiple';
+export type TipoPregunta = 'negocio' | 'logo' | 'paleta' | 'opcion' | 'multiple' | 'texto';
 
 export interface Opcion {
   valor: string;
@@ -218,6 +237,154 @@ export const PREGUNTAS_WEB: Pregunta[] = [
     opciones: PRESUPUESTOS,
   },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Los demás servicios                                                        */
+/* -------------------------------------------------------------------------- */
+
+const opciones = (...etiquetas: string[]): Opcion[] => etiquetas.map((e) => ({ valor: e, etiqueta: e }));
+
+const USUARIOS: Pregunta = {
+  id: 'usuarios',
+  tipo: 'opcion',
+  titulo: '¿Cuántas personas lo usarían?',
+  opciones: opciones('Solo yo', 'De 2 a 5', 'De 6 a 20', 'Más de 20'),
+};
+
+/**
+ * Lo que pregunta AIB+ en cada servicio, entre «tu negocio» y los colores.
+ * Pocas y de un clic: lo fino lo pregunta cada ingeniero con las suyas.
+ * Las respuestas se guardan con su etiqueta, así que el valor es el texto.
+ */
+export const PREGUNTAS_SERVICIO: Record<Exclude<TipoServicio, 'web'>, Pregunta[]> = {
+  crm: [
+    {
+      id: 'crm-ordenar',
+      tipo: 'multiple',
+      titulo: '¿Qué quieres ordenar con tu CRM?',
+      ayuda: 'Marca hasta 4.',
+      maximo: 4,
+      opciones: opciones(
+        'Mis contactos y clientes',
+        'Ventas y cotizaciones',
+        'Seguimiento por WhatsApp',
+        'Recordatorios y tareas',
+        'Reportes de ventas',
+        'Atención y reclamos'
+      ),
+    },
+    USUARIOS,
+    {
+      id: 'crm-hoy',
+      tipo: 'opcion',
+      titulo: '¿Dónde tienes hoy a tus clientes?',
+      opciones: opciones('En Excel u hojas de cálculo', 'En el WhatsApp del celular', 'En otro sistema', 'En papel o en ningún lado'),
+    },
+  ],
+  erp: [
+    {
+      id: 'erp-areas',
+      tipo: 'multiple',
+      titulo: '¿Qué áreas quieres controlar?',
+      ayuda: 'Marca hasta 5.',
+      maximo: 5,
+      opciones: opciones(
+        'Ventas y facturación',
+        'Inventario y almacén',
+        'Compras y proveedores',
+        'Caja y finanzas',
+        'Personal y planillas',
+        'Producción'
+      ),
+    },
+    {
+      id: 'erp-sunat',
+      tipo: 'opcion',
+      titulo: '¿Necesitas emitir facturas o boletas electrónicas (SUNAT)?',
+      opciones: opciones('Sí', 'Ya tengo un sistema para eso', 'No lo sé'),
+    },
+    USUARIOS,
+    {
+      id: 'erp-locales',
+      tipo: 'opcion',
+      titulo: '¿Cuántos locales o almacenes tienes?',
+      opciones: opciones('Uno', 'De 2 a 3', 'Más de 3'),
+    },
+  ],
+  automatizacion: [
+    {
+      id: 'auto-tarea',
+      tipo: 'multiple',
+      titulo: '¿Qué tareas te quitan más tiempo?',
+      ayuda: 'Marca hasta 3.',
+      maximo: 3,
+      opciones: opciones(
+        'Responder mensajes repetidos',
+        'Pasar datos de un lado a otro',
+        'Armar reportes',
+        'Recordar citas o cobros a clientes',
+        'Registrar pedidos',
+        'Otra'
+      ),
+    },
+    {
+      id: 'auto-detalle',
+      tipo: 'texto',
+      titulo: 'Cuéntanos la tarea en una o dos frases',
+      ayuda: 'Ej: Cada lunes copio las ventas del WhatsApp a un Excel y se lo mando a mi socio.',
+      opcional: true,
+    },
+    {
+      id: 'auto-herramientas',
+      tipo: 'multiple',
+      titulo: '¿Qué herramientas usas hoy?',
+      opciones: opciones('WhatsApp', 'Gmail o correo', 'Excel o Google Sheets', 'Un sistema de ventas', 'Redes sociales', 'Otra'),
+    },
+    {
+      id: 'auto-frecuencia',
+      tipo: 'opcion',
+      titulo: '¿Cada cuánto se repite?',
+      opciones: opciones('Varias veces al día', 'Todos los días', 'Cada semana', 'Cada mes'),
+    },
+  ],
+  'app-movil': [
+    {
+      id: 'app-para',
+      tipo: 'opcion',
+      titulo: '¿Para quién es la app?',
+      opciones: opciones('Para mis clientes', 'Para mi equipo de trabajo', 'Para ambos'),
+    },
+    {
+      id: 'app-funciones',
+      tipo: 'multiple',
+      titulo: '¿Qué debe poder hacer?',
+      ayuda: 'Marca hasta 5.',
+      maximo: 5,
+      opciones: opciones(
+        'Hacer pedidos o reservas',
+        'Pagar en la app',
+        'Ver un catálogo',
+        'Recibir notificaciones',
+        'Registrar visitas o tareas',
+        'Ver su historial'
+      ),
+    },
+    {
+      id: 'app-celulares',
+      tipo: 'opcion',
+      titulo: '¿En qué celulares?',
+      opciones: opciones('Android y iPhone', 'Solo Android', 'Solo iPhone', 'No lo sé'),
+    },
+  ],
+  otro: [
+    {
+      id: 'necesidad',
+      tipo: 'texto',
+      titulo: 'Cuéntanos qué necesitas',
+      ayuda: 'En una o dos frases, con tus palabras.',
+    },
+  ],
+};
 
 /* -------------------------------------------------------------------------- */
 /* Al aceptar                                                                 */

@@ -4,13 +4,15 @@ import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type CategoriaNegocio } from '
 import {
   basePropia,
   EJEMPLO_PLANTILLA,
+  EJEMPLO_SISTEMA,
   NIVELES,
   prepararDiseno,
   TEXTOS_EJEMPLO,
   type DisenoPropio,
   type NivelPlantilla,
 } from '../../lib/plantillaPropia';
-import { PREGUNTAS_WEB } from '../../lib/servicios';
+import type { ServicioDelIngeniero } from '../../lib/formularios';
+import { PREGUNTAS_WEB, iconoDeClave, nombreDeClave } from '../../lib/servicios';
 import { MiniVista } from './MiniVista';
 
 const ESTILOS = PREGUNTAS_WEB.find((p) => p.id === 'estilo')?.opciones ?? [];
@@ -18,38 +20,55 @@ const ESTILOS = PREGUNTAS_WEB.find((p) => p.id === 'estilo')?.opciones ?? [];
 /** Lo que pesa como máximo el archivo antes de limpiarlo. */
 const MAX_ARCHIVO = 2_000_000;
 
-/** Descarga la página de ejemplo, con todos los huecos de AIB+. */
-function descargarEjemplo() {
-  const url = URL.createObjectURL(new Blob([EJEMPLO_PLANTILLA], { type: 'text/html' }));
+/**
+ * Descarga la página de ejemplo, con todos los huecos de AIB+: una web, o un
+ * panel para los demás servicios (CRM, ERP…).
+ */
+function descargarEjemplo(sistema: boolean) {
+  const url = URL.createObjectURL(new Blob([sistema ? EJEMPLO_SISTEMA : EJEMPLO_PLANTILLA], { type: 'text/html' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'plantilla-ejemplo-aib.html';
+  a.download = sistema ? 'sistema-ejemplo-aib.html' : 'plantilla-ejemplo-aib.html';
   a.click();
   URL.revokeObjectURL(url);
 }
 
 /**
  * El ingeniero sube su propio diseño (o cambia uno que ya subió): el HTML, su
- * nombre, rubro, estilo, nivel y precio. Sale publicado.
+ * servicio, nombre, rubro, estilo, nivel y precio. Sale publicado.
  */
 export function SubirDiseno({
   existente,
+  servicios,
+  servicioInicial,
   onListo,
   onCerrar,
 }: {
   /** Para editar una propia ya subida. Sin ella, es un diseño nuevo. */
   existente?: PlantillaDelCatalogo;
+  /** Los servicios que ofrece: cada diseño es de uno. */
+  servicios: ServicioDelIngeniero[];
+  servicioInicial?: string;
   onListo: () => void;
   onCerrar: () => void;
 }) {
   const fila = existente?.fila;
+  const [servicio, setServicio] = useState(fila?.servicio ?? servicioInicial ?? servicios[0]?.clave ?? 'web');
+  const esWeb = servicio === 'web';
+  // El de un diseño ya subido sale aunque ya no lo ofrezca.
+  const opcionesServicio = servicios.some((s) => s.clave === servicio)
+    ? servicios
+    : [...servicios, { clave: servicio, nombre: nombreDeClave(servicio), icono: iconoDeClave(servicio) }];
   const [diseno, setDiseno] = useState<DisenoPropio | null>(
     fila?.html ? { html: fila.html, css: fila.css ?? '', fuentes: fila.fuentes ?? [] } : null
   );
   const [archivo, setArchivo] = useState('');
   const [nombre, setNombre] = useState(fila?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(fila?.descripcion ?? '');
-  const [categoria, setCategoria] = useState<CategoriaNegocio>(fila?.categoria ?? 'servicios-profesionales');
+  // Un CRM o un ERP no suele ser de un rubro: por defecto, cualquiera.
+  const [categoria, setCategoria] = useState<CategoriaNegocio>(
+    fila?.categoria ?? (servicioInicial && servicioInicial !== 'web' ? 'otro' : 'servicios-profesionales')
+  );
   const [estilo, setEstilo] = useState(fila?.estilo ?? ESTILOS[0]?.valor ?? 'moderno');
   const [nivel, setNivel] = useState<NivelPlantilla>(fila?.nivel ?? 'basica');
   const [precio, setPrecio] = useState(fila?.precio_desde ? String(fila.precio_desde) : '');
@@ -112,6 +131,7 @@ export function SubirDiseno({
     setGuardando(true);
     setError('');
     const datos = {
+      servicio,
       nombre: nombre.trim().slice(0, 80),
       descripcion: descripcion.trim().slice(0, 300),
       categoria,
@@ -158,6 +178,23 @@ export function SubirDiseno({
           {/* ----------------------------------------------------- datos */}
           <div className="space-y-4">
             <label className="block text-sm">
+              <span className="mb-1.5 block text-ink-muted">Servicio</span>
+              <select value={servicio} onChange={(e) => setServicio(e.target.value)} className="field">
+                {opcionesServicio.map((s) => (
+                  <option key={s.clave} value={s.clave}>
+                    {s.icono} {s.nombre}
+                  </option>
+                ))}
+              </select>
+              {!esWeb && (
+                <span className="mt-1 block text-xs text-ink-subtle">
+                  Sube cómo se vería tu sistema (pantallas, panel, app): el cliente lo ve con su nombre y sus colores antes de
+                  elegirte.
+                </span>
+              )}
+            </label>
+
+            <label className="block text-sm">
               <span className="mb-1.5 block text-ink-muted">Archivo HTML {fila && '(opcional: solo si lo cambias)'}</span>
               <input
                 type="file"
@@ -178,15 +215,21 @@ export function SubirDiseno({
                 <li>var(--aib-primario), var(--aib-secundario) — sus colores</li>
                 <li>data-aib-foto — un espacio donde pone su foto</li>
               </ul>
-              <button type="button" onClick={descargarEjemplo} className="mt-2 font-medium text-accent hover:underline">
-                Descargar una página de ejemplo
+              <button type="button" onClick={() => descargarEjemplo(!esWeb)} className="mt-2 font-medium text-accent hover:underline">
+                {esWeb ? 'Descargar una página de ejemplo' : 'Descargar un panel de ejemplo'}
               </button>
               <p className="mt-1.5">Los scripts se quitan: es un diseño, no una aplicación.</p>
             </div>
 
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-muted">Nombre del diseño</span>
-              <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} className="field" placeholder="Ej: Restaurante moderno" />
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                maxLength={80}
+                className="field"
+                placeholder={esWeb ? 'Ej: Restaurante moderno' : 'Ej: CRM para tiendas'}
+              />
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block text-ink-muted">Descripción corta (opcional)</span>
@@ -200,7 +243,7 @@ export function SubirDiseno({
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1.5 block text-ink-muted">Para qué tipo de negocio</span>
+                <span className="mb-1.5 block text-ink-muted">{esWeb ? 'Para qué tipo de negocio' : 'Pensado para (rubro)'}</span>
                 <select value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaNegocio)} className="field">
                   {CATEGORIAS_NEGOCIO.map((c) => (
                     <option key={c.valor} value={c.valor}>

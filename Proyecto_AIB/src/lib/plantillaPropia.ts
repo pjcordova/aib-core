@@ -265,3 +265,77 @@ export const EJEMPLO_PLANTILLA = `<!doctype html>
 </body>
 </html>
 `;
+
+/**
+ * Ejemplo para los servicios que no son una web (CRM, ERP, app…): un panel
+ * con menú, cifras y una tabla, con los mismos huecos. El cliente lo ve con
+ * su nombre y sus colores, como si ya fuera suyo.
+ */
+export const EJEMPLO_SISTEMA = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{negocio}}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<style>
+  /* Tus colores por defecto. AIB+ los cambia por los del cliente. */
+  :root {
+    --aib-primario: #1a2d4d;
+    --aib-primario-oscuro: #0e1a2b;
+    --aib-secundario: #c4a26a;
+    --aib-secundario-suave: #f3ead9;
+  }
+  body { background: #f5f6f8; }
+  .menu { background: var(--aib-primario-oscuro); color: #fff; min-height: 100vh; }
+  .menu a { color: rgba(255,255,255,.75); text-decoration: none; display: block; padding: .55rem 1rem; border-radius: .5rem; }
+  .menu a.activo, .menu a:hover { background: var(--aib-primario); color: #fff; }
+  .cifra { border-left: 4px solid var(--aib-secundario); }
+  .etiqueta { background: var(--aib-secundario-suave); color: var(--aib-primario-oscuro); }
+  .btn-marca { background: var(--aib-secundario); color: var(--aib-primario-oscuro); border: 0; }
+</style>
+</head>
+<body>
+  <div class="d-flex">
+    <aside class="menu p-3 d-none d-md-block" style="width:230px">
+      <div class="fw-bold fs-5 mb-4 px-2">{{{marca}}}</div>
+      <a class="activo" href="#">Inicio</a>
+      <a href="#">Clientes</a>
+      <a href="#">Ventas</a>
+      <a href="#">Tareas</a>
+      <a href="#">Reportes</a>
+    </aside>
+
+    <main class="flex-grow-1 p-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+          <h1 class="h4 mb-0">Hola, equipo de {{negocio}}</h1>
+          <p class="text-secondary mb-0 small">{{descripcion}}</p>
+        </div>
+        <button class="btn btn-marca">+ Nuevo cliente</button>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card cifra p-3"><small class="text-secondary">Ventas del mes</small><div class="fs-3 fw-bold">S/ 24,800</div></div></div>
+        <div class="col-md-4"><div class="card cifra p-3"><small class="text-secondary">Clientes activos</small><div class="fs-3 fw-bold">132</div></div></div>
+        <div class="col-md-4"><div class="card cifra p-3"><small class="text-secondary">Por cobrar</small><div class="fs-3 fw-bold">S/ 3,150</div></div></div>
+      </div>
+
+      <div class="card p-3">
+        <h2 class="h6 mb-3">Últimos clientes</h2>
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Cliente</th><th>Estado</th><th class="text-end">Monto</th></tr></thead>
+          <tbody>
+            <tr><td>María Torres</td><td><span class="badge etiqueta">Cotización</span></td><td class="text-end">S/ 1,200</td></tr>
+            <tr><td>Bodega El Sol</td><td><span class="badge etiqueta">Ganado</span></td><td class="text-end">S/ 3,400</td></tr>
+            <tr><td>Carlos Ruiz</td><td><span class="badge etiqueta">Seguimiento</span></td><td class="text-end">S/ 850</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-center text-secondary small mt-4 mb-0">© {{anio}} {{negocio}}</p>
+    </main>
+  </div>
+</body>
+</html>
+`;

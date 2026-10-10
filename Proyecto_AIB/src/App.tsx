@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import LoginRegistro from './components/LoginRegistro';
-import { AIBProductOwner } from './components/AIBProductOwner';
 import { PrototypePreview } from './components/PrototypePreviewDiferido';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { Portada } from './components/Portada';
@@ -9,6 +8,7 @@ import { conPrecioMostrado, miPrecio } from './lib/pruebaPrecio';
 import { ElegirIngeniero } from './components/ingenieros/ElegirIngeniero';
 import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
 import { FlujoWeb } from './components/web/FlujoWeb';
+import { FlujoServicio } from './components/web/FlujoServicio';
 import { WebPreview } from './components/web/WebPreview';
 import { SeguimientoCliente } from './components/SeguimientoEncargo';
 import { Wordmark, Shell } from './components/ui/Primitives';
@@ -23,10 +23,10 @@ import { registrarEvento } from './lib/catalogo';
 import { elegirIngeniero as asignarIngeniero } from './lib/ingenieros';
 import { miInvitacion, registrarInicioInvitacion, type MiInvitacion } from './lib/invitaciones';
 import { leerModoCliente, salirModoCliente } from './lib/modoCliente';
-import { SERVICIOS, obtenerServicio, type Paleta, type TipoServicio } from './lib/servicios';
+import { serviciosParaCliente, type ServiciosCliente } from './lib/formularios';
+import { SERVICIOS, claveServicio, obtenerServicio, type Paleta, type Servicio, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
-import type { QAHistory } from './Types/productOwner';
 
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 
@@ -54,8 +54,10 @@ export default function Home() {
   useEffect(() => {
     if (location.state) navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
-  const [descripcion, setDescripcion] = useState('');
-  const [iniciado, setIniciado] = useState(false);
+  // Con tipo 'otro': el servicio que escribió su ingeniero ("Chatbots").
+  const [otro, setOtro] = useState<string | null>(null);
+  // Qué servicios puede pedir: los de su ingeniero, o los de la plataforma.
+  const [disponibles, setDisponibles] = useState<ServiciosCliente | null>(null);
   const [abierto, setAbierto] = useState<ProyectoCompleto | null>(null);
   const [aceptacionAbierto, setAceptacionAbierto] = useState<EstadoAceptacion>('inactivo');
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
@@ -73,14 +75,6 @@ export default function Home() {
   // las verían como props nuevas. Ese fue el origen del bucle de peticiones.
   const refrescarLista = useCallback(() => setVersionLista((v) => v + 1), []);
 
-  const handleComplete = useCallback(
-    (history: QAHistory[]) => {
-      console.info('[AIB+] Discovery completado con', history.length, 'respuestas');
-      refrescarLista();
-    },
-    [refrescarLista]
-  );
-
   const abrirProyecto = useCallback(async (id: string) => {
     setCargandoProyecto(true);
     const proyecto = await cargarProyecto(id);
@@ -96,7 +90,7 @@ export default function Home() {
   }, []);
 
   // Cliente que entró con el enlace de un ingeniero: sesión anónima, sin
-  // cuenta. Solo ve el módulo web, con la bienvenida de su invitación.
+  // cuenta. Ve los servicios de su ingeniero, con la bienvenida de su invitación.
   const esInvitado = session?.user.is_anonymous === true;
   const [invitacion, setInvitacion] = useState<MiInvitacion | null | undefined>(undefined);
   useEffect(() => {
@@ -109,6 +103,17 @@ export default function Home() {
       vigente = false;
     };
   }, [esInvitado, session?.user.id]);
+
+  useEffect(() => {
+    if (!session) return;
+    let vigente = true;
+    void serviciosParaCliente().then((s) => {
+      if (vigente) setDisponibles(s);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [session]);
 
   // Quien está en una prueba sin cuenta (sesión anónima) y en realidad tiene
   // cuenta (el ingeniero, por ejemplo): se cierra la prueba y se abre el login.
@@ -180,10 +185,14 @@ export default function Home() {
 
   const reiniciar = () => {
     setTipo(null);
-    setDescripcion('');
-    setIniciado(false);
+    setOtro(null);
     setAbierto(null);
     setPidiendoContacto(false);
+  };
+
+  const elegirServicio = (t: TipoServicio, nombreOtro: string | null = null) => {
+    setTipo(t);
+    setOtro(nombreOtro);
   };
 
   /**
@@ -227,7 +236,16 @@ export default function Home() {
     return ok;
   };
 
-  const servicio = tipo ? obtenerServicio(tipo) : null;
+  // Los servicios que puede pedir (la web, mientras se averigua).
+  const servicios = SERVICIOS.filter((s) => (disponibles?.servicios ?? ['web']).includes(s.id as never));
+  // La vista previa reabierta de otro servicio lleva sus propios textos.
+  const servicioAbierto =
+    abierto?.tipoServicio && abierto.tipoServicio !== 'web'
+      ? {
+          nombre: abierto.servicioOtro ?? obtenerServicio(abierto.tipoServicio).nombre,
+          icono: obtenerServicio(abierto.tipoServicio).icono,
+        }
+      : undefined;
 
   // Quien llegó con la invitación de un ingeniero ya tiene el suyo.
   const vinoConSuIngeniero = esInvitado && invitacion?.origen === 'ingeniero';
@@ -248,14 +266,6 @@ export default function Home() {
       }
     }
     setEligiendoIngeniero(true);
-  };
-
-  const empezarIA = (texto: string) => {
-    const limpio = texto.trim();
-    if (!limpio || !servicio) return;
-    // El tipo de servicio va delante para que el discovery sepa por dónde tirar.
-    setDescripcion(`${servicio.nombre}: ${limpio}`);
-    setIniciado(true);
   };
 
   return (
@@ -345,6 +355,7 @@ export default function Home() {
                   proyectoId={abierto.id}
                   conSeguimiento={abierto.aceptado}
                   precio={precioAbierto}
+                  servicio={servicioAbierto}
                 />
               ) : (
                 <PrototypePreview
@@ -365,22 +376,24 @@ export default function Home() {
               elegirIngeniero={!vinoConSuIngeniero}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
             />
-          ) : servicio && iniciado ? (
-            <AIBProductOwner servicioInicial={descripcion} onComplete={handleComplete} />
-          ) : servicio ? (
-            <DescribirIdea
-              nombre={servicio.nombre}
-              icono={servicio.icono}
-              ejemplos={servicio.ejemplos}
-              onEmpezar={empezarIA}
-              onVolver={reiniciar}
+          ) : tipo ? (
+            <FlujoServicio
+              key={claveServicio(tipo, otro)}
+              tipo={tipo}
+              otro={otro ?? undefined}
+              empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
+              conSuIngeniero={vinoConSuIngeniero}
+              onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
+              onGuardado={refrescarLista}
             />
           ) : esInvitado ? (
             <BienvenidaInvitado
               negocio={invitacion?.negocio ?? null}
               desdePortada={invitacion?.origen === 'portada'}
               ingeniero={invitacion?.origen === 'ingeniero' ? (invitacion?.ingeniero ?? null) : null}
-              onEmpezar={() => setTipo('web')}
+              servicios={servicios}
+              otros={disponibles?.otros ?? []}
+              onElegir={elegirServicio}
               cargandoProyecto={cargandoProyecto}
               onAbrir={abrirProyecto}
               versionLista={versionLista}
@@ -398,27 +411,7 @@ export default function Home() {
                 verás una primera versión de tu proyecto.
               </p>
 
-              <div className="mt-10 grid gap-4 text-left sm:grid-cols-3">
-                {SERVICIOS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setTipo(s.id)}
-                    className="card group flex flex-col gap-3 p-6 transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[var(--shadow-glow)]"
-                  >
-                    <span className="text-3xl" aria-hidden="true">
-                      {s.icono}
-                    </span>
-                    <span className="text-lg font-semibold text-ink">{s.nombre}</span>
-                    <span className="text-sm leading-relaxed text-ink-muted">{s.descripcion}</span>
-                    {s.flujo === 'modulo' && (
-                      <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
-                        Mira tu web en ~1 minuto
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              <EleccionServicio servicios={servicios} otros={disponibles?.otros ?? []} onElegir={elegirServicio} />
 
               {/* Al ingeniero que prueba como cliente la lista solo le mostraba sus
                   pruebas: lo suyo lo ve en el panel. */}
@@ -436,6 +429,7 @@ export default function Home() {
         <ElegirIngeniero
           proyectoId={abierto.id}
           rubro={abierto.ficha?.categoria || undefined}
+          servicio={abierto.tipoServicio ?? 'web'}
           onElegido={(nombre) => {
             setIngenieroElegido(nombre);
             setEligiendoIngeniero(false);
@@ -449,6 +443,8 @@ export default function Home() {
           ingeniero={ingenieroElegido}
           tipoServicio={abierto.tipoServicio}
           objetivo={abierto.ficha?.objetivo}
+          // Si ya respondió las preguntas de su ingeniero en el formulario, no se repiten.
+          preguntasDe={abierto.historial.some((h) => h.question_id.startsWith('ing-')) ? null : abierto.id}
           enviando={aceptacionAbierto === 'procesando'}
           error={errorEnvio}
           onEnviar={(datos) => void aceptarAbierto(datos)}
@@ -461,12 +457,17 @@ export default function Home() {
 
 /* -------------------------------------------------------------------------- */
 
-/** Portada del cliente que entró con una invitación: directo a su web. */
+/**
+ * Portada del cliente que entró con una invitación. Si solo hay web, directo
+ * a su web; si su ingeniero (o la plataforma) ofrece más, elige qué quiere.
+ */
 function BienvenidaInvitado({
   negocio,
   desdePortada,
   ingeniero,
-  onEmpezar,
+  servicios,
+  otros,
+  onElegir,
   cargandoProyecto,
   onAbrir,
   versionLista,
@@ -476,29 +477,37 @@ function BienvenidaInvitado({
   desdePortada: boolean;
   /** El nombre de su ingeniero, si llegó con su enlace o desde su página. */
   ingeniero: string | null;
-  onEmpezar: () => void;
+  servicios: Servicio[];
+  otros: string[];
+  onElegir: (tipo: TipoServicio, otro?: string | null) => void;
   cargandoProyecto: boolean;
   onAbrir: (id: string) => void;
   versionLista: number;
 }) {
+  const soloWeb = otros.length === 0 && servicios.length === 1 && servicios[0].id === 'web';
+  const queVer = soloWeb ? 'cómo se vería tu página web' : 'cómo quedaría lo que necesitas';
   return (
-    <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
+    <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
       <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
         {desdePortada ? 'Tu prueba gratis' : 'Tu invitación'}
       </p>
       <h1 className="text-4xl font-bold text-balance sm:text-5xl">{negocio ? `Hola, ${negocio} 👋` : 'Hola 👋'}</h1>
       <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
         {desdePortada
-          ? 'Mira cómo se vería tu página web.'
+          ? `Mira ${queVer}.`
           : ingeniero
-            ? `${ingeniero.split(/\s+/)[0]} te invita a ver cómo se vería tu página web.`
-            : 'Te invitaron a ver cómo se vería tu página web.'}{' '}
+            ? `${ingeniero.split(/\s+/)[0]} te invita a ver ${queVer}.`
+            : `Te invitaron a ver ${queVer}.`}{' '}
         Responde unas preguntas rápidas, casi todas con un clic, y en un minuto verás una primera versión con
         tu nombre y tus colores. No necesitas crear cuenta ni pagar nada.
       </p>
-      <button type="button" onClick={onEmpezar} className="btn btn-primary mt-8 px-8 py-3 text-base">
-        Empezar
-      </button>
+      {soloWeb ? (
+        <button type="button" onClick={() => onElegir('web')} className="btn btn-primary mt-8 px-8 py-3 text-base">
+          Empezar
+        </button>
+      ) : (
+        <EleccionServicio servicios={servicios} otros={otros} onElegir={onElegir} />
+      )}
       <p className="mt-4 text-xs text-ink-subtle">
         {desdePortada
           ? 'Puedes volver cuando quieras desde este mismo navegador.'
@@ -538,73 +547,58 @@ function InvitacionInactiva({ enOtroNavegador, onIngresar }: { enOtroNavegador: 
   );
 }
 
-/** Paso de descripción libre para los servicios que aún usan el discovery con IA. */
-function DescribirIdea({
-  nombre,
-  icono,
-  ejemplos,
-  onEmpezar,
-  onVolver,
+/**
+ * Los servicios para elegir: los estándar (web, CRM…) y los que su ingeniero
+ * escribió a mano. La web va primero y destacada: es lo que más se pide.
+ */
+function EleccionServicio({
+  servicios,
+  otros,
+  onElegir,
 }: {
-  nombre: string;
-  icono: string;
-  ejemplos: string[];
-  onEmpezar: (texto: string) => void;
-  onVolver: () => void;
+  servicios: Servicio[];
+  otros: string[];
+  onElegir: (tipo: TipoServicio, otro?: string | null) => void;
 }) {
-  const [texto, setTexto] = useState('');
+  const otroServicio = obtenerServicio('otro');
+  const tarjetas = [
+    ...servicios.map((s) => ({
+      clave: claveServicio(s.id),
+      tipo: s.id,
+      otro: null,
+      nombre: s.nombre,
+      icono: s.icono,
+      descripcion: s.descripcion,
+    })),
+    ...otros.map((o) => ({
+      clave: claveServicio('otro', o),
+      tipo: 'otro' as const,
+      otro: o,
+      nombre: o,
+      icono: otroServicio.icono,
+      descripcion: otroServicio.descripcion,
+    })),
+  ];
 
   return (
-    <section className="animate-fade-up mx-auto max-w-2xl py-14 text-center sm:py-20">
-      <button type="button" onClick={onVolver} className="mb-6 text-sm text-ink-subtle hover:text-ink">
-        ← Elegir otro servicio
-      </button>
-      <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
-        {icono} {nombre}
-      </p>
-      <h1 className="text-3xl font-bold text-balance sm:text-4xl">Cuéntanos qué te gustaría resolver</h1>
-      <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-        Una frase basta. Luego te hacemos unas pocas preguntas para entenderlo bien.
-      </p>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onEmpezar(texto);
-        }}
-        className="mt-9 flex flex-col gap-3 sm:flex-row"
-      >
-        <input
-          type="text"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder={ejemplos[0] ? `Ej: ${ejemplos[0]}` : 'Describe tu idea'}
-          className="field flex-1 text-base"
-          autoFocus
-          aria-label="Describe lo que necesitas"
-        />
-        <button type="submit" disabled={!texto.trim()} className="btn btn-primary px-7">
-          Empezar
+    <div className={'mt-10 grid gap-4 text-left ' + (tarjetas.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+      {tarjetas.map((t) => (
+        <button
+          key={t.clave}
+          type="button"
+          onClick={() => onElegir(t.tipo, t.otro)}
+          className="card group flex flex-col gap-3 p-6 transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-[var(--shadow-glow)]"
+        >
+          <span className="text-3xl" aria-hidden="true">
+            {t.icono}
+          </span>
+          <span className="text-lg font-semibold text-ink">{t.nombre}</span>
+          <span className="text-sm leading-relaxed text-ink-muted">{t.descripcion}</span>
+          <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent">
+            {t.tipo === 'web' ? 'Mira tu web en ~1 minuto' : 'Mira cómo quedaría'}
+          </span>
         </button>
-      </form>
-
-      {ejemplos.length > 0 && (
-        <div className="mt-10">
-          <p className="mb-3 text-xs tracking-wide text-ink-subtle uppercase">O parte de un ejemplo</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {ejemplos.map((ejemplo) => (
-              <button
-                key={ejemplo}
-                type="button"
-                onClick={() => onEmpezar(ejemplo)}
-                className="rounded-full border border-line bg-surface-raised/60 px-4 py-2 text-sm text-ink-muted transition-colors hover:border-accent/50 hover:text-ink"
-              >
-                {ejemplo}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
+      ))}
+    </div>
   );
 }

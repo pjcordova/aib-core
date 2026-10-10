@@ -616,7 +616,9 @@ function DocumentacionTecnica({ doc }: { doc: Documentacion }) {
  */
 function DatosCliente({ encargo }: { encargo: ProyectoCompleto }) {
   const c = encargo.contacto;
-  const alcance = encargo.historial.filter((h) => h.question_id.startsWith('alcance-'));
+  // También las preguntas propias del ingeniero ("ing-"), que su cliente de
+  // enlace responde en el formulario.
+  const alcance = encargo.historial.filter((h) => h.question_id.startsWith('alcance-') || h.question_id.startsWith('ing-'));
 
   if (!c) {
     return (

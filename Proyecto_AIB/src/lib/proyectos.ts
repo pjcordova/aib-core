@@ -54,6 +54,8 @@ export interface PayloadDiscovery {
    * no lo tienen: eran todas del discovery de software.
    */
   tipo_servicio?: TipoServicio;
+  /** Con tipo_servicio 'otro': el nombre del servicio que escribió el ingeniero. */
+  servicio_otro?: string;
   /** Prototipo en React (discovery con IA). */
   react_code?: string;
   /** Cuerpo de la maqueta web en HTML (módulo web). */
@@ -85,6 +87,7 @@ export interface ProyectoResumen {
   creadoEn: string;
   aceptado: boolean;
   tipoServicio?: TipoServicio;
+  servicioOtro?: string;
   empresa?: string;
   presupuesto?: string;
 }
@@ -112,6 +115,7 @@ function resumenDe(id: string, creadoEn: string, p: PayloadDiscovery): ProyectoR
     creadoEn,
     aceptado: p.aceptado === true,
     tipoServicio: p.tipo_servicio,
+    servicioOtro: p.servicio_otro,
     empresa: p.ficha?.empresa,
     presupuesto: p.ficha?.presupuesto,
   };
@@ -153,6 +157,7 @@ export async function guardarProyecto(entrada: {
   servicio: string;
   historial: QAHistory[];
   tipoServicio?: TipoServicio;
+  servicioOtro?: string;
   reactCode?: string;
   html?: string;
   ficha?: FichaWeb;
@@ -172,6 +177,7 @@ export async function guardarProyecto(entrada: {
     servicio: entrada.servicio,
     historial: entrada.historial,
     tipo_servicio: entrada.tipoServicio,
+    servicio_otro: entrada.servicioOtro,
     react_code: entrada.reactCode,
     html: entrada.html,
     ficha: entrada.ficha,
@@ -272,6 +278,18 @@ export function actualizarMaqueta(
   usage?: TokenUsage | null
 ): Promise<{ ok: boolean; error: string | null }> {
   return modificarPayload(id, { ...cambios, usage: usage ?? null }, 'actualizar la maqueta');
+}
+
+/**
+ * Cambia la vista previa de un proyecto de servicio (CRM, ERP…): otra
+ * plantilla, o el prototipo de la IA en lugar de la plantilla. Lo que llega
+ * como undefined se quita, así no conviven la plantilla y el prototipo.
+ */
+export function actualizarVistaPrevia(
+  id: string,
+  cambios: Partial<Pick<PayloadDiscovery, 'documento' | 'react_code' | 'plantilla' | 'historial' | 'usage'>>
+): Promise<{ ok: boolean; error: string | null }> {
+  return modificarPayload(id, cambios, 'actualizar la vista previa');
 }
 
 /**

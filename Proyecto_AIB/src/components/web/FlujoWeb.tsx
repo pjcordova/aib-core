@@ -501,6 +501,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
             ingeniero={ingenieroElegido}
             tipoServicio="web"
             objetivo={objetivo}
+            preguntasDe={idGuardado}
             enviando={aceptacion === 'procesando'}
             error={errorEnvio}
             onEnviar={(datos) => void aceptar(datos)}
@@ -583,12 +584,13 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
  * nombre, el logo y los colores del cliente. Es instantáneo y no gasta tokens;
  * los textos de ejemplo se sustituyen por los suyos al elegir.
  */
-function EleccionPlantilla({
+export function EleccionPlantilla({
   candidatas,
   ficha,
   onElegir,
   onAMedida,
   conPrecios,
+  textoAMedida = 'Crear un diseño a medida con IA. Tarda un poco más.',
 }: {
   /** Con una prueba de precio activa, el precio solo se ve junto a la maqueta. */
   conPrecios: boolean;
@@ -596,6 +598,7 @@ function EleccionPlantilla({
   ficha: FichaWeb;
   onElegir: (c: PlantillaDelCatalogo) => void;
   onAMedida: () => void;
+  textoAMedida?: string;
 }) {
   return (
     <section className="animate-fade-up mx-auto max-w-5xl py-10">
@@ -659,7 +662,7 @@ function EleccionPlantilla({
             ✨
           </span>
           <span className="font-semibold text-ink">Ninguno me convence</span>
-          <span className="text-sm text-ink-muted">Crear un diseño a medida con IA. Tarda un poco más.</span>
+          <span className="text-sm text-ink-muted">{textoAMedida}</span>
         </button>
       </div>
 
@@ -742,11 +745,11 @@ function puedeSeguir(
   }
 }
 
-function Progreso({ actual, total }: { actual: number; total: number }) {
+export function Progreso({ actual, total, etiqueta = 'Tu web' }: { actual: number; total: number; etiqueta?: string }) {
   return (
     <div>
       <div className="mb-2 flex justify-between text-xs">
-        <span className="font-medium tracking-wide text-ink-muted uppercase">Tu web</span>
+        <span className="font-medium tracking-wide text-ink-muted uppercase">{etiqueta}</span>
         <span className="text-ink-subtle tabular-nums">
           {actual} de {total}
         </span>
@@ -946,7 +949,13 @@ function PasoNegocio({ estado, acciones }: { estado: EstadoRespuestas; acciones:
   );
 }
 
-function PasoLogo({ estado, acciones }: { estado: EstadoRespuestas; acciones: AccionesRespuestas }) {
+export function PasoLogo({
+  estado,
+  acciones,
+}: {
+  estado: Pick<EstadoRespuestas, 'logo' | 'paletaLogo'>;
+  acciones: Pick<AccionesRespuestas, 'setLogo' | 'setPaletaLogo'>;
+}) {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
@@ -1024,7 +1033,13 @@ function PasoLogo({ estado, acciones }: { estado: EstadoRespuestas; acciones: Ac
   );
 }
 
-function PasoPaleta({ estado, acciones }: { estado: EstadoRespuestas; acciones: AccionesRespuestas }) {
+export function PasoPaleta({
+  estado,
+  acciones,
+}: {
+  estado: Pick<EstadoRespuestas, 'paleta' | 'paletaLogo'>;
+  acciones: Pick<AccionesRespuestas, 'setPaleta'>;
+}) {
   // Si subió logo, sus colores van primero: es lo más probable que quiera.
   const opciones = estado.paletaLogo ? [estado.paletaLogo, ...PALETAS] : PALETAS;
 
@@ -1058,7 +1073,7 @@ function PasoPaleta({ estado, acciones }: { estado: EstadoRespuestas; acciones: 
   );
 }
 
-function PasoMultiple({
+export function PasoMultiple({
   pregunta,
   valores,
   onCambio,
@@ -1109,7 +1124,7 @@ function PasoMultiple({
   );
 }
 
-function PasoOpcion({
+export function PasoOpcion({
   pregunta,
   valor,
   onElegir,

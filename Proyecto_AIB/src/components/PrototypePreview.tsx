@@ -70,7 +70,7 @@ export const PrototypePreview = ({
               Prototipo en vivo
             </span>
             <span className="text-[11px] text-ink-subtle">
-              {respuestas} {respuestas === 1 ? 'respuesta' : 'respuestas'} de discovery
+              {respuestas} {respuestas === 1 ? 'respuesta' : 'respuestas'}
             </span>
             <IndicadorGuardado estado={guardado} />
           </div>

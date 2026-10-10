@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { normalizarWhatsapp } from '../lib/contacto';
+import { preguntasParaEncargo, type PreguntaPropia } from '../lib/formularios';
 import { PREGUNTAS_ENCARGO, type TipoServicio } from '../lib/servicios';
 import type { QAHistory } from '../Types/productOwner';
 
@@ -24,18 +25,46 @@ interface Props {
   onCancelar: () => void;
   /** El ingeniero que eligió en el paso anterior, si eligió uno. */
   ingeniero?: string | null;
+  /**
+   * El proyecto, para sumar las preguntas propias del ingeniero que lo va a
+   * construir. null si ya las respondió en el formulario (cliente de enlace).
+   */
+  preguntasDe?: string | null;
 }
 
 /**
  * Último paso al aceptar: cómo contactar al cliente y lo que más cambia el
  * precio. Sin esto el ingeniero recibía el encargo sin forma de responder.
  */
-export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnviar, onCancelar, ingeniero }: Props) {
+export function ContactoEncargo({
+  tipoServicio,
+  objetivo,
+  enviando,
+  error,
+  onEnviar,
+  onCancelar,
+  ingeniero,
+  preguntasDe = null,
+}: Props) {
   const { session } = useAuth();
   const [nombre, setNombre] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [whatsappTocado, setWhatsappTocado] = useState(false);
   const [elegidas, setElegidas] = useState<Record<string, string>>({});
+  // Las del ingeniero: una opción, varias o un texto.
+  const [propias, setPropias] = useState<PreguntaPropia[]>([]);
+  const [respuestasPropias, setRespuestasPropias] = useState<Record<string, string | string[]>>({});
+
+  useEffect(() => {
+    if (!preguntasDe) return;
+    let vigente = true;
+    void preguntasParaEncargo(preguntasDe).then((p) => {
+      if (vigente) setPropias(p);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [preguntasDe]);
 
   const preguntas = PREGUNTAS_ENCARGO.filter((p) => !p.soloWeb || tipoServicio === 'web')
     .filter((p) => p.id !== 'alcance-venta' || !objetivo || objetivo === 'vender')
@@ -46,7 +75,13 @@ export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnv
         : p
     );
   const numero = normalizarWhatsapp(whatsapp);
-  const completo = nombre.trim().length >= 2 && !!numero && preguntas.every((p) => elegidas[p.id]);
+  // Las escritas no obligan; las de opciones, sí.
+  const propiasCompletas = propias.every((p) => {
+    const r = respuestasPropias[p.id];
+    return p.tipo === 'texto' || (Array.isArray(r) ? r.length > 0 : !!r);
+  });
+  const completo =
+    nombre.trim().length >= 2 && !!numero && preguntas.every((p) => elegidas[p.id]) && propiasCompletas;
 
   // Escape cierra, como cualquier diálogo; no mientras se envía.
   useEffect(() => {
@@ -61,13 +96,31 @@ export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnv
     if (!completo || !numero || enviando) return;
     onEnviar({
       contacto: { nombre: nombre.trim(), whatsapp: numero },
-      respuestas: preguntas.map((p) => ({
-        question_id: p.id,
-        question: p.titulo,
-        answer: p.opciones.find((o) => o.valor === elegidas[p.id])?.etiqueta ?? elegidas[p.id],
-      })),
+      respuestas: [
+        ...preguntas.map((p) => ({
+          question_id: p.id,
+          question: p.titulo,
+          answer: p.opciones.find((o) => o.valor === elegidas[p.id])?.etiqueta ?? elegidas[p.id],
+        })),
+        // "alcance-ing-": el panel del ingeniero las pone arriba, con el contacto.
+        ...propias.flatMap((p) => {
+          const r = respuestasPropias[p.id];
+          const respuesta = Array.isArray(r) ? r.join(', ') : (r ?? '').trim();
+          return respuesta ? [{ question_id: `alcance-ing-${p.id}`, question: p.titulo, answer: respuesta }] : [];
+        }),
+      ],
     });
   };
+
+  const alternar = (p: PreguntaPropia, opcion: string) =>
+    setRespuestasPropias((prev) => {
+      if (p.tipo === 'opcion') return { ...prev, [p.id]: opcion };
+      const actuales = Array.isArray(prev[p.id]) ? (prev[p.id] as string[]) : [];
+      return {
+        ...prev,
+        [p.id]: actuales.includes(opcion) ? actuales.filter((o) => o !== opcion) : [...actuales, opcion],
+      };
+    });
 
   return (
     <div
@@ -162,6 +215,57 @@ export function ContactoEncargo({ tipoServicio, objetivo, enviando, error, onEnv
             </div>
           </fieldset>
         ))}
+
+        {propias.length > 0 && (
+          <div className="mt-7 border-t border-line pt-5">
+            <p className="text-sm font-semibold text-ink">
+              Unas preguntas de {ingeniero ? ingeniero.split(' ')[0] : 'tu ingeniero'}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-subtle">Con esto te prepara una propuesta más precisa.</p>
+            {propias.map((p) => (
+              <fieldset key={p.id} className="mt-4">
+                <legend className="mb-2 text-sm font-medium text-ink">
+                  {p.titulo}
+                  {p.tipo === 'multiple' && <span className="font-normal text-ink-subtle"> (puedes marcar varias)</span>}
+                  {p.tipo === 'texto' && <span className="font-normal text-ink-subtle"> (opcional)</span>}
+                </legend>
+                {p.tipo === 'texto' ? (
+                  <textarea
+                    value={(respuestasPropias[p.id] as string | undefined) ?? ''}
+                    onChange={(e) => setRespuestasPropias((prev) => ({ ...prev, [p.id]: e.target.value.slice(0, 500) }))}
+                    rows={2}
+                    className="field w-full"
+                    aria-label={p.titulo}
+                  />
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {(p.opciones ?? []).map((o) => {
+                      const r = respuestasPropias[p.id];
+                      const elegida = Array.isArray(r) ? r.includes(o) : r === o;
+                      return (
+                        <button
+                          key={o}
+                          type="button"
+                          onClick={() => alternar(p, o)}
+                          aria-pressed={elegida}
+                          className={
+                            'rounded-full border px-3.5 py-1.5 text-sm transition-colors ' +
+                            (elegida
+                              ? 'border-accent bg-accent/15 text-ink'
+                              : 'border-line bg-surface-overlay/50 text-ink-muted hover:border-accent/50 hover:text-ink')
+                          }
+                        >
+                          {elegida ? '✓ ' : ''}
+                          {o}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </fieldset>
+            ))}
+          </div>
+        )}
 
         {session?.user.email && (
           <p className="mt-6 text-xs text-ink-subtle">
