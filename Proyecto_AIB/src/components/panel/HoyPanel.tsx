@@ -20,7 +20,9 @@ import {
   misRecordatorios,
   type MisRecordatorios,
 } from '../../lib/recordatorios';
+import type { DestinoPaso } from '../../lib/primerosPasos';
 import { AvatarAbi } from './AvatarAbi';
+import { PrimerosPasos } from './PrimerosPasos';
 import { ChatAbi } from './ChatAbi';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,7 @@ export function HoyPanel({
   onNuevos,
   conAbi,
   onVerPlan,
+  onIrA,
 }: {
   onEncargos: (destino: IrAEncargos) => void;
   onInvitaciones: () => void;
@@ -57,6 +60,8 @@ export function HoyPanel({
   /** ABI viene con Pro y Negocio. null mientras se consulta el plan. */
   conAbi: boolean | null;
   onVerPlan: () => void;
+  /** Lleva a la pestaña donde se hace cada uno de los primeros pasos. */
+  onIrA: (destino: DestinoPaso) => void;
 }) {
   const [resumen, setResumen] = useState<ResumenHoy | null>(null);
   // Reseñas por pedir, propuestas por vencer y su plan (supabase_recordatorios.sql).
@@ -129,6 +134,8 @@ export function HoyPanel({
           </p>
         </div>
       </header>
+
+      <PrimerosPasos onIrA={onIrA} />
 
       {r.incompleto && (
         <p role="alert" className="mb-6 rounded-lg border border-caution/40 px-4 py-3 text-sm text-caution">

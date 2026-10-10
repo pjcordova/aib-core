@@ -168,6 +168,7 @@ export function PanelIngeniero() {
             onNuevos={setNuevos}
             conAbi={conAbi}
             onVerPlan={() => setPestana('plan')}
+            onIrA={setPestana}
           />
         ) : pestana === 'encargos' ? (
           <EncargosIngenieria

@@ -10,6 +10,7 @@ import {
   textoServicios,
 } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
+import { primerosPasosIngenieros, textoFaltantes, type Paso } from '../../lib/primerosPasos';
 import { FormularioPerfil } from '../ingenieros/FormularioPerfil';
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
 import { AvisosWhatsapp } from '../ingenieros/AvisosWhatsapp';
@@ -83,6 +84,8 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
 
 function EquipoAdmin() {
   const [lista, setLista] = useState<IngenieroAdmin[] | null | undefined>(undefined);
+  // Cuánto le falta a cada uno para empezar a recibir clientes.
+  const [pasos, setPasos] = useState<Map<string, Paso[]>>(new Map());
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const enlace = `${window.location.origin}/ingenieros`;
@@ -96,6 +99,9 @@ function EquipoAdmin() {
     let vigente = true;
     void ingenierosParaAdmin().then((l) => {
       if (vigente) setLista(l);
+    });
+    void primerosPasosIngenieros().then((p) => {
+      if (vigente) setPasos(p);
     });
     return () => {
       vigente = false;
@@ -186,7 +192,7 @@ function EquipoAdmin() {
           ) : (
             <ul className="space-y-3">
               {equipo.map((ing) => (
-                <FilaIngeniero key={ing.user_id} ing={ing} ocupado={trabajando === ing.user_id}>
+                <FilaIngeniero key={ing.user_id} ing={ing} ocupado={trabajando === ing.user_id} pasos={pasos.get(ing.user_id)}>
                   {ing.estado === 'aprobado' ? (
                     <button type="button" onClick={() => void accion(ing, 'pausar')} className="btn btn-ghost !px-3 !py-1.5 text-xs">
                       Pausar
@@ -215,13 +221,26 @@ function EquipoAdmin() {
 function FilaIngeniero({
   ing,
   ocupado,
+  pasos,
   children,
 }: {
   ing: IngenieroAdmin;
   ocupado: boolean;
+  /** Sus primeros pasos (solo los aprobados o en pausa). */
+  pasos?: Paso[];
   children: ReactNode;
 }) {
-  const chat = ing.whatsapp ? enlaceWhatsapp(ing.whatsapp, `Hola ${ing.nombre.split(' ')[0]}, te escribo de AIB+.`) : null;
+  const primerNombre = ing.nombre.split(' ')[0];
+  const chat = ing.whatsapp ? enlaceWhatsapp(ing.whatsapp, `Hola ${primerNombre}, te escribo de AIB+.`) : null;
+  const hechos = pasos?.filter((p) => p.hecho).length ?? 0;
+  const faltan = pasos && hechos < pasos.length ? textoFaltantes(pasos) : '';
+  const recordarle =
+    faltan && ing.whatsapp
+      ? enlaceWhatsapp(
+          ing.whatsapp,
+          `Hola ${primerNombre}, para que empieces a recibir clientes en AIB+ te falta ${faltan}. Lo haces en un momento desde tu panel, en «Hoy»: ${window.location.origin}/dashboard`
+        )
+      : null;
   return (
     <li className={'card p-4 ' + (ocupado ? 'opacity-60' : '')}>
       <div className="flex items-start gap-3">
@@ -273,10 +292,21 @@ function FilaIngeniero({
               {ing.encargos} {ing.encargos === 1 ? 'encargo' : 'encargos'} · {textoEstrellas(ing.promedio, ing.resenas)}
             </p>
           )}
+          {pasos && pasos.length > 0 && (
+            <p className={'mt-1 text-xs ' + (faltan ? 'text-caution' : 'text-positive')}>
+              Primeros pasos: {hechos} de {pasos.length}
+              {faltan ? ` · le falta ${faltan}` : ' ✓'}
+            </p>
+          )}
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {children}
+        {recordarle && (
+          <a href={recordarle} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-3 !py-1.5 text-xs">
+            Recordarle sus pasos
+          </a>
+        )}
         {chat && (
           <a href={chat} target="_blank" rel="noopener noreferrer" className="btn btn-ghost !px-3 !py-1.5 text-xs">
             Escribirle
