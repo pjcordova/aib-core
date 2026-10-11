@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
@@ -15,7 +15,10 @@ import { PlanesAdmin } from './PlanesAdmin';
 import { miPlan } from '../../lib/planes';
 import { activarModoCliente } from '../../lib/modoCliente';
 
-type Pestana = 'hoy' | 'encargos' | 'ingresos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros' | 'plan';
+// Solo el administrador la abre, y trae los gráficos: se carga aparte.
+const MetricasPanel = lazy(() => import('./MetricasPanel'));
+
+type Pestana = 'hoy' | 'encargos' | 'ingresos' | 'invitaciones' | 'comentarios' | 'catalogo' | 'ingenieros' | 'plan' | 'metricas';
 
 /**
  * Panel del ingeniero. Solo entra quien tiene el rol de ingeniero: antes
@@ -129,6 +132,7 @@ export function PanelIngeniero() {
                   ? (['ingenieros', 'Ingenieros', 'Ingenieros'] as const)
                   : (['ingenieros', 'Mi perfil', 'Perfil'] as const),
                 perfil.esAdmin ? (['plan', 'Planes', 'Planes'] as const) : (['plan', 'Mi plan', 'Plan'] as const),
+                ...(perfil.esAdmin ? ([['metricas', 'Métricas', 'Métricas']] as const) : []),
               ] as const
             ).map(([id, texto, corto]) => (
               <button
@@ -199,6 +203,10 @@ export function PanelIngeniero() {
           <ComentariosPanel />
         ) : pestana === 'ingenieros' ? (
           <IngenierosPanel esAdmin={perfil.esAdmin} />
+        ) : pestana === 'metricas' && perfil.esAdmin ? (
+          <Suspense fallback={<p className="p-6 text-sm text-ink-subtle">Cargando métricas…</p>}>
+            <MetricasPanel />
+          </Suspense>
         ) : (
           <CatalogoPlantillas esAdmin={perfil.esAdmin} />
         )}
