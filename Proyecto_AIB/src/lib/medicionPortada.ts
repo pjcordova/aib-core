@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 // Qué canal trae a los dueños de negocio y hasta dónde llegan
 // (supabase_medicion_portada.sql). El canal va en el enlace que se comparte:
-// aib-core.vercel.app/?c=instagram. No hay cookies ni datos personales: solo
+// aibplus.app/?c=instagram. No hay cookies ni datos personales: solo
 // se cuenta la visita y se guarda el canal en la prueba sin cuenta.
 // ---------------------------------------------------------------------------
 
