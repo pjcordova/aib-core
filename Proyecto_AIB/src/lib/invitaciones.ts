@@ -152,8 +152,13 @@ export async function eliminarInvitacion(id: string): Promise<{ borrados: number
 export type ResultadoEntrada =
   | { estado: 'ok'; negocio: string }
   | { estado: 'no_existe' }
-  /** Hay una cuenta normal abierta: el ingeniero probando su propio enlace. */
-  | { estado: 'con_cuenta' }
+  /**
+   * Hay una cuenta normal abierta: el ingeniero probando su propio enlace, o
+   * el cliente que ya guardó su proyecto (`suyo`: tiene invitación).
+   */
+  | { estado: 'con_cuenta'; suyo: boolean }
+  /** El cliente guardó este proyecto con Google o su correo: se entra con esa cuenta. */
+  | { estado: 'guardada' }
   | { estado: 'error' };
 
 async function reclamar(token: string): Promise<{ estado?: string; negocio?: string } | null> {
@@ -176,8 +181,9 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (session && !session.user.is_anonymous) return { estado: 'con_cuenta' };
+  if (session && !session.user.is_anonymous) return { estado: 'con_cuenta', suyo: (await miInvitacion()) !== null };
 
+  const abrioSesion = !session;
   if (!session) {
     // Antes de abrir una sesión anónima se comprueba el enlace: uno mal copiado
     // o inventado no debe dejar una sesión vacía en Supabase. Si la comprobación
@@ -202,6 +208,11 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
 
   if (resultado?.estado === 'ok') return { estado: 'ok', negocio: resultado.negocio ?? '' };
   if (resultado?.estado === 'no_existe') return { estado: 'no_existe' };
+  if (resultado?.estado === 'guardada') {
+    // La sesión recién abierta no sirve para nada: entrará con su cuenta.
+    if (abrioSesion) await supabase.auth.signOut();
+    return { estado: 'guardada' };
+  }
   return { estado: 'error' };
 }
 

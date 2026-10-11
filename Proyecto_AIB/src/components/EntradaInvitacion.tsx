@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { entrarConInvitacion, type ResultadoEntrada } from '../lib/invitaciones';
 import { Logo } from './ui/Primitives';
+import { AccesoCliente } from './AccesoCliente';
 
 // Una sola entrada por código aunque el efecto se ejecute dos veces (modo
 // estricto de React): dos sesiones anónimas a la vez se pisarían.
@@ -28,12 +29,14 @@ export function EntradaInvitacion() {
   const { token = '' } = useParams();
   const navigate = useNavigate();
   const [resultado, setResultado] = useState<ResultadoEntrada | null>(null);
+  const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {
     let vigente = true;
     void entrarUnaVez(token).then((r) => {
       if (!vigente) return;
-      if (r.estado === 'ok') navigate('/mi-web', { replace: true });
+      // El cliente que ya guardó su proyecto, con su cuenta abierta: directo a él.
+      if (r.estado === 'ok' || (r.estado === 'con_cuenta' && r.suyo)) navigate('/mi-web', { replace: true });
       else setResultado(r);
     });
     return () => {
@@ -57,6 +60,10 @@ export function EntradaInvitacion() {
       titulo: 'Este enlace ya no está disponible',
       detalle: 'Puede que haya caducado o que lo hayan desactivado. Pide a quien te lo envió uno nuevo.',
     },
+    guardada: {
+      titulo: 'Este proyecto ya está guardado',
+      detalle: 'Lo guardaste en tu cuenta. Entra con esa misma cuenta para seguir donde lo dejaste.',
+    },
     con_cuenta: {
       titulo: 'Este enlace es para tu cliente',
       detalle:
@@ -74,7 +81,11 @@ export function EntradaInvitacion() {
         <Logo size={40} />
         <h1 className="mt-6 text-2xl font-semibold text-ink">{textos.titulo}</h1>
         <p className="mt-3 text-sm text-ink-muted">{textos.detalle}</p>
-        {resultado.estado === 'con_cuenta' ? (
+        {resultado.estado === 'guardada' ? (
+          <button type="button" onClick={() => setRecuperando(true)} className="btn btn-primary mt-8 inline-flex">
+            Entrar a mi proyecto
+          </button>
+        ) : resultado.estado === 'con_cuenta' ? (
           <Link to="/dashboard" className="btn btn-primary mt-8 inline-flex">
             Ir a mi panel
           </Link>
@@ -84,6 +95,13 @@ export function EntradaInvitacion() {
           </Link>
         )}
       </div>
+      {recuperando && (
+        <AccesoCliente
+          accion="recuperar"
+          onCerrar={() => setRecuperando(false)}
+          onListo={() => navigate('/mi-web', { replace: true })}
+        />
+      )}
     </div>
   );
 }

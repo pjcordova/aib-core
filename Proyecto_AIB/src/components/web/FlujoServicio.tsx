@@ -88,6 +88,8 @@ interface Props {
   onEmpezar?: (empresa: string) => void;
   /** Avisa al padre cuando el proyecto queda guardado, para refrescar listas. */
   onGuardado?: () => void;
+  /** El encargo llegó a su ingeniero: el momento de ofrecerle guardar su proyecto. */
+  onEnviado?: () => void;
 }
 
 /**
@@ -99,7 +101,7 @@ interface Props {
  * con su nombre y sus colores; elegir una es elegir a quien la construye. Si
  * aún no hay ninguna, o ninguna le convence, la IA arma un prototipo.
  */
-export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEmpezar, onGuardado }: Props) {
+export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEmpezar, onGuardado, onEnviado }: Props) {
   const servicio = obtenerServicio(tipo);
   const nombre = tipo === 'otro' && otro ? otro : servicio.nombre;
   const clave = claveServicio(tipo, otro);
@@ -374,6 +376,7 @@ export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEm
     setPidiendoContacto(false);
     setAceptacion('aceptado');
     onGuardado?.();
+    onEnviado?.();
   };
 
   /* ------------------------------------------------------------- pantallas */

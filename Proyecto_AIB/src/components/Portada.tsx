@@ -22,6 +22,8 @@ import { obtenerServicio, solesEnteros, type TipoServicio } from '../lib/servici
 import { servicioDeBusqueda, vitrinaPortada, type DisenoVitrina, type Vitrina } from '../lib/vitrina';
 import { FotoIngeniero, TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { PiePagina } from './ui/PiePagina';
+import { AccesoCliente } from './AccesoCliente';
+import { hayAcceso, useAccesos } from '../lib/cuentaCliente';
 
 type Acceso = 'login' | 'registro';
 type Clave = Exclude<TipoServicio, 'otro'>;
@@ -79,6 +81,9 @@ const PREGUNTAS = [
     pregunta: '¿Tengo que crear una cuenta?',
     respuesta:
       'No. Pulsas «Pruébalo gratis» y empiezas. Si vuelves desde el mismo navegador, tu proyecto te estará esperando.',
+    // Cuando ya se puede guardar con Google o con el correo (cuentaCliente.ts).
+    respuestaConCuenta:
+      'No. Pulsas «Pruébalo gratis» y empiezas. Al enviar tu encargo puedes guardarlo en tu cuenta, sin contraseña, y verlo desde cualquier celular o computadora.',
   },
   {
     pregunta: '¿Cómo elijo a mi ingeniero?',
@@ -100,13 +105,19 @@ const PREGUNTAS = [
 export function Portada({
   onAcceso,
   continuar,
+  conCuenta = false,
 }: {
   onAcceso: (modo: Acceso) => void;
   /** Quien ya tiene una prueba o una invitación abierta: vuelve a ella. */
   continuar?: () => void;
+  /** El cliente que guardó su proyecto con su cuenta: ya está dentro, no «ingresa». */
+  conCuenta?: boolean;
 }) {
   const navigate = useNavigate();
   const medir = !continuar;
+  // «Recupera tu proyecto»: quien lo guardó con Google o su correo, desde otro dispositivo.
+  const [recuperando, setRecuperando] = useState(false);
+  const puedeRecuperar = hayAcceso(useAccesos());
 
   /**
    * Sin cuenta, /probar abre una sesión de prueba; con una ya abierta, se
@@ -181,13 +192,15 @@ export function Portada({
                 {texto}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => onAcceso('login')}
-              className={continuar ? 'text-sm text-ink-muted hover:text-ink' : 'btn btn-ghost'}
-            >
-              Ingresar
-            </button>
+            {!conCuenta && (
+              <button
+                type="button"
+                onClick={() => onAcceso('login')}
+                className={continuar ? 'text-sm text-ink-muted hover:text-ink' : 'btn btn-ghost'}
+              >
+                Ingresar
+              </button>
+            )}
             {continuar && (
               <button type="button" onClick={continuar} className="btn btn-primary">
                 <span className="sm:hidden">Mi proyecto</span>
@@ -240,6 +253,15 @@ export function Portada({
                 </li>
               ))}
             </ul>
+
+            {!continuar && puedeRecuperar && (
+              <p className="mt-5 text-sm text-ink-muted">
+                ¿Ya empezaste un proyecto?{' '}
+                <button type="button" onClick={() => setRecuperando(true)} className="font-medium text-accent hover:underline">
+                  Recupéralo aquí
+                </button>
+              </p>
+            )}
           </div>
 
           <Destacado diseno={destacado} cargando={vitrina === undefined} />
@@ -368,7 +390,9 @@ export function Portada({
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-ink-muted">{p.respuesta}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                    {puedeRecuperar && 'respuestaConCuenta' in p ? p.respuestaConCuenta : p.respuesta}
+                  </p>
                 </details>
               ))}
             </div>
@@ -410,6 +434,17 @@ export function Portada({
           Pruébalo gratis
         </button>
       </div>
+
+      {recuperando && (
+        <AccesoCliente
+          accion="recuperar"
+          onCerrar={() => setRecuperando(false)}
+          onListo={() => {
+            setRecuperando(false);
+            navigate('/mi-web');
+          }}
+        />
+      )}
     </div>
   );
 }

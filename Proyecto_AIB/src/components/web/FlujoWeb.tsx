@@ -57,6 +57,8 @@ type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 interface Props {
   /** Avisa al padre cuando el proyecto queda guardado, para refrescar listas. */
   onGuardado?: () => void;
+  /** El encargo llegó a su ingeniero: el momento de ofrecerle guardar su proyecto. */
+  onEnviado?: () => void;
   /** Nombre del negocio ya conocido (cliente invitado): se rellena, editable. */
   empresaInicial?: string;
   /** El cliente pasó la primera pregunta. Se avisa una vez, con el nombre de su negocio. */
@@ -82,7 +84,7 @@ const MIN_RUBRO = 10;
  * solo entonces la IA escribe sus textos. Si ninguna encaja, o prefiere algo a
  * medida, se genera una maqueta nueva como antes.
  */
-export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngeniero = true }: Props) {
+export function FlujoWeb({ onGuardado, onEnviado, empresaInicial, onEmpezar, elegirIngeniero = true }: Props) {
   const [paso, setPaso] = useState(0);
   const [fase, setFase] = useState<Fase>('preguntas');
   // Prueba de precio: el precio que le tocó a este cliente (null si no hay).
@@ -403,6 +405,7 @@ export function FlujoWeb({ onGuardado, empresaInicial, onEmpezar, elegirIngenier
     setAceptacion('aceptado');
     registrarProgreso(sesion, 'acepto');
     onGuardado?.();
+    onEnviado?.();
   };
 
   /**

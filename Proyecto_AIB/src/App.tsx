@@ -22,6 +22,8 @@ import {
 import { registrarEvento } from './lib/catalogo';
 import { elegirIngeniero as asignarIngeniero } from './lib/ingenieros';
 import { miInvitacion, registrarInicioInvitacion, type MiInvitacion } from './lib/invitaciones';
+import { hayAcceso, marcarOfrecido, retomarAcceso, tieneProyectos, useAccesos, yaSeOfrecio } from './lib/cuentaCliente';
+import { AccesoCliente } from './components/AccesoCliente';
 import { leerModoCliente, salirModoCliente } from './lib/modoCliente';
 import { serviciosParaCliente, type ServiciosCliente } from './lib/formularios';
 import { SERVICIOS, claveServicio, obtenerServicio, type Paleta, type Servicio, type TipoServicio } from './lib/servicios';
@@ -101,20 +103,81 @@ export default function Home() {
     }
   }, []);
 
-  // Cliente que entró con el enlace de un ingeniero: sesión anónima, sin
-  // cuenta. Ve los servicios de su ingeniero, con la bienvenida de su invitación.
-  const esInvitado = session?.user.is_anonymous === true;
-  const [invitacion, setInvitacion] = useState<MiInvitacion | null | undefined>(undefined);
+  // Cliente que entró con el enlace de un ingeniero o con «Pruébalo gratis»:
+  // ve los servicios de su ingeniero, con la bienvenida de su invitación.
+  // Empieza sin cuenta (sesión anónima) y puede guardarlo con Google o con su
+  // correo: sigue siendo el mismo cliente, ya con cuenta.
+  const esAnonimo = session?.user.is_anonymous === true;
+  // De quién es la invitación leída: al cambiar de usuario (entró a su cuenta)
+  // no se usa la del anterior mientras llega la suya.
+  const [leida, setLeida] = useState<{ de: string; inv: MiInvitacion | null } | null>(null);
+  const [versionInvitacion, setVersionInvitacion] = useState(0);
+  const usuarioId = session?.user.id;
   useEffect(() => {
-    if (!esInvitado) return;
+    if (!usuarioId) return;
     let vigente = true;
     void miInvitacion().then((inv) => {
-      if (vigente) setInvitacion(inv);
+      if (vigente) setLeida({ de: usuarioId, inv });
     });
     return () => {
       vigente = false;
     };
-  }, [esInvitado, session?.user.id]);
+  }, [usuarioId, versionInvitacion]);
+  const invitacion = leida && leida.de === usuarioId ? leida.inv : undefined;
+  const clienteConCuenta = !esAnonimo && !!invitacion && !perfil.cargando && perfil.rol === 'cliente';
+  const esInvitado = esAnonimo || clienteConCuenta;
+
+  // Guardar el proyecto: se ofrece al enviar el encargo, y queda un botón.
+  // De quién: si entra a otra cuenta, la ventana ya no tiene nada que hacer
+  // (el aviso lo pone onListo).
+  const [guardando, setGuardando] = useState<{ modo: 'boton' | 'enviado'; de: string } | null>(null);
+  const [tieneProyecto, setTieneProyecto] = useState(false);
+  // Solo si ya hay con qué (Google activado o correo con Resend).
+  const accesos = useAccesos();
+  const puedeGuardar = tieneProyecto && hayAcceso(accesos);
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
+  useEffect(() => {
+    if (!esAnonimo) return;
+    let vigente = true;
+    void tieneProyectos().then((si) => {
+      if (vigente) setTieneProyecto(si);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [esAnonimo, versionLista]);
+  const ofrecerGuardar = useCallback(() => {
+    if (yaSeOfrecio() || !usuarioId || !hayAcceso(accesos)) return;
+    marcarOfrecido();
+    setGuardando({ modo: 'enviado', de: usuarioId });
+  }, [usuarioId, accesos]);
+
+  // Al volver de Google o del enlace del correo: termina lo que quedó a medias.
+  const [retomado, setRetomado] = useState(false);
+  useEffect(() => {
+    if (initializing || retomado) return;
+    let vigente = true;
+    void retomarAcceso(esAnonimo).then((r) => {
+      if (!vigente) return;
+      setRetomado(true);
+      if (r.estado === 'listo') {
+        setAviso({
+          ok: true,
+          texto:
+            r.accion === 'guardar'
+              ? `Tu proyecto quedó guardado con tu ${r.via === 'google' ? 'cuenta de Google' : 'correo'}. Para volver desde cualquier celular o computadora, entra a AIB+ y toca «Recupera tu proyecto».`
+              : '¡Hola de nuevo! Aquí está tu proyecto.',
+        });
+        setVersionInvitacion((v) => v + 1);
+        setVersionLista((v) => v + 1);
+      } else if (r.estado === 'error') {
+        setAviso({ ok: false, texto: r.mensaje });
+      }
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [initializing, retomado, esAnonimo]);
 
   useEffect(() => {
     if (!session) return;
@@ -161,28 +224,35 @@ export default function Home() {
     );
   }
 
-  if (esInvitado && !enMiWeb) {
-    return (
-      <Portada onAcceso={(modo) => void ingresarConCuenta(true, modo)} continuar={() => navigate('/mi-web')} />
-    );
-  }
-  if (!esInvitado && enMiWeb) return <Navigate to="/" replace />;
-
-  // Esperar al rol evita que el ingeniero vea un instante la pantalla del cliente.
-  if (!esInvitado && perfil.cargando) {
+  // Con cuenta, hasta saber su rol y si tiene invitación no se decide nada:
+  // evita que el ingeniero vea un instante la pantalla del cliente, y que el
+  // cliente que guardó su proyecto vea la de un cliente sin invitación.
+  if (!esAnonimo && (perfil.cargando || invitacion === undefined)) {
     return (
       <div className="grid min-h-screen place-items-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
       </div>
     );
   }
+
+  if (esInvitado && !enMiWeb) {
+    return (
+      <Portada
+        // Con su proyecto guardado ya está dentro: «Ingresar» lo lleva a él.
+        onAcceso={clienteConCuenta ? () => navigate('/mi-web') : (modo) => void ingresarConCuenta(true, modo)}
+        continuar={() => navigate('/mi-web')}
+        conCuenta={clienteConCuenta}
+      />
+    );
+  }
+  if (!esInvitado && enMiWeb) return <Navigate to="/" replace />;
 
   // Su portada es el panel, con ABI.
   if (!esInvitado && perfil.rol === 'ingeniero' && !modoCliente) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (esInvitado && invitacion === undefined) {
+  if (esAnonimo && invitacion === undefined) {
     return (
       <div className="grid min-h-screen place-items-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
@@ -190,7 +260,7 @@ export default function Home() {
     );
   }
 
-  if (esInvitado && !invitacion?.activa) {
+  if (esAnonimo && !invitacion?.activa) {
     // null: el enlace se abrió en otro navegador y la sesión pasó allí.
     return <InvitacionInactiva enOtroNavegador={invitacion === null} onIngresar={() => void ingresarConCuenta(false)} />;
   }
@@ -231,6 +301,7 @@ export default function Home() {
     setPidiendoContacto(false);
     setAceptacionAbierto('aceptado');
     refrescarLista();
+    if (esAnonimo) ofrecerGuardar();
   };
 
   /** Cambios a mano en un proyecto reabierto: igual que en el flujo, sin IA. */
@@ -325,7 +396,14 @@ export default function Home() {
                   <span className="hidden sm:inline">Página principal</span>
                 </Link>
               )}
-              {esInvitado && (
+              {/* Con un proyecto ya hecho, lo que le sirve es guardarlo. */}
+              {esAnonimo && puedeGuardar && (
+                <button type="button" onClick={() => setGuardando({ modo: 'boton', de: session.user.id })} className="btn btn-primary">
+                  <span className="sm:hidden">Guardar</span>
+                  <span className="hidden sm:inline">Guardar mi proyecto</span>
+                </button>
+              )}
+              {esAnonimo && !puedeGuardar && (
                 <button
                   type="button"
                   onClick={() => void ingresarConCuenta(true)}
@@ -334,7 +412,7 @@ export default function Home() {
                   <span className="hidden sm:inline">¿Tienes cuenta? </span>Ingresar
                 </button>
               )}
-              {!esInvitado && (
+              {!esAnonimo && (
                 <>
                   <span className="hidden text-sm text-ink-subtle lg:inline">{session.user.email}</span>
                   <button type="button" onClick={signOut} className="btn btn-ghost">
@@ -349,6 +427,23 @@ export default function Home() {
 
       <main>
         <Shell>
+          {aviso && (
+            <div
+              role="status"
+              className={
+                'mt-4 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ' +
+                (aviso.ok ? 'border-positive/30 bg-positive/10 text-ink' : 'border-negative/30 bg-negative/10 text-negative')
+              }
+            >
+              <p>
+                {aviso.ok && '✓ '}
+                {aviso.texto}
+              </p>
+              <button type="button" onClick={() => setAviso(null)} className="shrink-0 text-ink-muted hover:text-ink" aria-label="Cerrar aviso">
+                ✕
+              </button>
+            </div>
+          )}
           {abierto ? (
             <>
               {abierto.aceptado && (
@@ -390,6 +485,7 @@ export default function Home() {
           ) : tipoActivo === 'web' ? (
             <FlujoWeb
               onGuardado={refrescarLista}
+              onEnviado={esAnonimo ? ofrecerGuardar : undefined}
               empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
               elegirIngeniero={!vinoConSuIngeniero}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
@@ -403,11 +499,13 @@ export default function Home() {
               conSuIngeniero={vinoConSuIngeniero}
               onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
               onGuardado={refrescarLista}
+              onEnviado={esAnonimo ? ofrecerGuardar : undefined}
             />
           ) : esInvitado ? (
             <BienvenidaInvitado
               negocio={invitacion?.negocio ?? null}
               desdePortada={invitacion?.origen === 'portada'}
+              conCuenta={clienteConCuenta}
               ingeniero={invitacion?.origen === 'ingeniero' ? (invitacion?.ingeniero ?? null) : null}
               servicios={servicios}
               otros={disponibles?.otros ?? []}
@@ -469,6 +567,25 @@ export default function Home() {
           onCancelar={() => setPidiendoContacto(false)}
         />
       )}
+      {/* Sigue abierta aunque la sesión deje de ser anónima: el aviso lo pone onListo. */}
+      {guardando && guardando.de === usuarioId && (
+        <AccesoCliente
+          accion="guardar"
+          trasEnviar={guardando.modo === 'enviado'}
+          onCerrar={() => setGuardando(null)}
+          onListo={({ correo, yaTeniaCuenta }) => {
+            setGuardando(null);
+            setAviso({
+              ok: true,
+              texto: `${yaTeniaCuenta ? 'Entraste a tu cuenta y trajimos este proyecto.' : 'Tu proyecto quedó guardado.'} Para volver desde cualquier celular o computadora, entra a AIB+, toca «Recupera tu proyecto» y usa ${correo}.`,
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Si entró a una cuenta que ya tenía, su invitación y sus proyectos son otros.
+            setVersionInvitacion((v) => v + 1);
+            refrescarLista();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -482,6 +599,7 @@ export default function Home() {
 function BienvenidaInvitado({
   negocio,
   desdePortada,
+  conCuenta,
   ingeniero,
   servicios,
   otros,
@@ -493,6 +611,8 @@ function BienvenidaInvitado({
   negocio: string | null;
   /** Llegó por «Pruébalo gratis», no con un enlace del ingeniero. */
   desdePortada: boolean;
+  /** Ya guardó su proyecto con Google o su correo. */
+  conCuenta: boolean;
   /** El nombre de su ingeniero, si llegó con su enlace o desde su página. */
   ingeniero: string | null;
   servicios: Servicio[];
@@ -527,9 +647,11 @@ function BienvenidaInvitado({
         <EleccionServicio servicios={servicios} otros={otros} onElegir={onElegir} />
       )}
       <p className="mt-4 text-xs text-ink-subtle">
-        {desdePortada
-          ? 'Puedes volver cuando quieras desde este mismo navegador.'
-          : 'Puedes volver cuando quieras con el mismo enlace.'}
+        {conCuenta
+          ? 'Tu proyecto está guardado en tu cuenta: vuelve cuando quieras, desde cualquier dispositivo.'
+          : desdePortada
+            ? 'Puedes volver desde este mismo navegador, o guardar tu proyecto para verlo en cualquier dispositivo.'
+            : 'Puedes volver cuando quieras con el mismo enlace.'}
       </p>
 
       {cargandoProyecto ? (
@@ -546,6 +668,8 @@ function BienvenidaInvitado({
  * invitación pasó allí) o el ingeniero la desactivó.
  */
 function InvitacionInactiva({ enOtroNavegador, onIngresar }: { enOtroNavegador: boolean; onIngresar: () => void }) {
+  const [recuperando, setRecuperando] = useState(false);
+  const puedeRecuperar = hayAcceso(useAccesos());
   return (
     <div className="grid min-h-screen place-items-center px-6">
       <div className="max-w-md text-center">
@@ -554,13 +678,26 @@ function InvitacionInactiva({ enOtroNavegador, onIngresar }: { enOtroNavegador: 
         </h1>
         <p className="mt-3 text-sm text-ink-muted">
           {enOtroNavegador
-            ? 'Tu proyecto sigue allí. Para continuar aquí, vuelve a abrir el enlace de tu invitación.'
+            ? `Tu proyecto sigue allí. Para continuar aquí, vuelve a abrir el enlace de tu invitación${puedeRecuperar ? ' o, si lo guardaste en tu cuenta, recupéralo' : ''}.`
             : 'Pide a quien te envió el enlace que te mande uno nuevo.'}
         </p>
-        <button type="button" onClick={onIngresar} className="mt-6 text-sm text-ink-muted underline underline-offset-2 hover:text-ink">
-          ¿Tienes cuenta? Ingresar
+        {enOtroNavegador && puedeRecuperar && (
+          <button type="button" onClick={() => setRecuperando(true)} className="btn btn-primary mt-6">
+            Recuperar mi proyecto
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onIngresar}
+          className="mx-auto mt-6 block text-sm text-ink-muted underline underline-offset-2 hover:text-ink"
+        >
+          ¿Eres ingeniero? Ingresar
         </button>
       </div>
+      {/* Al entrar a su cuenta, la app pasa sola a su proyecto. */}
+      {recuperando && (
+        <AccesoCliente accion="recuperar" onCerrar={() => setRecuperando(false)} onListo={() => setRecuperando(false)} />
+      )}
     </div>
   );
 }
