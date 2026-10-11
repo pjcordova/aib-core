@@ -387,6 +387,17 @@ export async function avisarPedidoPlan(): Promise<void> {
 }
 
 /**
+ * Hubo un cambio en un encargo (etapa nueva, propuesta enviada) o un cliente
+ * guardó su proyecto: el servidor envía los correos pendientes a los clientes
+ * (supabase_avisos_cliente.sql). Si falla, el resumen diario los envía igual.
+ */
+export function despertarAvisosCliente(): void {
+  void fetch(`${API_URL}/api/avisos/clientes`, { method: 'POST', signal: AbortSignal.timeout(20_000) }).catch(() => {
+    // Sin efecto: lo pendiente sale con el resumen diario.
+  });
+}
+
+/**
  * El cliente respondió una propuesta: el servidor avisa a su ingeniero por
  * WhatsApp. No pide sesión (el cliente puede no tener cuenta): basta el token,
  * y el servidor solo avisa si hay una respuesta sin avisar. Si falla, el

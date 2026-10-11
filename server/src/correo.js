@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // Correo saliente (Resend)
 // ---------------------------------------------------------------------------
-// Solo se usa para avisar al ingeniero. Todo lo que se inserta en el correo
-// viene del cliente, así que se escapa: un nombre de negocio no puede colar
-// HTML en la bandeja del ingeniero.
+// Avisa al ingeniero de un encargo nuevo y al cliente de cómo avanza el suyo
+// (avisosCliente.js). Lo que se inserta en el correo viene de los usuarios,
+// así que se escapa: un nombre de negocio no puede colar HTML en una bandeja.
 // ---------------------------------------------------------------------------
 
 const { config } = require('./config');
@@ -14,11 +14,18 @@ const escapar = (valor) => String(valor ?? '').replace(/[&<>"']/g, (c) => ENTIDA
 /** Una línea de asunto: sin saltos de línea y con un largo razonable. */
 const unaLinea = (valor, max = 120) => String(valor ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
 
+/** Si se puede avisar al administrador por correo. */
 function correoConfigurado() {
   return Boolean(config.avisos.resendApiKey && config.avisos.para);
 }
 
-async function enviarCorreo({ asunto, html, texto }) {
+/** Si hay con qué enviar correos (la clave de Resend). */
+function resendConfigurado() {
+  return Boolean(config.avisos.resendApiKey);
+}
+
+/** @param {{ para?: string, asunto: string, html: string, texto: string }} correo Sin `para`, va al administrador. */
+async function enviarCorreo({ para = config.avisos.para, asunto, html, texto }) {
   const respuesta = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -27,7 +34,7 @@ async function enviarCorreo({ asunto, html, texto }) {
     },
     body: JSON.stringify({
       from: config.avisos.remitente,
-      to: [config.avisos.para],
+      to: [para],
       subject: unaLinea(asunto),
       html,
       text: texto,
@@ -40,4 +47,4 @@ async function enviarCorreo({ asunto, html, texto }) {
   }
 }
 
-module.exports = { correoConfigurado, enviarCorreo, escapar, unaLinea };
+module.exports = { correoConfigurado, resendConfigurado, enviarCorreo, escapar, unaLinea };

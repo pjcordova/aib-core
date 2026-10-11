@@ -19,6 +19,7 @@ const { Router } = require('express');
 const { config } = require('../config');
 const { whatsappConfigurado, enviarWhatsapp } = require('../whatsapp');
 const { consultarComo } = require('../supabaseUsuario');
+const { enviarAvisosCliente } = require('../avisosCliente');
 
 const router = Router();
 
@@ -231,9 +232,11 @@ router.get('/abi/resumen-diario', async (req, res, next) => {
       console.error('[AIB+] No se pudieron preparar los recordatorios:', error.message);
       return { error: error.message };
     });
+    // Por si algún aviso al cliente se quedó sin enviar (el navegador no llegó a despertarlo).
+    const avisosCliente = prueba ? 0 : await enviarAvisosCliente();
     if (admin.error && ingenieros.error) return res.status(500).json({ success: false, error: admin.error });
     // Lo del administrador, como antes, más lo de los demás ingenieros y los recordatorios.
-    return res.json({ success: !admin.error, ...admin, ingenieros, recordatorios: avisos });
+    return res.json({ success: !admin.error, ...admin, ingenieros, recordatorios: avisos, avisosCliente });
   } catch (error) {
     return next(error);
   }

@@ -200,7 +200,7 @@ export function AccesoCliente({
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
               {guardar
-                ? 'Así lo sigues desde cualquier celular o computadora y ves cómo avanza tu encargo. No necesitas contraseña.'
+                ? 'Así lo sigues desde cualquier celular o computadora, y te avisamos por correo cada vez que tu encargo avance. No necesitas contraseña.'
                 : `Entra con ${accesos?.correo ? 'el Google o el correo' : 'la cuenta de Google'} con ${accesos?.correo ? 'el' : 'la'} que lo guardaste. No necesitas contraseña.`}
             </p>
 

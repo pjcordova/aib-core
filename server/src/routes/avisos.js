@@ -13,11 +13,13 @@ const { requireAuth } = require('../auth');
 const { correoConfigurado, enviarCorreo, escapar } = require('../correo');
 const { whatsappConfigurado, enviarWhatsapp } = require('../whatsapp');
 const { consultarComo } = require('../supabaseUsuario');
+const { enviarAvisosCliente } = require('../avisosCliente');
 
 const router = Router();
 
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'avisar-encargo' });
 const limitarPrueba = crearLimitador({ maxPorMinuto: 3, nombre: 'probar-whatsapp' });
+const limitarClientes = crearLimitador({ maxPorMinuto: 20, nombre: 'avisos-cliente' });
 
 /**
  * Datos que solo el servidor puede pedir: los protege la misma clave secreta
@@ -180,6 +182,8 @@ router.post('/avisar-encargo', limitar, requireAuth, async (req, res, next) => {
       }
     });
     console.log(`[AIB+] Aviso de encargo ${proyectoId.slice(0, 8)}:`, JSON.stringify(avisado));
+    // Y al cliente, si ya tiene cuenta: «Tu encargo llegó a tu ingeniero».
+    await enviarAvisosCliente();
     return res.json({ success: true, avisado });
   } catch (error) {
     // El encargo ya está aceptado y guardado: un fallo aquí solo significa que
@@ -276,6 +280,9 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
         ? `🎉 *${negocio} aceptó tu propuesta* de S/ ${datos.precio}.\n\nEl encargo pasó a «En desarrollo». Míralo en tu panel: ${panel}`
         : `✏️ *${negocio} pidió cambios en tu propuesta*:\n«${comentario}»\n\nEnvíale una nueva desde tu panel: ${panel}`;
 
+    // El cliente aceptó: su encargo pasó a «En desarrollo» y se lo confirmamos por correo.
+    await enviarAvisosCliente();
+
     // El administrador recibe sus avisos en el WhatsApp del servidor; los demás, en el suyo.
     if (datos.es_admin) {
       if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
@@ -290,6 +297,17 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
     console.error('[AIB+] No se pudo avisar de la respuesta a la propuesta:', error.message);
     return next(error);
   }
+});
+
+/**
+ * Hubo un cambio en un encargo (etapa nueva, propuesta enviada, cuenta
+ * guardada): se envían los avisos pendientes a los clientes. No pide sesión ni
+ * datos: solo despierta el envío, y la base de datos decide qué falta enviar
+ * y no repite nada.
+ */
+router.post('/avisos/clientes', limitarClientes, async (_req, res) => {
+  const enviados = await enviarAvisosCliente();
+  return res.json({ success: true, enviados });
 });
 
 module.exports = router;

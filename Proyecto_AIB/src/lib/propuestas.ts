@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
+import { despertarAvisosCliente } from './api';
 
 export type EstadoPropuesta = 'enviada' | 'aceptada' | 'cambios' | 'retirada' | 'reemplazada' | 'vencida';
 
@@ -137,6 +138,8 @@ export async function enviarPropuesta(
     };
   }
   const r = data as { estado: 'ok' | 'no_existe' | 'ya_aceptada'; token?: string };
+  // La etapa pasó a «Propuesta enviada»: si el cliente tiene cuenta, le llega por correo.
+  if (r.estado === 'ok') despertarAvisosCliente();
   return r;
 }
 

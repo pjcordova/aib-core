@@ -21,6 +21,7 @@
 import { useEffect, useState } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { despertarAvisosCliente } from './api';
 
 const CLAVE = 'aib-acceso-cliente';
 /** Lo apuntado caduca a la hora, como el código de traspaso. */
@@ -279,6 +280,8 @@ export async function confirmarCodigo(
   // Un token nuevo, que ya dice que no es anónima.
   await supabase.auth.refreshSession();
   await terminarTraspaso();
+  // Ya tiene correo: si su encargo tenía novedades esperando, le llegan ahora.
+  despertarAvisosCliente();
   return { error: null };
 }
 
@@ -290,6 +293,7 @@ export async function revisarSiSeGuardo(): Promise<boolean> {
   const { data, error } = await supabase.auth.refreshSession();
   if (error || !data.session || data.session.user.is_anonymous) return false;
   olvidar();
+  despertarAvisosCliente();
   return true;
 }
 
@@ -372,5 +376,6 @@ async function retomar(anonima: boolean): Promise<Retomado> {
 
   if (!pendiente || anonima) return { estado: 'nada' };
   await terminarTraspaso();
+  despertarAvisosCliente();
   return { estado: 'listo', accion: pendiente.accion, via: pendiente.via };
 }

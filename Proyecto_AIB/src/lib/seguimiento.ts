@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
+import { despertarAvisosCliente } from './api';
 import type { TipoServicio } from './servicios';
 
 export type EstadoEncargo = 'recibido' | 'en_revision' | 'propuesta_enviada' | 'en_desarrollo' | 'publicada';
@@ -103,6 +104,8 @@ export async function cambiarEstado(
     console.error('[AIB+] No se pudo cambiar el estado:', error?.message);
     return { cambio: null, error: 'No se pudo guardar la etapa. Vuelve a intentarlo.' };
   }
+  // Si el cliente tiene cuenta, le llega un correo con la etapa nueva.
+  despertarAvisosCliente();
   return {
     cambio: { estado: data.estado, nota: (data.nota as string | null) ?? null, creadoEn: data.created_at as string },
     error: null,

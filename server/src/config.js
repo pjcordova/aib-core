@@ -92,14 +92,15 @@ const config = {
 
   isProduction: process.env.NODE_ENV === 'production',
 
-  // Aviso por correo al ingeniero cuando entra un encargo (Resend). Opcional:
-  // sin estas dos variables no se envía nada y el resto funciona igual.
-  // Sin dominio propio verificado en Resend, AVISOS_CORREO tiene que ser el
-  // correo de la cuenta de Resend.
+  // Correo con Resend: al administrador cuando entra un encargo (si hay
+  // AVISOS_CORREO) y a los clientes cuando avanza el suyo. Sin RESEND_API_KEY
+  // no se envía ningún correo y el resto funciona igual.
   avisos: {
     resendApiKey: process.env.RESEND_API_KEY?.trim() || null,
     para: process.env.AVISOS_CORREO?.trim() || null,
-    remitente: process.env.AVISOS_REMITENTE?.trim() || 'AIB+ <onboarding@resend.dev>',
+    // El dominio aibplus.app está verificado en Resend; las respuestas llegan
+    // al Gmail del dueño (ImprovMX).
+    remitente: process.env.AVISOS_REMITENTE?.trim() || 'AIB+ <contacto@aibplus.app>',
 
     // WhatsApp al ingeniero con CallMeBot (gratis, solo para avisarse a uno
     // mismo). Número con código de país y sin símbolos: 51987654321.
