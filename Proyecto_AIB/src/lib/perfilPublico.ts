@@ -46,6 +46,8 @@ export interface PerfilPublico {
   ciudad: string | null;
   portafolio_url: string | null;
   foto_url: string | null;
+  /** Tiene la insignia «Verificado». */
+  verificado?: boolean;
   promedio: number | null;
   resenas: number;
   /** Webs suyas que ya están publicadas. */

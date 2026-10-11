@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { textoEstrellas, textoServicios, type IngenieroPublico } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
+import { InsigniaVerificado } from '../ui/InsigniaVerificado';
 
 const etiquetaRubro = (valor: string) => CATEGORIAS_NEGOCIO.find((c) => c.valor === valor)?.etiqueta ?? valor;
 
@@ -64,7 +65,10 @@ export function TarjetaIngeniero({
       <div className="flex items-start gap-4">
         <FotoIngeniero nombre={ingeniero.nombre} foto={ingeniero.foto_url} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg">{ingeniero.nombre}</h3>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 className="truncate text-lg">{ingeniero.nombre}</h3>
+            {ingeniero.verificado && <InsigniaVerificado />}
+          </div>
           <p className="text-sm text-ink-muted">{ingeniero.titular}</p>
           <p className="mt-1 text-sm">
             <span className={ingeniero.resenas ? 'font-semibold text-ink' : 'text-ink-subtle'}>

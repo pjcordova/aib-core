@@ -3,7 +3,9 @@ import { formatearWhatsapp, enlaceWhatsapp } from '../../lib/contacto';
 import {
   ingenierosParaAdmin,
   miPerfilIngeniero,
+  miVerificacion,
   revisarIngeniero,
+  verificarIngeniero,
   textoEstrellas,
   type IngenieroAdmin,
   type MiPerfil,
@@ -16,6 +18,9 @@ import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
 import { AvisosWhatsapp } from '../ingenieros/AvisosWhatsapp';
 import { TuPaginaPublica } from '../ingenieros/TuPaginaPublica';
 import { MisTrabajos } from '../ingenieros/MisTrabajos';
+import { InsigniaVerificado, QUE_ES_VERIFICADO } from '../ui/InsigniaVerificado';
+import { pedirVerificacion } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Ingenieros del marketplace
@@ -63,6 +68,7 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
         </p>
       )}
       {perfil?.slug && perfil.estado === 'aprobado' && <TuPaginaPublica slug={perfil.slug} />}
+      {perfil?.estado === 'aprobado' && <MiInsignia esAdmin={esAdmin} />}
       {perfil?.estado === 'aprobado' && <MisTrabajos />}
       {perfil === undefined ? (
         <p className="text-sm text-ink-subtle">Cargando…</p>
@@ -114,6 +120,17 @@ function EquipoAdmin() {
     if (que === 'rechazar' && !window.confirm(`¿Rechazar la solicitud de ${ing.nombre}?`)) return;
     setTrabajando(ing.user_id);
     await revisarIngeniero(ing.user_id, que);
+    await cargar();
+    setTrabajando(null);
+  };
+
+  const verificar = async (ing: IngenieroAdmin, si: boolean) => {
+    const pregunta = si
+      ? `¿Verificar a ${ing.nombre}? Hazlo solo si comprobaste su identidad (su DNI en una videollamada) y revisaste al menos un trabajo real suyo.`
+      : `¿Quitarle la insignia «Verificado» a ${ing.nombre}?`;
+    if (!window.confirm(pregunta)) return;
+    setTrabajando(ing.user_id);
+    await verificarIngeniero(ing.user_id, si);
     await cargar();
     setTrabajando(null);
   };
@@ -195,6 +212,15 @@ function EquipoAdmin() {
             <ul className="space-y-3">
               {equipo.map((ing) => (
                 <FilaIngeniero key={ing.user_id} ing={ing} ocupado={trabajando === ing.user_id} pasos={pasos.get(ing.user_id)}>
+                  {ing.verificado_en ? (
+                    <button type="button" onClick={() => void verificar(ing, false)} className="btn btn-ghost !px-3 !py-1.5 text-xs">
+                      Quitar insignia
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => void verificar(ing, true)} className="btn btn-primary !px-3 !py-1.5 text-xs">
+                      Verificar
+                    </button>
+                  )}
                   {ing.estado === 'aprobado' ? (
                     <button type="button" onClick={() => void accion(ing, 'pausar')} className="btn btn-ghost !px-3 !py-1.5 text-xs">
                       Pausar
@@ -252,6 +278,10 @@ function FilaIngeniero({
             <p className="font-semibold text-ink">{ing.nombre}</p>
             {ing.estado === 'pausado' && (
               <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-subtle">Pausado</span>
+            )}
+            {ing.verificado_en && <InsigniaVerificado />}
+            {!ing.verificado_en && ing.verificacion_pedida_en && (
+              <span className="rounded-full bg-caution/15 px-2 py-0.5 text-[11px] font-medium text-ink">Pidió la insignia</span>
             )}
           </div>
           <p className="text-sm text-ink-muted">{ing.titular}</p>
@@ -316,5 +346,84 @@ function FilaIngeniero({
         )}
       </div>
     </li>
+  );
+}
+
+/**
+ * En «Tu perfil»: la insignia «Verificado». Si no la tiene, la pide y al
+ * administrador le llega un WhatsApp. El administrador se la pone él mismo.
+ */
+function MiInsignia({ esAdmin }: { esAdmin: boolean }) {
+  const [estado, setEstado] = useState<{ verificado: boolean; pedidaEn: string | null } | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [mensaje, setMensaje] = useState('');
+
+  useEffect(() => {
+    let vigente = true;
+    void miVerificacion().then((v) => vigente && setEstado(v));
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  if (!estado) return null;
+
+  const pedir = async () => {
+    setEnviando(true);
+    setMensaje('');
+    const r = await pedirVerificacion();
+    setEnviando(false);
+    if (r === 'ok' || r === 'ya_pedida') {
+      setEstado({ ...estado, pedidaEn: estado.pedidaEn ?? new Date().toISOString() });
+      setMensaje(r === 'ok' ? 'Listo: el administrador te escribirá para coordinar la verificación.' : 'Ya la pediste esta semana: el administrador te escribirá.');
+    } else if (r === 'ya_verificado') {
+      setEstado({ verificado: true, pedidaEn: null });
+    } else {
+      setMensaje('No pudimos enviar tu pedido. Vuelve a intentarlo en un momento.');
+    }
+  };
+
+  const marcarme = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    setEnviando(true);
+    if (await verificarIngeniero(user.id, true)) setEstado({ verificado: true, pedidaEn: null });
+    setEnviando(false);
+  };
+
+  return (
+    <div className="card mb-6 p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="flex flex-wrap items-center gap-2 text-xl">
+            Insignia {estado.verificado ? <InsigniaVerificado tamano="md" /> : '«Verificado»'}
+          </h3>
+          <p className="mt-1 max-w-xl text-sm text-ink-muted">
+            {estado.verificado
+              ? `Ya la tienes: sale en tu tarjeta, en tu página y en tus diseños, y apareces antes en las búsquedas. ${QUE_ES_VERIFICADO}`
+              : 'Da más confianza a los clientes y te pone antes en las búsquedas. Para dártela, el administrador comprueba tu identidad (tu DNI en una videollamada corta) y revisa al menos un trabajo real tuyo.'}
+          </p>
+        </div>
+        {!estado.verificado &&
+          (esAdmin ? (
+            <button type="button" onClick={() => void marcarme()} disabled={enviando} className="btn btn-primary">
+              Marcarme como verificado
+            </button>
+          ) : estado.pedidaEn ? (
+            <span className="rounded-full bg-caution/15 px-3 py-1.5 text-xs font-medium text-ink">Pedida: te escribiremos</span>
+          ) : (
+            <button type="button" onClick={() => void pedir()} disabled={enviando} className="btn btn-primary">
+              {enviando ? 'Enviando…' : 'Pedir verificación'}
+            </button>
+          ))}
+      </div>
+      {mensaje && (
+        <p role="status" className="mt-3 text-sm text-ink-muted">
+          {mensaje}
+        </p>
+      )}
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { solesEnteros, type TipoServicio } from '../lib/servicios';
 import { documentoDeVitrina, type DisenoVitrina } from '../lib/vitrina';
 import { MiniVista } from './panel/MiniVista';
 import { FotoIngeniero } from './ingenieros/TarjetaIngeniero';
+import { InsigniaVerificado } from './ui/InsigniaVerificado';
 
 type Clave = Exclude<TipoServicio, 'otro'>;
 
@@ -99,6 +100,12 @@ function TarjetaDiseno({
           <FotoIngeniero nombre={nombre} foto={d.ingeniero.foto_url} tamano={28} />
           <p className="min-w-0 text-xs text-ink-muted">
             Lo construye <span className="font-medium text-ink">{nombre}</span>
+            {d.ingeniero.verificado && (
+              <>
+                {' '}
+                <InsigniaVerificado />
+              </>
+            )}
             <span className="block">{textoEstrellas(d.ingeniero.promedio, d.ingeniero.resenas)}</span>
           </p>
         </div>

@@ -86,6 +86,8 @@ export interface IngenieroPublico {
   servicios?: string[];
   servicios_otros?: string[];
   slug?: string | null;
+  /** Tiene la insignia «Verificado» (supabase_verificados.sql). */
+  verificado?: boolean;
 }
 
 /** Lo que ve el administrador de cada ingeniero o solicitud. */
@@ -100,6 +102,10 @@ export interface IngenieroAdmin extends DatosPerfil {
   promedio: number | null;
   servicios?: string[];
   servicios_otros?: string[];
+  /** Cuándo lo verificó el administrador (null si no tiene la insignia). */
+  verificado_en?: string | null;
+  /** Cuándo pidió la insignia, si está pendiente. */
+  verificacion_pedida_en?: string | null;
 }
 
 export async function miPerfilIngeniero(): Promise<MiPerfil | null> {
@@ -165,6 +171,28 @@ export async function ingenierosDisponibles(): Promise<IngenieroPublico[]> {
     return [];
   }
   return (data as IngenieroPublico[] | null) ?? [];
+}
+
+/** La insignia del ingeniero: si la tiene y si la pidió. */
+export async function miVerificacion(): Promise<{ verificado: boolean; pedidaEn: string | null } | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from('perfiles_ingeniero')
+    .select('verificado_en, verificacion_pedida_en')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return { verificado: !!data.verificado_en, pedidaEn: (data.verificacion_pedida_en as string | null) ?? null };
+}
+
+/** Solo el administrador: da o quita la insignia «Verificado». */
+export async function verificarIngeniero(usuario: string, verificar: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('verificar_ingeniero', { p_usuario: usuario, p_verificar: verificar });
+  if (error) console.error('[AIB+] No se pudo cambiar la verificación:', error.message);
+  return data === true;
 }
 
 export async function ingenierosParaAdmin(): Promise<IngenieroAdmin[] | null> {

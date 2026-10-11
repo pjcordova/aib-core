@@ -17,6 +17,7 @@ import { MiniVista } from '../panel/MiniVista';
 import { PiePagina } from '../ui/PiePagina';
 import { Wordmark } from '../ui/Primitives';
 import { FotoIngeniero } from './TarjetaIngeniero';
+import { InsigniaVerificado, QUE_ES_VERIFICADO } from '../ui/InsigniaVerificado';
 
 // ---------------------------------------------------------------------------
 // Página pública del ingeniero (/ing/:slug)
@@ -142,6 +143,12 @@ export function PerfilPublico() {
             <div className="min-w-0 flex-1">
               <p className="mb-2 text-xs font-medium tracking-[0.2em] text-ink-subtle uppercase">Ingeniero en AIB+</p>
               <h1 className="text-4xl leading-tight text-balance sm:text-5xl">{perfil.nombre}</h1>
+              {perfil.verificado && (
+                <p className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-muted sm:justify-start">
+                  <InsigniaVerificado tamano="md" />
+                  {QUE_ES_VERIFICADO}
+                </p>
+              )}
               {perfil.titular && <p className="mt-2 text-lg text-ink-muted">{perfil.titular}</p>}
               <p className="mt-3 text-sm text-ink-muted">
                 {[

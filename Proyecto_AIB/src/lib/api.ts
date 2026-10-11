@@ -381,6 +381,20 @@ export async function probarWhatsappIngeniero(): Promise<void> {
   await post<{ success: boolean }>('/api/avisos/probar-whatsapp', {}, 20_000);
 }
 
+/**
+ * El ingeniero pide la insignia «Verificado». El servidor la registra con su
+ * token (pedir_verificacion) y, si es nueva, avisa al administrador por WhatsApp.
+ */
+export async function pedirVerificacion(): Promise<'ok' | 'ya_verificado' | 'ya_pedida' | 'no_ingeniero' | 'error'> {
+  try {
+    const r = await post<{ success: boolean; estado?: string }>('/api/ingenieros/pedir-verificacion', {}, 20_000);
+    const estado = r.estado;
+    return estado === 'ok' || estado === 'ya_verificado' || estado === 'ya_pedida' || estado === 'no_ingeniero' ? estado : 'error';
+  } catch {
+    return 'error';
+  }
+}
+
 /** Avisa al administrador por WhatsApp de que el ingeniero pidió un plan. */
 export async function avisarPedidoPlan(): Promise<void> {
   await post<{ success: boolean }>('/api/planes/avisar-pedido', {}, 20_000);

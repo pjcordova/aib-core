@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { InsigniaVerificado } from './ui/InsigniaVerificado';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ingenierosDisponibles, type IngenieroPublico } from '../lib/ingenieros';
@@ -76,6 +77,7 @@ export function Explorar() {
   const [rubro, setRubro] = useState('');
   const [tope, setTope] = useState<number | null>(null);
   const [orden, setOrden] = useState<Orden>('estrellas');
+  const [soloVerificados, setSoloVerificados] = useState(false);
   const [empezando, setEmpezando] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -110,6 +112,7 @@ export function Explorar() {
     const lista = (ingenieros ?? []).filter((ing) => {
       if (servicio && !ofrece(ing, servicio)) return false;
       if (rubro && !ing.especialidades.includes(rubro)) return false;
+      if (soloVerificados && !ing.verificado) return false;
       if (tope !== null) {
         const desde = desdeDe(ing);
         if (desde === null || desde > tope) return false;
@@ -128,7 +131,7 @@ export function Explorar() {
     });
     // desdeDe depende de precios y servicio, que ya están en la lista.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ingenieros, precios, busqueda, servicio, rubro, tope, orden]);
+  }, [ingenieros, precios, busqueda, servicio, rubro, tope, orden, soloVerificados]);
 
   const trabajarCon = async (ing: IngenieroPublico) => {
     if (!ing.slug) return;
@@ -143,13 +146,15 @@ export function Explorar() {
     else if (r !== 'cancelado') setError('No pudimos empezar. Revisa tu conexión y vuelve a intentarlo.');
   };
 
-  const hayFiltros = !!(busqueda.trim() || servicio || rubro || tope !== null);
+  const hayFiltros = !!(busqueda.trim() || servicio || rubro || tope !== null || soloVerificados);
   const limpiar = () => {
     setBusqueda('');
     elegirServicio('');
     setRubro('');
     setTope(null);
+    setSoloVerificados(false);
   };
+  const hayVerificados = (ingenieros ?? []).some((i) => i.verificado);
 
   return (
     <div className="min-h-screen">
@@ -240,6 +245,17 @@ export function Explorar() {
               </select>
             </label>
           </div>
+          {hayVerificados && (
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={soloVerificados}
+                onChange={(e) => setSoloVerificados(e.target.checked)}
+                className="h-4 w-4 accent-[var(--color-accent)]"
+              />
+              Solo ingenieros <InsigniaVerificado />
+            </label>
+          )}
         </div>
 
         {error && (

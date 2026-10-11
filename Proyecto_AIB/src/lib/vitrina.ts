@@ -27,6 +27,7 @@ export interface DisenoVitrina extends DisenoPublico {
     slug: string | null;
     promedio: number | null;
     resenas: number;
+    verificado?: boolean;
   };
 }
 

@@ -300,6 +300,34 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
 });
 
 /**
+ * Un ingeniero pide la insignia «Verificado». La base de datos la registra con
+ * su token (pedir_verificacion: una vez por semana) y, solo si es nueva, se le
+ * avisa al administrador por WhatsApp para coordinar la videollamada.
+ */
+router.post('/ingenieros/pedir-verificacion', limitarPrueba, requireAuth, async (req, res, next) => {
+  try {
+    const estado = await consultarComo(req.tokenUsuario, 'rpc/pedir_verificacion', { cuerpo: {} });
+    if (estado === 'ok' && whatsappConfigurado()) {
+      const perfil = await consultarComo(req.tokenUsuario, 'perfiles_ingeniero', {
+        params: [['select', 'nombre'], ['user_id', `eq.${req.usuario?.id}`]],
+      }).catch(() => null);
+      const nombre = String(perfil?.[0]?.nombre || 'Un ingeniero')
+        .replace(/[*_~`]/g, '')
+        .slice(0, 60);
+      await enviarWhatsapp(
+        `🛡️ *Pedido de insignia en AIB+*
+${nombre} pidió la insignia «Verificado».
+
+Coordina una videollamada para ver su DNI y revisa un trabajo real suyo. Luego verifícalo en tu panel → Ingenieros: ${origenDeLaApp(req)}/dashboard`
+      ).catch((error) => console.error('[AIB+] No se pudo avisar del pedido de insignia:', error.message));
+    }
+    return res.json({ success: true, estado });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
  * Hubo un cambio en un encargo (etapa nueva, propuesta enviada, cuenta
  * guardada): se envían los avisos pendientes a los clientes. No pide sesión ni
  * datos: solo despierta el envío, y la base de datos decide qué falta enviar
