@@ -17,6 +17,7 @@ import { PerfilPublico } from './components/ingenieros/PerfilPublico';
 import { PaginaPropuesta } from './components/propuestas/PaginaPropuesta';
 import { PaginaResena } from './components/PaginaResena';
 import { Explorar } from './components/Explorar';
+import { Privacidad, Terminos } from './components/PaginasLegales';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -64,6 +65,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/propuesta/:token" element={<PaginaPropuesta />} />
             {/* El buscador de ingenieros: por servicio, rubro, presupuesto y reseñas. */}
             <Route path="/explorar" element={<Explorar />} />
+            {/* Política de privacidad y términos: Google los pide para verificar la marca. */}
+            <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/terminos" element={<Terminos />} />
             {/* La reseña que deja el cliente con el enlace de su ingeniero, sin cuenta. */}
             <Route path="/resena/:token" element={<PaginaResena />} />
             {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}

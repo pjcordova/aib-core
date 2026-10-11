@@ -64,6 +64,12 @@ function olvidar() {
 /** A dónde vuelve el cliente desde Google o desde el enlace del correo. */
 const destino = () => `${window.location.origin}/mi-web`;
 
+/**
+ * Google siempre pregunta con qué cuenta: si en el navegador ya hay un Gmail
+ * abierto, no entra solo con ese (puede no ser con el que guardó su proyecto).
+ */
+const opcionesGoogle = () => ({ redirectTo: destino(), queryParams: { prompt: 'select_account' } });
+
 async function esAnonima(): Promise<boolean> {
   const {
     data: { session },
@@ -186,7 +192,7 @@ export const hayAcceso = (a: Accesos | null) => !!a && (a.google || a.correo);
 export async function continuarConGoogle(accion: AccionAcceso): Promise<{ error: string | null }> {
   const anonima = await esAnonima();
   apuntar({ accion, via: 'google', traspaso: await prepararTraspaso() });
-  const opciones = { provider: 'google' as const, options: { redirectTo: destino() } };
+  const opciones = { provider: 'google' as const, options: opcionesGoogle() };
   const { error } =
     anonima && accion === 'guardar'
       ? await supabase.auth.linkIdentity(opciones)
@@ -346,7 +352,7 @@ async function retomar(anonima: boolean): Promise<Retomado> {
       apuntar({ accion: pendiente.accion, via: 'google', traspaso: pendiente.traspaso });
       const { error: fallo } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: destino() },
+        options: opcionesGoogle(),
       });
       if (!fallo) return { estado: 'redirigiendo' };
       olvidar();

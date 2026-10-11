@@ -106,17 +106,20 @@ export function Portada({
   onAcceso,
   continuar,
   conCuenta = false,
+  recuperarAlEntrar = false,
 }: {
   onAcceso: (modo: Acceso) => void;
   /** Quien ya tiene una prueba o una invitación abierta: vuelve a ella. */
   continuar?: () => void;
   /** El cliente que guardó su proyecto con su cuenta: ya está dentro, no «ingresa». */
   conCuenta?: boolean;
+  /** Salió de una cuenta sin proyectos para entrar con otra: se abre «Recupera tu proyecto». */
+  recuperarAlEntrar?: boolean;
 }) {
   const navigate = useNavigate();
   const medir = !continuar;
   // «Recupera tu proyecto»: quien lo guardó con Google o su correo, desde otro dispositivo.
-  const [recuperando, setRecuperando] = useState(false);
+  const [recuperando, setRecuperando] = useState(recuperarAlEntrar);
   const puedeRecuperar = hayAcceso(useAccesos());
 
   /**

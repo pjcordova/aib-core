@@ -118,6 +118,14 @@ export function PiePagina({
           <span>
             © {anio} Cordova Solutions. Todos los derechos reservados.
           </span>
+          <span className="flex gap-4">
+            <Link to="/privacidad" className="hover:text-ink">
+              Privacidad
+            </Link>
+            <Link to="/terminos" className="hover:text-ink">
+              Términos
+            </Link>
+          </span>
           <span>
             AIB+ es un producto de <span className="text-accent">Cordova Solutions</span>
           </span>

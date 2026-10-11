@@ -131,21 +131,31 @@ export default function Home() {
   // De quién: si entra a otra cuenta, la ventana ya no tiene nada que hacer
   // (el aviso lo pone onListo).
   const [guardando, setGuardando] = useState<{ modo: 'boton' | 'enviado'; de: string } | null>(null);
-  const [tieneProyecto, setTieneProyecto] = useState(false);
+  // Si tiene proyectos, y de quién es la respuesta (como con la invitación).
+  const [conProyectos, setConProyectos] = useState<{ de: string; si: boolean } | null>(null);
   // Solo si ya hay con qué (Google activado o correo con Resend).
   const accesos = useAccesos();
-  const puedeGuardar = tieneProyecto && hayAcceso(accesos);
+  const tieneProyecto = !!conProyectos && conProyectos.de === usuarioId && conProyectos.si;
+  const puedeGuardar = esAnonimo && tieneProyecto && hayAcceso(accesos);
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   useEffect(() => {
-    if (!esAnonimo) return;
+    if (!usuarioId) return;
     let vigente = true;
     void tieneProyectos().then((si) => {
-      if (vigente) setTieneProyecto(si);
+      if (vigente) setConProyectos({ de: usuarioId, si });
     });
     return () => {
       vigente = false;
     };
-  }, [esAnonimo, versionLista]);
+  }, [usuarioId, versionLista]);
+  // Entró con una cuenta sin proyectos: quizá guardó el suyo con otro Google u
+  // otro correo. Al salir se le abre «Recupera tu proyecto» para probar con esa.
+  const cuentaVacia = !esAnonimo && perfil.rol === 'cliente' && !!conProyectos && conProyectos.de === usuarioId && !conProyectos.si;
+  const [recuperarAlSalir, setRecuperarAlSalir] = useState(false);
+  const entrarConOtraCuenta = async () => {
+    setRecuperarAlSalir(true);
+    await signOut();
+  };
   const ofrecerGuardar = useCallback(() => {
     if (yaSeOfrecio() || !usuarioId || !hayAcceso(accesos)) return;
     marcarOfrecido();
@@ -161,13 +171,13 @@ export default function Home() {
       if (!vigente) return;
       setRetomado(true);
       if (r.estado === 'listo') {
-        setAviso({
-          ok: true,
-          texto:
-            r.accion === 'guardar'
-              ? `Tu proyecto quedó guardado con tu ${r.via === 'google' ? 'cuenta de Google' : 'correo'}. Para volver desde cualquier celular o computadora, entra a AIB+ y toca «Recupera tu proyecto».`
-              : '¡Hola de nuevo! Aquí está tu proyecto.',
-        });
+        // Al recuperar no se anuncia nada: o ve su proyecto, o el aviso de cuenta sin proyectos.
+        if (r.accion === 'guardar') {
+          setAviso({
+            ok: true,
+            texto: `Tu proyecto quedó guardado con tu ${r.via === 'google' ? 'cuenta de Google' : 'correo'}. Para volver desde cualquier celular o computadora, entra a AIB+ y toca «Recupera tu proyecto».`,
+          });
+        }
         setVersionInvitacion((v) => v + 1);
         setVersionLista((v) => v + 1);
       } else if (r.estado === 'error') {
@@ -218,7 +228,7 @@ export default function Home() {
 
   if (!session) {
     if (enMiWeb) return <Navigate to="/" replace />;
-    if (!acceso) return <Portada onAcceso={setAcceso} />;
+    if (!acceso) return <Portada onAcceso={setAcceso} recuperarAlEntrar={recuperarAlSalir} />;
     return (
       <LoginRegistro key={acceso} onAuthSuccess={() => {}} modoInicial={acceso} onVolver={() => setAcceso(null)} />
     );
@@ -516,6 +526,17 @@ export default function Home() {
             />
           ) : (
             <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
+              {cuentaVacia && (
+                <div role="status" className="mb-10 rounded-xl border border-caution/40 bg-caution/10 px-5 py-4 text-left text-sm text-ink">
+                  <p className="font-medium">No encontramos proyectos en {session.user.email || 'esta cuenta'}.</p>
+                  <p className="mt-1 text-ink-muted">
+                    Si guardaste tu proyecto con otra cuenta de Google u otro correo, sal y entra con esa.
+                  </p>
+                  <button type="button" onClick={() => void entrarConOtraCuenta()} className="btn btn-ghost mt-3 !py-1.5 text-sm">
+                    Entrar con otra cuenta
+                  </button>
+                </div>
+              )}
               <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
                 Empecemos
               </p>
