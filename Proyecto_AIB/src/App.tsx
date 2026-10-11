@@ -230,7 +230,17 @@ export default function Home() {
     if (enMiWeb) return <Navigate to="/" replace />;
     if (!acceso) return <Portada onAcceso={setAcceso} recuperarAlEntrar={recuperarAlSalir} />;
     return (
-      <LoginRegistro key={acceso} onAuthSuccess={() => {}} modoInicial={acceso} onVolver={() => setAcceso(null)} />
+      <LoginRegistro
+        key={acceso}
+        onAuthSuccess={() => {}}
+        modoInicial={acceso}
+        onVolver={() => setAcceso(null)}
+        // El cliente que guardó su proyecto entra con Google o con un código, no con contraseña.
+        onClienteDentro={() => {
+          setAcceso(null);
+          navigate('/mi-web');
+        }}
+      />
     );
   }
 

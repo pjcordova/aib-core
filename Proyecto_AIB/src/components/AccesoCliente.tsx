@@ -149,7 +149,7 @@ export function AccesoCliente({
                 onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 10))}
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                placeholder="123456"
+                placeholder="12345678"
                 className="field text-center text-2xl tracking-[0.4em] tabular-nums"
                 autoFocus
               />

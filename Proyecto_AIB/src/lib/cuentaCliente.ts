@@ -141,11 +141,12 @@ export function marcarOfrecido() {
 /* -------------------------------------------------------------------------- */
 
 /**
- * El correo de Supabase, sin un servidor de correo propio (Resend), solo
- * llega a los miembros del equipo y unos pocos por hora: a un cliente no le
- * llegaría el código. Se pone en true al configurar Resend en Supabase.
+ * Los códigos salen por Resend desde contacto@aibplus.app (SMTP propio en
+ * Supabase, con las plantillas «Magic Link» y «Change Email Address» en
+ * español y con {{ .Token }}). Sin SMTP propio, el correo de Supabase solo
+ * llega a los miembros del equipo: si se quitara, volver a false.
  */
-const CORREO_LISTO = false;
+const CORREO_LISTO = true;
 
 export interface Accesos {
   google: boolean;

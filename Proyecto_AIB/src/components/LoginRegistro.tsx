@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Logo } from './ui/Primitives';
+import { AccesoCliente } from './AccesoCliente';
+import { hayAcceso, useAccesos } from '../lib/cuentaCliente';
 
 // ---------------------------------------------------------------------------
 // LoginRegistro — autenticación con Supabase
@@ -23,10 +25,39 @@ interface LoginRegistroProps {
   redirigirA?: string;
   /** Texto bajo la marca. */
   subtitulo?: string;
+  /**
+   * Desde «Ingresar» de la portada: el cliente que guardó su proyecto no tiene
+   * contraseña (entró con Google o con un código). Se le ofrece primero su
+   * entrada, y al entrar se llama a esto.
+   */
+  onClienteDentro?: () => void;
 }
 
-const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicial = 'login', onVolver, redirigirA, subtitulo }) => {
+/** Los errores de Supabase, en palabras del usuario. */
+function mensajeDeError(mensaje: string, conClientes: boolean): string {
+  if (/invalid login credentials/i.test(mensaje)) {
+    return conClientes
+      ? 'Correo o contraseña incorrectos. Si guardaste tu proyecto con Google o con un código, usa «Entrar a mi proyecto».'
+      : 'Correo o contraseña incorrectos.';
+  }
+  if (/email not confirmed/i.test(mensaje)) return 'Aún no confirmas tu correo. Revisa tu bandeja de entrada.';
+  if (/user already registered/i.test(mensaje)) return 'Ese correo ya tiene una cuenta. Inicia sesión.';
+  if (/password should be at least/i.test(mensaje)) return 'La contraseña debe tener al menos 6 caracteres.';
+  return mensaje;
+}
+
+const LoginRegistro: React.FC<LoginRegistroProps> = ({
+  onAuthSuccess,
+  modoInicial = 'login',
+  onVolver,
+  redirigirA,
+  subtitulo,
+  onClienteDentro,
+}) => {
   const [mode, setMode] = useState<AuthMode>(modoInicial);
+  const accesos = useAccesos();
+  const conClientes = !!onClienteDentro && hayAcceso(accesos);
+  const [recuperando, setRecuperando] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,7 +83,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
           password,
         });
         if (signInError) {
-          setError(signInError.message);
+          setError(mensajeDeError(signInError.message, conClientes));
           return;
         }
         onAuthSuccess();
@@ -65,7 +96,7 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
           options: { emailRedirectTo: redirigirA ?? `${window.location.origin}${window.location.pathname}` },
         });
         if (signUpError) {
-          setError(signUpError.message);
+          setError(mensajeDeError(signUpError.message, conClientes));
           return;
         }
         setSuccessMsg(
@@ -92,6 +123,25 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
               {subtitulo ?? (mode === 'registro' ? 'Crea tu cuenta y mira cómo quedaría tu proyecto' : 'Tecnología para tu negocio')}
             </p>
           </div>
+
+          {conClientes && mode === 'login' && (
+            <>
+              <div className="rounded-xl border border-accent-alt/50 bg-accent-alt/10 p-4 text-center">
+                <p className="font-semibold text-ink">¿Hiciste un proyecto en AIB+?</p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Entra con el Google o el correo con el que lo guardaste. No necesitas contraseña.
+                </p>
+                <button type="button" onClick={() => setRecuperando(true)} className="btn btn-primary mt-3 w-full">
+                  Entrar a mi proyecto
+                </button>
+              </div>
+              <div className="my-6 flex items-center gap-3 text-xs text-ink-subtle">
+                <span className="h-px flex-1 bg-line" />
+                ¿Eres ingeniero? Ingresa con tu contraseña
+                <span className="h-px flex-1 bg-line" />
+              </div>
+            </>
+          )}
 
           <div className="mb-6 flex rounded-xl border border-line bg-surface-deep/50 p-1">
             {(['login', 'registro'] as const).map((m) => (
@@ -192,6 +242,16 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({ onAuthSuccess, modoInicia
           Cordova Solutions © {new Date().getFullYear()}
         </p>
       </div>
+      {recuperando && onClienteDentro && (
+        <AccesoCliente
+          accion="recuperar"
+          onCerrar={() => setRecuperando(false)}
+          onListo={() => {
+            setRecuperando(false);
+            onClienteDentro();
+          }}
+        />
+      )}
     </div>
   );
 };

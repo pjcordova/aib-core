@@ -258,12 +258,14 @@ export function Portada({
             </ul>
 
             {!continuar && puedeRecuperar && (
-              <p className="mt-5 text-sm text-ink-muted">
-                ¿Ya empezaste un proyecto?{' '}
-                <button type="button" onClick={() => setRecuperando(true)} className="font-medium text-accent hover:underline">
-                  Recupéralo aquí
-                </button>
-              </p>
+              <button
+                type="button"
+                onClick={() => setRecuperando(true)}
+                className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent-alt/60 bg-accent-alt/10 px-4 py-2 text-sm text-ink transition-colors hover:border-accent-alt"
+              >
+                <span aria-hidden="true">↩</span>
+                ¿Ya empezaste un proyecto? <span className="font-semibold text-accent">Entra aquí</span>
+              </button>
             )}
           </div>
 
