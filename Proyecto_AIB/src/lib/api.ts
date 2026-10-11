@@ -418,8 +418,20 @@ export function despertarAvisosCliente(): void {
  * ingeniero igual la ve en su panel.
  */
 export async function avisarRespuestaPropuesta(token: string): Promise<void> {
+  await avisarConToken('/api/propuestas/respuesta', token);
+}
+
+/**
+ * El cliente aprobó una entrega o pidió ajustes: el servidor avisa a su
+ * ingeniero por WhatsApp, igual que con la respuesta a la propuesta.
+ */
+export async function avisarRespuestaEntrega(token: string): Promise<void> {
+  await avisarConToken('/api/propuestas/entrega', token);
+}
+
+async function avisarConToken(ruta: string, token: string): Promise<void> {
   try {
-    await fetch(`${API_URL}/api/propuestas/respuesta`, {
+    await fetch(`${API_URL}${ruta}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),

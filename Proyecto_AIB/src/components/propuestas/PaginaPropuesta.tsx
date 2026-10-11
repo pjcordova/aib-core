@@ -5,6 +5,7 @@ import { propuestaPorToken, responderPropuesta, type PropuestaPublica } from '..
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
 import { PiePagina } from '../ui/PiePagina';
 import { Wordmark } from '../ui/Primitives';
+import { EntregasCliente } from './Entregas';
 import { TarjetaPropuesta } from './TarjetaPropuesta';
 
 // ---------------------------------------------------------------------------
@@ -12,7 +13,8 @@ import { TarjetaPropuesta } from './TarjetaPropuesta';
 // ---------------------------------------------------------------------------
 // Se abre desde el WhatsApp que le manda su ingeniero, sin cuenta: ve el
 // precio, el plazo, qué incluye y la forma de pago, y la acepta con un clic o
-// pide cambios. Su ingeniero se entera por WhatsApp.
+// pide cambios. Su ingeniero se entera por WhatsApp. Si va por etapas, aquí
+// mismo revisa cada entrega y la aprueba o pide ajustes.
 // ---------------------------------------------------------------------------
 
 const fecha = (iso: string) => new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'long' });
@@ -178,11 +180,18 @@ export function PaginaPropuesta() {
               </div>
             )
           ) : propuesta.estado === 'aceptada' ? (
-            <p className="rounded-xl border border-positive/30 bg-positive/10 p-4 text-sm text-ink" role="status">
-              <strong>✓ Aceptaste esta propuesta</strong>
-              {propuesta.respondida_en ? ` el ${fecha(propuesta.respondida_en)}` : ''}. {Quien} ya está al tanto y empieza
-              a construir tu web.
-            </p>
+            <>
+              <p className="rounded-xl border border-positive/30 bg-positive/10 p-4 text-sm text-ink" role="status">
+                <strong>✓ Aceptaste esta propuesta</strong>
+                {propuesta.respondida_en ? ` el ${fecha(propuesta.respondida_en)}` : ''}. {Quien} ya está al tanto y empieza
+                a construir tu web.
+              </p>
+              {propuesta.hitos.length > 0 && (
+                <div className="mt-6">
+                  <EntregasCliente token={token} hitos={propuesta.hitos} ingeniero={primerNombre} onCambio={cargar} />
+                </div>
+              )}
+            </>
           ) : propuesta.estado === 'cambios' ? (
             <p className="rounded-xl border border-accent-alt/50 bg-accent-alt/10 p-4 text-sm text-ink" role="status">
               <strong>Pediste cambios:</strong> «{propuesta.comentario_cliente}». {Quien} te enviará una nueva propuesta.

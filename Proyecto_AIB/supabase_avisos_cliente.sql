@@ -12,6 +12,9 @@
 -- envía solo la novedad más reciente: si se juntan varias, no se le llena el
 -- correo.
 --
+-- También las entregas de una propuesta por etapas (estado 'entrega', con el
+-- nombre del hito en nota; supabase_entregas.sql).
+--
 -- Pasan por aquí todas las etapas, las marque el ingeniero, ABI o el propio
 -- flujo (enviar_propuesta, responder_propuesta), porque el disparador está
 -- en la tabla.
@@ -115,7 +118,7 @@ BEGIN
         SELECT NULLIF(split_part(btrim(pi.nombre), ' ', 1), '')
         FROM public.perfiles_ingeniero pi WHERE pi.user_id = r.ingeniero_id
       ),
-      'propuesta', CASE WHEN r.estado = 'propuesta_enviada' THEN (
+      'propuesta', CASE WHEN r.estado IN ('propuesta_enviada', 'entrega') THEN (
         SELECT jsonb_build_object('token', pr.token, 'precio', pr.precio, 'plazo_dias', pr.plazo_dias)
         FROM public.propuestas pr
         WHERE pr.proyecto_id = r.proyecto_id

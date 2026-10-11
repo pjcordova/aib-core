@@ -59,6 +59,14 @@ function componerAvisoCliente(a, appUrl = config.appUrl) {
       titulo: esWeb ? '¡Tu web ya está en línea!' : '¡Tu proyecto está listo!',
       texto: `${ingeniero} terminó ${queEs}. Gracias por confiar en AIB+.`,
     },
+    // Propuesta por etapas: la nota es el nombre de la etapa entregada.
+    entrega: {
+      asunto: 'Tienes una entrega para revisar',
+      titulo: 'Tienes una entrega para revisar',
+      texto: `${ingeniero} terminó la etapa «${String(a.nota || '').trim().slice(0, 60) || 'siguiente'}» de ${queEs}. Revísala y apruébala, o pide ajustes.`,
+      boton: a.propuesta?.token ? { texto: 'Revisar la entrega', url: `${appUrl}/propuesta/${a.propuesta.token}` } : null,
+      sinNota: true,
+    },
   };
 
   const e = porEtapa[a.estado] ?? {
@@ -67,7 +75,7 @@ function componerAvisoCliente(a, appUrl = config.appUrl) {
     texto: `${ingeniero} actualizó tu encargo.`,
   };
   const boton = e.boton ?? { texto: 'Ver mi proyecto', url: proyecto };
-  const nota = String(a.nota || '').trim().slice(0, 280);
+  const nota = e.sinNota ? '' : String(a.nota || '').trim().slice(0, 280);
   const negocio = String(a.negocio || '').trim().slice(0, 80);
 
   const html = `<div lang="es" style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1f2937">

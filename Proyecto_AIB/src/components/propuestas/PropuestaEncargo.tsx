@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { enlaceWhatsapp } from '../../lib/contacto';
 import type { ProyectoCompleto } from '../../lib/proyectos';
 import {
+  ETAPAS_SUGERIDAS,
   enviarPropuesta,
   marcarCobro,
   montos,
+  montosEtapas,
   propuestaDeEncargo,
   retirarPropuesta,
   textoPlazo,
@@ -12,14 +14,15 @@ import {
   type Propuesta,
 } from '../../lib/propuestas';
 import { solesEnteros } from '../../lib/servicios';
+import { EntregasIngeniero } from './Entregas';
 import { TarjetaPropuesta } from './TarjetaPropuesta';
 
 // ---------------------------------------------------------------------------
 // La propuesta, dentro del encargo (panel del ingeniero)
 // ---------------------------------------------------------------------------
-// Arma la propuesta (precio, plazo, qué incluye, adelanto, validez), se la
-// manda al cliente por WhatsApp con su enlace, ve su respuesta y, aceptada,
-// marca lo que cobró.
+// Arma la propuesta (precio, plazo, qué incluye, forma de pago, validez), se
+// la manda al cliente por WhatsApp con su enlace, ve su respuesta y, aceptada,
+// marca lo que cobró. Por etapas, además entrega cada una (Entregas.tsx).
 // ---------------------------------------------------------------------------
 
 /** Hoy + n días, como AAAA-MM-DD (en Lima). */
@@ -144,7 +147,18 @@ export function PropuestaEncargo({ encargo }: { encargo: ProyectoCompleto }) {
             </div>
           )}
 
-          {propuesta.estado === 'aceptada' && <Cobros propuesta={propuesta} ocupado={ocupado} onMarcar={(t, v) => void hacer(() => marcarCobro(propuesta.id, t, v))} />}
+          {propuesta.estado === 'aceptada' &&
+            (propuesta.hitos.length > 0 ? (
+              <EntregasIngeniero
+                hitos={propuesta.hitos}
+                enlace={enlace}
+                nombreCliente={nombreCliente}
+                whatsappCliente={encargo.contacto?.whatsapp ?? null}
+                onCambio={cargar}
+              />
+            ) : (
+              <Cobros propuesta={propuesta} ocupado={ocupado} onMarcar={(t, v) => void hacer(() => marcarCobro(propuesta.id, t, v))} />
+            ))}
 
           {abierta && (
             <div className="flex flex-wrap gap-3 text-sm">
@@ -227,15 +241,33 @@ function FormularioPropuesta({
   const [plazo, setPlazo] = useState(String(semanasIniciales % 7 === 0 ? semanasIniciales / 7 : semanasIniciales));
   const [unidad, setUnidad] = useState<'semanas' | 'dias'>(semanasIniciales % 7 === 0 ? 'semanas' : 'dias');
   const [incluye, setIncluye] = useState((anterior?.incluye.length ? anterior.incluye : incluyeSugerido(encargo)).join('\n'));
-  const [adelanto, setAdelanto] = useState(anterior?.adelanto_pct ?? 50);
+  // Un porcentaje de adelanto, o 'etapas'.
+  const [pago, setPago] = useState<number | 'etapas'>(anterior?.hitos.length ? 'etapas' : (anterior?.adelanto_pct ?? 50));
+  const [etapas, setEtapas] = useState(
+    (anterior?.hitos.length ? anterior.hitos : ETAPAS_SUGERIDAS).map((h) => ({
+      titulo: h.titulo,
+      porcentaje: String(h.porcentaje),
+      dias: String(h.dias),
+    }))
+  );
   const [validaHasta, setValidaHasta] = useState(enDias(15));
   const [nota, setNota] = useState(anterior?.nota ?? '');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
+  const porEtapas = pago === 'etapas';
+  const adelanto = porEtapas ? 0 : pago;
   const valorPrecio = Number(precio.replace(/[^\d]/g, ''));
   const valorPlazo = Number(plazo.replace(/[^\d]/g, ''));
-  const dias = unidad === 'semanas' ? valorPlazo * 7 : valorPlazo;
+  const etapasListas = etapas.map((h) => ({
+    titulo: h.titulo.replace(/[<>]/g, '').trim(),
+    porcentaje: Number(h.porcentaje) || 0,
+    dias: Number(h.dias) || 0,
+  }));
+  const sumaPorcentajes = etapasListas.reduce((suma, h) => suma + h.porcentaje, 0);
+  const sumaDias = etapasListas.reduce((suma, h) => suma + h.dias, 0);
+  const montosDeEtapas = montosEtapas(valorPrecio || 0, etapasListas.map((h) => h.porcentaje));
+  const dias = porEtapas ? sumaDias : unidad === 'semanas' ? valorPlazo * 7 : valorPlazo;
   const lineas = incluye
     .split('\n')
     .map((l) => l.replace(/[<>]/g, '').trim().slice(0, 140))
@@ -243,9 +275,27 @@ function FormularioPropuesta({
     .slice(0, 15);
   const { adelanto: montoAdelanto } = montos(valorPrecio || 0, adelanto);
 
+  const cambiarEtapa = (i: number, campo: 'titulo' | 'porcentaje' | 'dias', valor: string) =>
+    setEtapas((todas) =>
+      todas.map((h, j) =>
+        j !== i
+          ? h
+          : { ...h, [campo]: campo === 'titulo' ? valor.replace(/[<>]/g, '').slice(0, 60) : valor.replace(/[^\d]/g, '').slice(0, 3) }
+      )
+    );
+
+  const errorEtapas = (): string => {
+    if (etapasListas.some((h) => h.titulo.length < 2)) return 'Ponle nombre a cada etapa.';
+    if (etapasListas.some((h) => h.porcentaje < 1 || h.dias < 1)) return 'Cada etapa necesita su porcentaje y sus días.';
+    if (sumaPorcentajes !== 100) return `Los porcentajes deben sumar 100 % (ahora suman ${sumaPorcentajes} %).`;
+    if (sumaDias > 365) return 'Las etapas suman más de un año.';
+    return '';
+  };
+
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!(valorPrecio > 0 && valorPrecio < 1_000_000)) return setError('Pon el precio en soles, sin decimales.');
+    if (porEtapas && errorEtapas()) return setError(errorEtapas());
     if (!(dias >= 1 && dias <= 365)) return setError('Revisa el plazo (de 1 día a 52 semanas).');
     setEnviando(true);
     setError('');
@@ -256,6 +306,7 @@ function FormularioPropuesta({
       adelanto_pct: adelanto,
       valida_hasta: validaHasta,
       nota: nota.trim().slice(0, 800),
+      etapas: porEtapas ? etapasListas : undefined,
     });
     setEnviando(false);
     if (r.estado === 'ok') return onEnviada();
@@ -287,22 +338,32 @@ function FormularioPropuesta({
             />
           </span>
         </label>
-        <label className="block text-sm">
-          <span className="mb-1.5 block text-ink-muted">Plazo de entrega</span>
-          <span className="flex gap-2">
-            <input
-              value={plazo}
-              onChange={(e) => setPlazo(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
-              inputMode="numeric"
-              className="field !w-20 tabular-nums"
-              aria-label="Cantidad"
-            />
-            <select value={unidad} onChange={(e) => setUnidad(e.target.value as 'semanas' | 'dias')} className="field" aria-label="Unidad">
-              <option value="semanas">semanas</option>
-              <option value="dias">días</option>
-            </select>
-          </span>
-        </label>
+        {porEtapas ? (
+          <div className="text-sm">
+            <span className="mb-1.5 block text-ink-muted">Plazo de entrega</span>
+            <p className="field bg-surface-overlay/50 text-ink tabular-nums" aria-live="polite">
+              {sumaDias > 0 ? textoPlazo(sumaDias) : '—'}
+            </p>
+            <span className="mt-1 block text-xs text-ink-subtle">La suma de las etapas</span>
+          </div>
+        ) : (
+          <label className="block text-sm">
+            <span className="mb-1.5 block text-ink-muted">Plazo de entrega</span>
+            <span className="flex gap-2">
+              <input
+                value={plazo}
+                onChange={(e) => setPlazo(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
+                inputMode="numeric"
+                className="field !w-20 tabular-nums"
+                aria-label="Cantidad"
+              />
+              <select value={unidad} onChange={(e) => setUnidad(e.target.value as 'semanas' | 'dias')} className="field" aria-label="Unidad">
+                <option value="semanas">semanas</option>
+                <option value="dias">días</option>
+              </select>
+            </span>
+          </label>
+        )}
         <label className="block text-sm">
           <span className="mb-1.5 block text-ink-muted">Válida hasta</span>
           <input type="date" value={validaHasta} min={enDias(0)} onChange={(e) => setValidaHasta(e.target.value)} className="field" />
@@ -311,18 +372,97 @@ function FormularioPropuesta({
 
       <label className="block text-sm">
         <span className="mb-1.5 block text-ink-muted">Forma de pago</span>
-        <select value={adelanto} onChange={(e) => setAdelanto(Number(e.target.value))} className="field sm:!w-80">
-          <option value={50}>50 % al empezar y 50 % al entregar</option>
-          <option value={30}>30 % al empezar y 70 % al entregar</option>
-          <option value={100}>Todo al empezar</option>
-          <option value={0}>Todo al entregar</option>
+        <select
+          value={String(pago)}
+          onChange={(e) => setPago(e.target.value === 'etapas' ? 'etapas' : Number(e.target.value))}
+          className="field sm:!w-80"
+        >
+          <option value="50">50 % al empezar y 50 % al entregar</option>
+          <option value="30">30 % al empezar y 70 % al entregar</option>
+          <option value="100">Todo al empezar</option>
+          <option value="0">Todo al entregar</option>
+          <option value="etapas">Por etapas, al aprobar cada entrega</option>
         </select>
-        {valorPrecio > 0 && adelanto > 0 && adelanto < 100 && (
+        {valorPrecio > 0 && !porEtapas && adelanto > 0 && adelanto < 100 && (
           <span className="mt-1 block text-xs text-ink-subtle tabular-nums">
             Adelanto: {solesEnteros(montoAdelanto)} · Saldo: {solesEnteros(valorPrecio - montoAdelanto)}
           </span>
         )}
       </label>
+
+      {porEtapas && (
+        <fieldset className="rounded-xl border border-line p-3 sm:p-4">
+          <legend className="px-1 text-sm text-ink-muted">Etapas</legend>
+          <p className="mb-3 text-xs text-ink-subtle">
+            Entregas cada etapa, el cliente la aprueba con el enlace de la propuesta y te paga esa parte. De 2 a 5 etapas.
+          </p>
+          <div className="mb-1 grid grid-cols-[1fr_3.25rem_3.25rem_1.5rem] gap-2 text-xs text-ink-subtle sm:grid-cols-[1fr_4.5rem_4.5rem_5.5rem_1.75rem]">
+            <span>Nombre</span>
+            <span className="text-center">%</span>
+            <span className="text-center">Días</span>
+            <span className="hidden text-right sm:block">Monto</span>
+            <span />
+          </div>
+          <ol className="space-y-2">
+            {etapas.map((h, i) => (
+              <li
+                key={i}
+                className="grid grid-cols-[1fr_3.25rem_3.25rem_1.5rem] items-center gap-2 sm:grid-cols-[1fr_4.5rem_4.5rem_5.5rem_1.75rem]"
+              >
+                <input
+                  value={h.titulo}
+                  onChange={(e) => cambiarEtapa(i, 'titulo', e.target.value)}
+                  className="field"
+                  placeholder={`Etapa ${i + 1}`}
+                  aria-label={`Nombre de la etapa ${i + 1}`}
+                />
+                <input
+                  value={h.porcentaje}
+                  onChange={(e) => cambiarEtapa(i, 'porcentaje', e.target.value)}
+                  inputMode="numeric"
+                  className="field !px-1 text-center tabular-nums"
+                  aria-label={`Porcentaje de la etapa ${i + 1}`}
+                />
+                <input
+                  value={h.dias}
+                  onChange={(e) => cambiarEtapa(i, 'dias', e.target.value)}
+                  inputMode="numeric"
+                  className="field !px-1 text-center tabular-nums"
+                  aria-label={`Días de la etapa ${i + 1}`}
+                />
+                <span className="hidden text-right text-sm text-ink tabular-nums sm:block">
+                  {valorPrecio > 0 && sumaPorcentajes === 100 ? solesEnteros(montosDeEtapas[i]) : '—'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEtapas((todas) => todas.filter((_, j) => j !== i))}
+                  disabled={etapas.length <= 2}
+                  className="grid h-7 w-6 place-items-center rounded-full text-ink-subtle hover:bg-surface-overlay hover:text-negative disabled:invisible sm:w-7"
+                  aria-label={`Quitar la etapa ${i + 1}`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            {etapas.length < 5 ? (
+              <button
+                type="button"
+                onClick={() => setEtapas((todas) => [...todas, { titulo: '', porcentaje: '', dias: '' }])}
+                className="font-medium text-accent hover:underline"
+              >
+                + Agregar etapa
+              </button>
+            ) : (
+              <span />
+            )}
+            <span className={'tabular-nums ' + (sumaPorcentajes === 100 ? 'text-ink-muted' : 'text-negative')}>
+              Suma: {sumaPorcentajes} %{sumaPorcentajes === 100 ? ' ✓' : ` (${sumaPorcentajes < 100 ? 'faltan' : 'sobran'} ${Math.abs(100 - sumaPorcentajes)} %)`}
+            </span>
+          </div>
+        </fieldset>
+      )}
 
       <label className="block text-sm">
         <span className="mb-1.5 block text-ink-muted">Qué incluye (una línea por cada cosa)</span>

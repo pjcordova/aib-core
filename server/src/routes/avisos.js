@@ -20,6 +20,7 @@ const router = Router();
 const limitar = crearLimitador({ maxPorMinuto: 5, nombre: 'avisar-encargo' });
 const limitarPrueba = crearLimitador({ maxPorMinuto: 3, nombre: 'probar-whatsapp' });
 const limitarClientes = crearLimitador({ maxPorMinuto: 20, nombre: 'avisos-cliente' });
+const limitarEntregas = crearLimitador({ maxPorMinuto: 6, nombre: 'respuesta-entrega' });
 
 /**
  * Datos que solo el servidor puede pedir: los protege la misma clave secreta
@@ -295,6 +296,48 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
   } catch (error) {
     // La respuesta del cliente ya quedó guardada: el ingeniero la ve en su panel.
     console.error('[AIB+] No se pudo avisar de la respuesta a la propuesta:', error.message);
+    return next(error);
+  }
+});
+
+/**
+ * Propuesta por etapas: el cliente aprobó una entrega o pidió ajustes. Igual
+ * que con la respuesta a la propuesta, basta el token y la base de datos solo
+ * devuelve una respuesta sin avisar (aviso_respuesta_entrega).
+ */
+router.post('/propuestas/entrega', limitarEntregas, async (req, res, next) => {
+  try {
+    const { token } = req.body ?? {};
+    if (typeof token !== 'string' || !/^[0-9a-f]{32}$/.test(token) || !config.cronSecret) {
+      return res.status(202).json({ success: true, avisado: false });
+    }
+    const datos = await consultarConClave('aviso_respuesta_entrega', { p_token: token });
+    if (datos?.estado !== 'ok') return res.status(202).json({ success: true, avisado: false });
+
+    const limpio = (valor, largo) =>
+      String(valor || '')
+        .replace(/[*_~`]/g, '')
+        .slice(0, largo);
+    const negocio = limpio(datos.negocio, 80) || 'Tu cliente';
+    const etapa = limpio(datos.titulo, 60);
+    const comentario = limpio(datos.comentario, 300);
+    const panel = `${origenDeLaApp(req)}/dashboard`;
+    const texto =
+      datos.respuesta === 'aprobado'
+        ? `✅ *${negocio} aprobó la etapa «${etapa}»*.\n\nCuando te pague, márcala como cobrada en tu panel: ${panel}`
+        : `✏️ *${negocio} pidió ajustes en la etapa «${etapa}»*:\n«${comentario}»\n\nMíralo en tu panel: ${panel}`;
+
+    if (datos.es_admin) {
+      if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
+      await enviarWhatsapp(texto);
+    } else {
+      if (!datos.whatsapp || !datos.apikey) return res.status(202).json({ success: true, avisado: false });
+      await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
+    }
+    return res.json({ success: true, avisado: true });
+  } catch (error) {
+    // La respuesta del cliente ya quedó guardada: el ingeniero la ve en su panel.
+    console.error('[AIB+] No se pudo avisar de la respuesta a la entrega:', error.message);
     return next(error);
   }
 });

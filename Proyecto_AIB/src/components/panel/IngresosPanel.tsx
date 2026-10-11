@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ETIQUETA_ESTADO,
   marcarCobro,
+  marcarCobroHito,
   misIngresos,
   textoPlazo,
   totalesPropuestas,
@@ -37,9 +38,11 @@ export function IngresosPanel({ esAdmin, onAbrirEncargo }: { esAdmin: boolean; o
     };
   }, []);
 
-  const marcar = async (id: string, tipo: 'adelanto' | 'saldo', valor: boolean) => {
+  /** tipo: 'adelanto', 'saldo' o el id de una etapa. */
+  const marcar = async (id: string, tipo: string, valor: boolean) => {
     setOcupado(id);
-    await marcarCobro(id, tipo, valor);
+    if (tipo === 'adelanto' || tipo === 'saldo') await marcarCobro(id, tipo, valor);
+    else await marcarCobroHito(tipo, valor);
     await cargar();
     setOcupado(null);
   };
@@ -67,7 +70,7 @@ export function IngresosPanel({ esAdmin, onAbrirEncargo }: { esAdmin: boolean; o
           <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Cifra titulo="Vendido este mes" valor={solesEnteros(datos.vendido_mes)} destacada />
             <Cifra titulo="Cobrado este mes" valor={solesEnteros(datos.cobrado_mes)} />
-            <Cifra titulo="Por cobrar" valor={solesEnteros(datos.por_cobrar)} nota="Adelantos y saldos pendientes" />
+            <Cifra titulo="Por cobrar" valor={solesEnteros(datos.por_cobrar)} nota="Adelantos, saldos y etapas pendientes" />
             <Cifra
               titulo="Esperando respuesta"
               valor={String(datos.esperando)}
@@ -114,7 +117,8 @@ function FilaPropuesta({
   propuesta: FilaIngreso;
   ocupado: boolean;
   onAbrir: () => void;
-  onMarcar: (tipo: 'adelanto' | 'saldo', valor: boolean) => void;
+  /** tipo: 'adelanto', 'saldo' o el id de una etapa. */
+  onMarcar: (tipo: string, valor: boolean) => void;
 }) {
   const etiqueta = ETIQUETA_ESTADO[p.estado];
   return (
@@ -131,7 +135,17 @@ function FilaPropuesta({
           {p.respondida_en && p.estado === 'aceptada' ? ` · aceptada el ${fecha(p.respondida_en)}` : ''}
         </p>
       </div>
-      {p.estado === 'aceptada' && (
+      {p.estado === 'aceptada' && p.hitos.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {p.hitos.map((h) => (
+            <label key={h.id} className="inline-flex items-center gap-1.5 text-ink">
+              <input type="checkbox" checked={!!h.cobrado_en} disabled={ocupado} onChange={(e) => onMarcar(h.id, e.target.checked)} />
+              {h.titulo} {solesEnteros(h.monto)}
+            </label>
+          ))}
+        </div>
+      )}
+      {p.estado === 'aceptada' && p.hitos.length === 0 && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {p.monto_adelanto > 0 && (
             <label className="inline-flex items-center gap-1.5 text-ink">

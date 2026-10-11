@@ -22,6 +22,24 @@ export function PropuestaCliente({ proyectoId }: { proyectoId: string }) {
 
   if (!propuesta || propuesta.estado === 'retirada' || propuesta.estado === 'reemplazada') return null;
 
+  const porRevisar =
+    propuesta.estado === 'aceptada' ? propuesta.hitos.find((h) => h.estado === 'entregado') : undefined;
+  if (porRevisar) {
+    return (
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-alt/60 bg-accent-alt/10 p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink">📦 Tienes una entrega por revisar</p>
+          <p className="text-sm text-ink-muted">
+            Etapa «{porRevisar.titulo}» · {solesEnteros(porRevisar.monto)}
+          </p>
+        </div>
+        <Link to={`/propuesta/${propuesta.token}`} className="btn btn-primary">
+          Revisar la entrega
+        </Link>
+      </div>
+    );
+  }
+
   const pendiente = propuesta.estado === 'enviada';
   return (
     <div
@@ -42,6 +60,9 @@ export function PropuestaCliente({ proyectoId }: { proyectoId: string }) {
         </p>
         <p className="text-sm text-ink-muted tabular-nums">
           {solesEnteros(propuesta.precio)} · lista en {textoPlazo(propuesta.plazo_dias)}
+          {propuesta.estado === 'aceptada' &&
+            propuesta.hitos.length > 0 &&
+            ` · ${propuesta.hitos.filter((h) => h.estado === 'aprobado').length} de ${propuesta.hitos.length} etapas aprobadas`}
         </p>
       </div>
       <Link to={`/propuesta/${propuesta.token}`} className={pendiente ? 'btn btn-primary' : 'btn btn-ghost'}>
