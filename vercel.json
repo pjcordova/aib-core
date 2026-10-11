@@ -117,6 +117,10 @@
       "destination": "/api"
     },
     {
+      "source": "/servicios/:slug(paginas-web|tiendas-online|crm|erp|automatizacion|apps-moviles)",
+      "destination": "/servicios/:slug/index.html"
+    },
+    {
       "source": "/((?!api|health|assets|favicon).*)",
       "destination": "/index.html"
     }

@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
-import type { DisenoPublico } from './perfilPublico';
+import { documentoDeDiseno, type DisenoPublico } from './perfilPublico';
 import type { TipoServicio } from './servicios';
 
 export interface ServicioVitrina {
@@ -28,6 +28,20 @@ export interface DisenoVitrina extends DisenoPublico {
     promedio: number | null;
     resenas: number;
   };
+}
+
+/** Negocios inventados para los diseños de la biblioteca: son ejemplos, no clientes. */
+const NEGOCIOS_EJEMPLO: Record<string, string> = {
+  restaurante: 'Sazón de la Casa',
+  'moda-boutique': 'Alma Boutique',
+  'salud-belleza': 'Spa Armonía',
+  consultora: 'Norte Consultores',
+  institucional: 'Asociación Las Flores',
+};
+
+/** El diseño listo para mostrarlo, con un negocio de ejemplo. */
+export function documentoDeVitrina(d: DisenoVitrina): string | null {
+  return documentoDeDiseno(d, NEGOCIOS_EJEMPLO[d.base] ?? 'Tu negocio');
 }
 
 export interface Vitrina {

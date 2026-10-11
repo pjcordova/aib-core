@@ -1,0 +1,240 @@
+[
+  {
+    "slug": "paginas-web",
+    "clave": "web",
+    "nombre": "Páginas web",
+    "icono": "🌐",
+    "titulo": "Páginas web para negocios en Perú | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la página web de tu negocio con tu nombre y tus colores, elige a tu ingeniero y recibe su propuesta con precio y plazo.",
+    "h1": "Páginas web para tu negocio",
+    "intro": "Una web que explique qué haces, muestre tus productos o servicios y lleve a tus clientes a escribirte por WhatsApp. En AIB+ la ves gratis con tu nombre y tus colores antes de pagar nada, y la construye un ingeniero de software de verdad.",
+    "beneficios": [
+      "Ves cómo quedaría en un minuto, gratis y sin crear cuenta.",
+      "Eliges entre los diseños de varios ingenieros, cada uno con su precio «desde».",
+      "Recibes una propuesta con precio, plazo y lo que incluye antes de decidir.",
+      "AIB+ no te cobra comisión: pagas directamente al ingeniero que elijas."
+    ],
+    "incluye": [
+      "Portada con tu marca, tus colores y tu propuesta de valor",
+      "Secciones de servicios, nosotros, galería y testimonios",
+      "Botón de WhatsApp y formulario de contacto",
+      "Diseño que se adapta al celular",
+      "Dominio y publicación, según lo que acuerdes con tu ingeniero"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Cuánto cuesta una página web?",
+        "respuesta": "Depende de lo que necesites. Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      },
+      {
+        "pregunta": "¿Puedo ver mi web antes de pagar?",
+        "respuesta": "Sí. Respondes unas preguntas de un clic y en un minuto ves una primera versión con el nombre de tu negocio, tu logo y tus colores. Es gratis y no necesitas crear cuenta."
+      },
+      {
+        "pregunta": "¿Necesito saber de tecnología?",
+        "respuesta": "No. Tú cuentas qué hace tu negocio y el ingeniero se encarga de la parte técnica: el diseño, el dominio y la publicación."
+      },
+      {
+        "pregunta": "¿Cuánto demora?",
+        "respuesta": "La vista previa sale en un minuto. El plazo de la web terminada te lo indica tu ingeniero en su propuesta, según lo que incluya."
+      }
+    ]
+  },
+  {
+    "slug": "tiendas-online",
+    "clave": "web",
+    "nombre": "Tiendas online",
+    "icono": "🛒",
+    "titulo": "Tiendas online para negocios en Perú | AIB+",
+    "descripcion": "Vende por internet con una tienda online hecha por un ingeniero: catálogo, carrito, pedidos por WhatsApp y pagos en línea. Mírala gratis antes de decidir.",
+    "h1": "Tu tienda online, lista para vender",
+    "intro": "Muestra tu catálogo con precios, recibe pedidos por WhatsApp o con carrito de compras y cobra con Yape, transferencia o tarjeta. En AIB+ ves gratis cómo quedaría tu tienda con tu marca y eliges al ingeniero que la construye.",
+    "beneficios": [
+      "Ves tu tienda con tus colores y tu logo antes de pagar.",
+      "Los ingenieros publican sus diseños con precio, para que compares.",
+      "Recibes una propuesta clara con precio, plazo y lo que incluye.",
+      "Pagas directamente a tu ingeniero, sin comisión de AIB+."
+    ],
+    "incluye": [
+      "Catálogo de productos con fotos, precios y categorías",
+      "Pedidos por WhatsApp o carrito de compras",
+      "Pagos con Yape, transferencia o tarjeta, según lo que acuerdes",
+      "Diseño pensado para comprar desde el celular",
+      "Administración de productos y stock, según el alcance"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Cuánto cuesta una tienda online?",
+        "respuesta": "Depende de cuántos productos tengas y de cómo quieras cobrar. Cada ingeniero publica su precio «desde» y te envía una propuesta con el precio final antes de empezar. AIB+ no cobra comisión."
+      },
+      {
+        "pregunta": "¿Puedo recibir pagos con Yape?",
+        "respuesta": "Es algo que tu ingeniero puede incluir. Al contar lo que necesitas eliges si quieres recibir pedidos por WhatsApp o vender con carrito y pagos en línea; dile que quieres cobrar con Yape y te dirá en su propuesta cómo lo integra."
+      },
+      {
+        "pregunta": "¿Puedo ver mi tienda antes de pagar?",
+        "respuesta": "Sí. En un minuto ves una primera versión con el nombre de tu negocio y tus colores. Es gratis y sin crear cuenta."
+      },
+      {
+        "pregunta": "¿Quién publica la tienda?",
+        "respuesta": "El ingeniero que elijas se encarga de construirla y dejarla publicada y funcionando, con tu dominio si lo tienes."
+      }
+    ]
+  },
+  {
+    "slug": "crm",
+    "clave": "crm",
+    "nombre": "CRM",
+    "icono": "🤝",
+    "titulo": "CRM para pequeñas empresas en Perú | AIB+",
+    "descripcion": "Ordena tus clientes, ventas y seguimientos en un CRM a la medida de tu negocio. Mira gratis cómo quedaría y elige al ingeniero que lo construye.",
+    "h1": "Un CRM a la medida de tu negocio",
+    "intro": "Deja el cuaderno y las hojas de cálculo sueltas: un CRM reúne a tus clientes, tus oportunidades de venta y tus seguimientos en un solo lugar. En AIB+ ves gratis cómo quedaría con el nombre de tu negocio y lo construye un ingeniero de software.",
+    "beneficios": [
+      "Ves la pantalla principal de tu CRM antes de decidir, gratis.",
+      "Ingenieros con diseños de CRM publicados y su precio «desde».",
+      "Una propuesta con precio, plazo y módulos incluidos.",
+      "Sin comisión de AIB+: pagas directamente a tu ingeniero."
+    ],
+    "incluye": [
+      "Registro de clientes con su historial y datos de contacto",
+      "Embudo de ventas por etapas (cotización, negociación, cierre)",
+      "Recordatorios de seguimiento para tu equipo",
+      "Reportes de ventas por vendedor y por mes",
+      "Acceso para tu equipo, con permisos, según el alcance"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Qué es un CRM y para qué sirve?",
+        "respuesta": "Es un sistema para gestionar la relación con tus clientes: quiénes son, qué te compraron, qué cotizaciones tienen pendientes y cuándo toca hacerles seguimiento. Sirve para no perder ventas por olvido y ordenar a tu equipo."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta un CRM a medida?",
+        "respuesta": "Depende de los módulos y de cuántas personas lo usarán. Cada ingeniero te envía una propuesta con el precio final y el plazo antes de empezar. AIB+ no cobra comisión."
+      },
+      {
+        "pregunta": "¿Puedo verlo antes de contratar?",
+        "respuesta": "Sí. Respondes unas preguntas sobre tu negocio y ves cómo se vería tu CRM con tu nombre y tus colores, gratis."
+      },
+      {
+        "pregunta": "¿Se puede conectar con WhatsApp?",
+        "respuesta": "Es algo que puedes pedir al contar lo que necesitas. Tu ingeniero te dirá en su propuesta cómo lo integra y cuánto suma."
+      }
+    ]
+  },
+  {
+    "slug": "erp",
+    "clave": "erp",
+    "nombre": "ERP",
+    "icono": "📊",
+    "titulo": "ERP y sistemas de gestión para negocios en Perú | AIB+",
+    "descripcion": "Un sistema para ordenar ventas, inventario, compras y caja de tu negocio, hecho a tu medida por un ingeniero. Mira gratis cómo quedaría antes de decidir.",
+    "h1": "Un sistema de gestión (ERP) para tu negocio",
+    "intro": "Ventas, inventario, compras, caja y reportes en un solo sistema, pensado para cómo trabaja tu negocio. En AIB+ ves gratis cómo quedaría y eliges al ingeniero que lo construye, con una propuesta clara antes de empezar.",
+    "beneficios": [
+      "Ves la pantalla principal de tu sistema antes de pagar.",
+      "Comparas diseños y precios de varios ingenieros.",
+      "Recibes una propuesta con módulos, precio y plazo.",
+      "Pagas directamente a tu ingeniero, sin comisión de AIB+."
+    ],
+    "incluye": [
+      "Ventas y comprobantes",
+      "Inventario con alertas de stock bajo",
+      "Compras a proveedores",
+      "Caja y cierre del día",
+      "Reportes para tomar decisiones, según el alcance"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Qué es un ERP?",
+        "respuesta": "Es un sistema que une las áreas de tu negocio (ventas, inventario, compras, caja) para que la información esté en un solo lugar y no tengas que cuadrar todo a mano."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta un sistema a medida?",
+        "respuesta": "Depende de los módulos que necesites. Tu ingeniero te envía una propuesta con el precio final, el plazo y lo que incluye antes de empezar. AIB+ no cobra comisión."
+      },
+      {
+        "pregunta": "¿Puedo empezar con pocos módulos?",
+        "respuesta": "Sí. Puedes empezar con lo más urgente (por ejemplo, ventas e inventario) y sumar módulos después. Coméntalo al contar lo que necesitas."
+      },
+      {
+        "pregunta": "¿Puedo verlo antes de contratar?",
+        "respuesta": "Sí. Respondes unas preguntas y ves cómo se vería la pantalla principal de tu sistema con tu nombre, gratis."
+      }
+    ]
+  },
+  {
+    "slug": "automatizacion",
+    "clave": "automatizacion",
+    "nombre": "Automatización",
+    "icono": "⚡",
+    "titulo": "Automatización de procesos para negocios en Perú | AIB+",
+    "descripcion": "Que las tareas repetitivas se hagan solas: pedidos, recordatorios, reportes y mensajes. Cuéntanos tu proceso, mira cómo quedaría y elige a tu ingeniero.",
+    "h1": "Automatiza las tareas repetitivas de tu negocio",
+    "intro": "Pedidos que se registran solos, recordatorios de citas y de cobros, reportes que llegan cada mañana: una automatización le ahorra horas a tu equipo cada semana. En AIB+ cuentas tu proceso, ves gratis cómo funcionaría y lo construye un ingeniero.",
+    "beneficios": [
+      "Ves cómo funcionaría tu automatización antes de decidir.",
+      "Ingenieros que conectan las herramientas que ya usas.",
+      "Propuesta con precio, plazo y lo que se automatiza.",
+      "Sin comisión de AIB+."
+    ],
+    "incluye": [
+      "Registro automático de pedidos y formularios",
+      "Recordatorios por WhatsApp o correo",
+      "Reportes que se envían solos",
+      "Conexión entre tus herramientas (hojas de cálculo, correo, tu web)",
+      "Un historial para ver qué se ejecutó y cuándo"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Qué puedo automatizar?",
+        "respuesta": "Casi cualquier tarea que se repita igual: copiar pedidos a una hoja, enviar recordatorios, avisar al almacén, generar reportes o responder mensajes frecuentes."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta una automatización?",
+        "respuesta": "Depende de cuántos pasos y herramientas involucre. Tu ingeniero te envía una propuesta con el precio y el plazo antes de empezar. AIB+ no cobra comisión."
+      },
+      {
+        "pregunta": "¿Tengo que cambiar las herramientas que uso?",
+        "respuesta": "No necesariamente. Cuéntale a tu ingeniero qué usas hoy; muchas veces se pueden conectar entre sí sin cambiar nada."
+      }
+    ]
+  },
+  {
+    "slug": "apps-moviles",
+    "clave": "app-movil",
+    "nombre": "Apps móviles",
+    "icono": "📱",
+    "titulo": "Apps móviles para negocios en Perú | AIB+",
+    "descripcion": "Una app para tus clientes o tu equipo, en Android y iPhone: pedidos, reservas, catálogo y más. Mira gratis cómo quedaría y elige al ingeniero que la construye.",
+    "h1": "Una app móvil para tu negocio",
+    "intro": "Pedidos, reservas, catálogo, fidelización o una herramienta para tu equipo en la calle: una app pone tu negocio en el celular de tus clientes. En AIB+ ves gratis cómo se verían sus pantallas con tu marca y eliges al ingeniero que la construye.",
+    "beneficios": [
+      "Ves las pantallas de tu app con tu nombre y tus colores, gratis.",
+      "Comparas los diseños y precios de varios ingenieros.",
+      "Recibes una propuesta con precio, plazo y lo que incluye.",
+      "Pagas directamente a tu ingeniero, sin comisión de AIB+."
+    ],
+    "incluye": [
+      "Pantallas para tus clientes o para tu equipo",
+      "Pedidos, reservas o catálogo, según lo que necesites",
+      "Notificaciones",
+      "Versiones para Android y iPhone, según el alcance",
+      "Publicación en las tiendas de apps, según lo que acuerdes"
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Cuánto cuesta una app?",
+        "respuesta": "Depende de las pantallas y funciones que necesites. Tu ingeniero te envía una propuesta con el precio final y el plazo antes de empezar. AIB+ no cobra comisión."
+      },
+      {
+        "pregunta": "¿Funciona en Android y en iPhone?",
+        "respuesta": "Puede funcionar en ambos. Coméntalo al contar lo que necesitas y tu ingeniero lo incluirá en su propuesta."
+      },
+      {
+        "pregunta": "¿Puedo ver mi app antes de contratar?",
+        "respuesta": "Sí. Respondes unas preguntas y ves cómo se verían las pantallas de tu app con tu marca, gratis y sin crear cuenta."
+      }
+    ]
+  }
+]

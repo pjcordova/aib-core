@@ -153,6 +153,11 @@ export async function guardarServicios(servicios: string[], otros: string[] = []
   return data === true;
 }
 
+/** Si ofrece el servicio. La tienda online cuenta como web. */
+export function ofreceServicio(ing: Pick<IngenieroPublico, 'servicios'>, clave: string): boolean {
+  return (ing.servicios ?? ['web']).includes(clave) || (clave === 'web' && (ing.servicios ?? []).includes('tienda-online'));
+}
+
 export async function ingenierosDisponibles(): Promise<IngenieroPublico[]> {
   const { data, error } = await supabase.rpc('ingenieros_disponibles');
   if (error) {

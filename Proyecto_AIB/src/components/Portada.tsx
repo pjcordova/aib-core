@@ -13,14 +13,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
-import { useAuth } from '../hooks/useAuth';
 import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
-import { ingenierosDisponibles, textoEstrellas, type IngenieroPublico } from '../lib/ingenieros';
-import { documentoDeDiseno, empezarConfirmando } from '../lib/perfilPublico';
-import { etiquetaNivel } from '../lib/plantillaPropia';
+import { ingenierosDisponibles, ofreceServicio, type IngenieroPublico } from '../lib/ingenieros';
 import { obtenerServicio, solesEnteros, type TipoServicio } from '../lib/servicios';
-import { servicioDeBusqueda, vitrinaPortada, type DisenoVitrina, type Vitrina } from '../lib/vitrina';
+import { documentoDeVitrina, servicioDeBusqueda, vitrinaPortada, type DisenoVitrina, type Vitrina } from '../lib/vitrina';
 import { FotoIngeniero, TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
+import { GaleriaDisenos } from './GaleriaDisenos';
+import { PAGINAS_SERVICIO } from '../lib/paginasServicio';
 import { PiePagina } from './ui/PiePagina';
 import { AccesoCliente } from './AccesoCliente';
 import { hayAcceso, useAccesos } from '../lib/cuentaCliente';
@@ -29,15 +28,6 @@ type Acceso = 'login' | 'registro';
 type Clave = Exclude<TipoServicio, 'otro'>;
 
 const CLAVES: Clave[] = ['web', 'crm', 'erp', 'automatizacion', 'app-movil'];
-
-/** Negocios inventados para los diseños de la biblioteca: son ejemplos, no clientes. */
-const NEGOCIOS_EJEMPLO: Record<string, string> = {
-  restaurante: 'Sazón de la Casa',
-  'moda-boutique': 'Alma Boutique',
-  'salud-belleza': 'Spa Armonía',
-  consultora: 'Norte Consultores',
-  institucional: 'Asociación Las Flores',
-};
 
 const PASOS = [
   {
@@ -309,6 +299,17 @@ export function Portada({
                 </button>
               ))}
             </div>
+            <p className="mt-8 text-center text-sm text-ink-muted">
+              Conoce más:{' '}
+              {PAGINAS_SERVICIO.map((p, i) => (
+                <span key={p.slug}>
+                  {i > 0 && ' · '}
+                  <Link to={`/servicios/${p.slug}`} className="text-accent hover:underline">
+                    {p.nombre}
+                  </Link>
+                </span>
+              ))}
+            </p>
           </div>
         </section>
 
@@ -504,7 +505,7 @@ function Buscador({ onElegir }: { onElegir: (clave?: Clave) => void }) {
 /** Un diseño real de un ingeniero, en un celular, con quién lo hizo y su precio. */
 function Destacado({ diseno, cargando }: { diseno: DisenoVitrina | undefined; cargando: boolean }) {
   const documento = useMemo(
-    () => (diseno ? documentoDeDiseno(diseno, NEGOCIOS_EJEMPLO[diseno.base] ?? 'Tu negocio') : null),
+    () => (diseno ? documentoDeVitrina(diseno) : null),
     [diseno]
   );
   if (!cargando && !documento) return null;
@@ -546,29 +547,8 @@ function Destacado({ diseno, cargando }: { diseno: DisenoVitrina | undefined; ca
  * con quien lo hizo y en ese servicio: ve sus diseños con su nombre.
  */
 function Disenos({ disenos, onProbar }: { disenos: DisenoVitrina[]; onProbar: (clave?: Clave) => void }) {
-  const navigate = useNavigate();
-  const { signOut } = useAuth();
   const conDisenos = CLAVES.filter((c) => disenos.some((d) => d.servicio === c));
   const [servicio, setServicio] = useState<Clave>(conDisenos[0] ?? 'web');
-  const [empezando, setEmpezando] = useState<string | null>(null);
-  const [error, setError] = useState('');
-
-  const loQuiero = async (d: DisenoVitrina) => {
-    const clave = d.servicio as Clave;
-    if (!d.ingeniero.slug) {
-      onProbar(clave);
-      return;
-    }
-    setEmpezando(d.id);
-    setError('');
-    const nombre = d.ingeniero.nombre.split(/\s+/)[0];
-    const r = await empezarConfirmando(d.ingeniero.slug, nombre, signOut);
-    setEmpezando(null);
-    if (r === 'ok') navigate('/mi-web', { state: { clave } });
-    else if (r === 'con_cuenta') navigate('/');
-    else if (r === 'lleno') setError(`${nombre} recibió muchas solicitudes hoy. Prueba con otro diseño o vuelve mañana.`);
-    else if (r !== 'cancelado') setError('No pudimos empezar. Revisa tu conexión y vuelve a intentarlo.');
-  };
 
   return (
     <section id="plantillas" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -602,25 +582,7 @@ function Disenos({ disenos, onProbar }: { disenos: DisenoVitrina[]; onProbar: (c
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="mt-6 text-center text-sm text-negative">
-          {error}
-        </p>
-      )}
-
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {disenos
-          .filter((d) => d.servicio === servicio)
-          .map((d) => (
-            <TarjetaDiseno
-              key={d.id}
-              diseno={d}
-              empezando={empezando === d.id}
-              ocupado={empezando !== null}
-              onQuiero={() => void loQuiero(d)}
-            />
-          ))}
-      </div>
+      <GaleriaDisenos disenos={disenos.filter((d) => d.servicio === servicio)} onProbar={onProbar} />
       <p className="mt-6 text-center text-sm">
         <button type="button" onClick={() => onProbar(servicio)} className="font-medium text-accent hover:underline">
           Ver todos los de {obtenerServicio(servicio).nombre} con mi nombre →
@@ -629,63 +591,6 @@ function Disenos({ disenos, onProbar }: { disenos: DisenoVitrina[]; onProbar: (c
     </section>
   );
 }
-
-function TarjetaDiseno({
-  diseno: d,
-  empezando,
-  ocupado,
-  onQuiero,
-}: {
-  diseno: DisenoVitrina;
-  empezando: boolean;
-  ocupado: boolean;
-  onQuiero: () => void;
-}) {
-  const documento = useMemo(() => documentoDeDiseno(d, NEGOCIOS_EJEMPLO[d.base] ?? 'Tu negocio'), [d]);
-  if (!documento) return null;
-  const nombre = d.ingeniero.nombre;
-
-  return (
-    <article className="card flex flex-col overflow-hidden">
-      <MiniVista documento={documento} titulo={`Diseño ${d.nombre}`} alto={240} interactiva />
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-semibold text-ink">{d.nombre}</p>
-          {d.nivel !== 'basica' && (
-            <span className="rounded-full bg-accent-alt/20 px-2 py-0.5 text-[11px] font-medium text-ink">
-              {etiquetaNivel(d.nivel)}
-            </span>
-          )}
-        </div>
-        {d.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{d.descripcion}</p>}
-        <div className="mt-3 flex items-center gap-2">
-          <FotoIngeniero nombre={nombre} foto={d.ingeniero.foto_url} tamano={28} />
-          <p className="min-w-0 text-xs text-ink-muted">
-            Lo construye <span className="font-medium text-ink">{nombre}</span>
-            <span className="block">{textoEstrellas(d.ingeniero.promedio, d.ingeniero.resenas)}</span>
-          </p>
-        </div>
-        {d.precio_desde !== null && (
-          <p className="mt-3 text-base font-semibold text-ink tabular-nums">desde {solesEnteros(d.precio_desde)}</p>
-        )}
-        <div className="mt-auto flex gap-2 pt-4">
-          <button type="button" onClick={onQuiero} disabled={ocupado} className="btn btn-primary flex-1">
-            {empezando ? 'Preparando…' : 'Lo quiero'}
-          </button>
-          {d.ingeniero.slug && (
-            <Link to={`/ing/${d.ingeniero.slug}`} className="btn btn-ghost">
-              Ver ingeniero
-            </Link>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/** Si ofrece el servicio. La tienda online cuenta como web. */
-const ofrece = (ing: IngenieroPublico, clave: Clave) =>
-  (ing.servicios ?? ['web']).includes(clave) || (clave === 'web' && (ing.servicios ?? []).includes('tienda-online'));
 
 /** Los ingenieros aprobados, con sus reseñas y filtro por servicio. Si aún no hay ninguno, no sale. */
 function Ingenieros() {
@@ -704,8 +609,8 @@ function Ingenieros() {
 
   if (lista.length === 0) return null;
 
-  const filtros = CLAVES.filter((c) => lista.some((i) => ofrece(i, c)));
-  const visibles = filtro ? lista.filter((i) => ofrece(i, filtro)) : lista;
+  const filtros = CLAVES.filter((c) => lista.some((i) => ofreceServicio(i, c)));
+  const visibles = filtro ? lista.filter((i) => ofreceServicio(i, filtro)) : lista;
 
   return (
     <section id="ingenieros" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16 sm:px-6">
