@@ -12,7 +12,7 @@ import type { FilaPlantilla } from './catalogo';
 import type { Trabajo } from './portafolio';
 import { basePropia } from './plantillaPropia';
 import { renderizarPlantilla } from './plantillas';
-import { obtenerPlantillaBase } from '../plantillas';
+import { cargarPlantillasBase, conPlantillasBase, plantillaBaseCargada } from './plantillasBase';
 
 export type DisenoPublico = Pick<
   FilaPlantilla,
@@ -64,12 +64,15 @@ export const urlPerfil = (slug: string) => `${window.location.origin}/ing/${slug
 /** null si no existe o el ingeniero no está aprobado. */
 export async function perfilPublico(slug: string): Promise<PerfilPublico | null> {
   if (!/^[a-z0-9-]{3,40}$/.test(slug)) return null;
+  const plantillas = cargarPlantillasBase();
   const { data, error } = await supabase.rpc('perfil_publico', { p_slug: slug });
   if (error) {
     console.warn('[AIB+] No se pudo leer el perfil:', error.message);
     return null;
   }
-  return (data as PerfilPublico | null) ?? null;
+  const perfil = (data as PerfilPublico | null) ?? null;
+  if (perfil?.disenos) await conPlantillasBase(perfil.disenos, plantillas);
+  return perfil;
 }
 
 export type ResultadoEmpezar = 'ok' | 'otra' | 'lleno' | 'no_existe' | 'con_cuenta' | 'error';
@@ -125,10 +128,12 @@ export async function empezarConfirmando(
 
 /**
  * Un diseño publicado tal como lo vería un cliente: con un negocio de
- * ejemplo y los colores del ingeniero. null si su plantilla ya no existe.
+ * ejemplo y los colores del ingeniero. null si su plantilla ya no existe o,
+ * si es de la biblioteca, mientras no se hayan bajado los diseños base (las
+ * consultas que devuelven diseños los esperan: conPlantillasBase).
  */
 export function documentoDeDiseno(d: DisenoPublico, empresa = 'Tu negocio'): string | null {
-  const base = d.tipo === 'propia' ? basePropia(d) : obtenerPlantillaBase(d.base);
+  const base = d.tipo === 'propia' ? basePropia(d) : plantillaBaseCargada(d.base);
   if (!base) return null;
   return renderizarPlantilla(base, base.ejemplo, { empresa, logo: null, paleta: null });
 }

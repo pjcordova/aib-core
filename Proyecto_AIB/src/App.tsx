@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import LoginRegistro from './components/LoginRegistro';
 import { PrototypePreview } from './components/PrototypePreviewDiferido';
 import { ProyectosGuardados } from './components/ProyectosGuardados';
 import { Portada } from './components/Portada';
 import { conPrecioMostrado, miPrecio } from './lib/pruebaPrecio';
-import { ElegirIngeniero } from './components/ingenieros/ElegirIngeniero';
-import { ContactoEncargo, type DatosEncargo } from './components/ContactoEncargo';
-import { FlujoWeb } from './components/web/FlujoWeb';
-import { FlujoServicio } from './components/web/FlujoServicio';
-import { WebPreview } from './components/web/WebPreview';
-import { SeguimientoCliente } from './components/SeguimientoEncargo';
+import type { DatosEncargo } from './components/ContactoEncargo';
 import { Wordmark, Shell } from './components/ui/Primitives';
+import { diferido } from './lib/diferido';
 import {
   cargarProyecto,
   conPaletaEnHistorial,
@@ -19,7 +14,6 @@ import {
   guardarEdicion,
   type ProyectoCompleto,
 } from './lib/proyectos';
-import { registrarEvento } from './lib/catalogo';
 import { elegirIngeniero as asignarIngeniero } from './lib/ingenieros';
 import { miInvitacion, registrarInicioInvitacion, type MiInvitacion } from './lib/invitaciones';
 import { hayAcceso, marcarOfrecido, retomarAcceso, tieneProyectos, useAccesos, yaSeOfrecio } from './lib/cuentaCliente';
@@ -29,6 +23,23 @@ import { serviciosParaCliente, type ServiciosCliente } from './lib/formularios';
 import { SERVICIOS, claveServicio, obtenerServicio, type Paleta, type Servicio, type TipoServicio } from './lib/servicios';
 import { useAuth } from './hooks/useAuth';
 import { usePerfil } from './hooks/usePerfil';
+
+// Lo que no hace falta para la portada se baja cuando se usa: quien solo mira
+// la portada no descarga el cuestionario, la vista previa ni los diseños base.
+const LoginRegistro = diferido(() => import('./components/LoginRegistro').then((m) => m.default));
+const FlujoWeb = diferido(() => import('./components/web/FlujoWeb').then((m) => m.FlujoWeb));
+const FlujoServicio = diferido(() => import('./components/web/FlujoServicio').then((m) => m.FlujoServicio));
+const WebPreview = diferido(() => import('./components/web/WebPreview').then((m) => m.WebPreview));
+const SeguimientoCliente = diferido(() => import('./components/SeguimientoEncargo').then((m) => m.SeguimientoCliente));
+const ElegirIngeniero = diferido(() => import('./components/ingenieros/ElegirIngeniero').then((m) => m.ElegirIngeniero));
+const ContactoEncargo = diferido(() => import('./components/ContactoEncargo').then((m) => m.ContactoEncargo));
+
+/** Mientras baja una parte de la app, dentro de la página. */
+const cargandoParte = (
+  <div className="grid place-items-center py-24" role="status">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent" />
+  </div>
+);
 
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 
@@ -323,7 +334,10 @@ export default function Home() {
       setAceptacionAbierto('inactivo');
       return;
     }
-    if (abierto.plantilla) void registrarEvento(abierto.plantilla.id, 'aceptada');
+    if (abierto.plantilla) {
+      const plantillaId = abierto.plantilla.id;
+      void import('./lib/catalogo').then((m) => m.registrarEvento(plantillaId, 'aceptada'));
+    }
     setAbierto({ ...abierto, aceptado: true });
     setPidiendoContacto(false);
     setAceptacionAbierto('aceptado');
@@ -454,157 +468,162 @@ export default function Home() {
 
       <main>
         <Shell>
-          {aviso && (
-            <div
-              role="status"
-              className={
-                'mt-4 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ' +
-                (aviso.ok ? 'border-positive/30 bg-positive/10 text-ink' : 'border-negative/30 bg-negative/10 text-negative')
-              }
-            >
-              <p>
-                {aviso.ok && '✓ '}
-                {aviso.texto}
-              </p>
-              <button type="button" onClick={() => setAviso(null)} className="shrink-0 text-ink-muted hover:text-ink" aria-label="Cerrar aviso">
-                ✕
-              </button>
-            </div>
-          )}
-          {abierto ? (
-            <>
-              {abierto.aceptado && (
-                <SeguimientoCliente
-                  proyectoId={abierto.id}
-                  aceptadoEn={abierto.aceptadoEn}
-                  tipo={abierto.tipoServicio}
-                />
-              )}
-              {(abierto.documento || abierto.html) && abierto.ficha ? (
-                <WebPreview
-                  cuerpo={abierto.html}
-                  documento={abierto.documento}
-                  plantilla={abierto.plantilla?.nombre}
-                  plantillaBase={abierto.plantilla?.base}
-                  ficha={abierto.ficha}
-                  usage={abierto.usage}
-                  guardado="guardado"
-                  aceptacion={aceptacionAbierto}
-                  onAceptar={aceptarConIngeniero}
-                  onGuardarEdicion={guardarCambiosAbierto}
-                  proyectoId={abierto.id}
-                  conSeguimiento={abierto.aceptado}
-                  precio={precioAbierto}
-                  servicio={servicioAbierto}
-                />
-              ) : (
-                <PrototypePreview
-                  code={abierto.reactCode ?? ''}
-                  servicio={abierto.servicio}
-                  respuestas={abierto.respuestas}
-                  usage={abierto.usage}
-                  guardado="guardado"
-                  aceptacion={aceptacionAbierto}
-                  onAceptar={aceptarConIngeniero}
-                />
-              )}
-            </>
-          ) : tipoActivo === 'web' ? (
-            <FlujoWeb
-              onGuardado={refrescarLista}
-              onEnviado={esAnonimo ? ofrecerGuardar : undefined}
-              empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
-              elegirIngeniero={!vinoConSuIngeniero}
-              onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
-            />
-          ) : tipoActivo ? (
-            <FlujoServicio
-              key={claveServicio(tipoActivo, otro)}
-              tipo={tipoActivo}
-              otro={otro ?? undefined}
-              empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
-              conSuIngeniero={vinoConSuIngeniero}
-              onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
-              onGuardado={refrescarLista}
-              onEnviado={esAnonimo ? ofrecerGuardar : undefined}
-            />
-          ) : esInvitado ? (
-            <BienvenidaInvitado
-              negocio={invitacion?.negocio ?? null}
-              desdePortada={invitacion?.origen === 'portada'}
-              conCuenta={clienteConCuenta}
-              ingeniero={invitacion?.origen === 'ingeniero' ? (invitacion?.ingeniero ?? null) : null}
-              servicios={servicios}
-              otros={disponibles?.otros ?? []}
-              onElegir={elegirServicio}
-              cargandoProyecto={cargandoProyecto}
-              onAbrir={abrirProyecto}
-              versionLista={versionLista}
-            />
-          ) : (
-            <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
-              {cuentaVacia && (
-                <div role="status" className="mb-10 rounded-xl border border-caution/40 bg-caution/10 px-5 py-4 text-left text-sm text-ink">
-                  <p className="font-medium">No encontramos proyectos en {session.user.email || 'esta cuenta'}.</p>
-                  <p className="mt-1 text-ink-muted">
-                    Si guardaste tu proyecto con otra cuenta de Google u otro correo, sal y entra con esa.
-                  </p>
-                  <button type="button" onClick={() => void entrarConOtraCuenta()} className="btn btn-ghost mt-3 !py-1.5 text-sm">
-                    Entrar con otra cuenta
-                  </button>
-                </div>
-              )}
-              <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
-                Empecemos
-              </p>
-              <h1 className="text-4xl font-bold text-balance sm:text-5xl">
-                ¿Qué necesitas para tu negocio?
-              </h1>
-              <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
-                Elige una opción y te guiamos paso a paso, sin tecnicismos. Al final
-                verás una primera versión de tu proyecto.
-              </p>
+          <Suspense fallback={cargandoParte}>
+            {aviso && (
+              <div
+                role="status"
+                className={
+                  'mt-4 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ' +
+                  (aviso.ok ? 'border-positive/30 bg-positive/10 text-ink' : 'border-negative/30 bg-negative/10 text-negative')
+                }
+              >
+                <p>
+                  {aviso.ok && '✓ '}
+                  {aviso.texto}
+                </p>
+                <button type="button" onClick={() => setAviso(null)} className="shrink-0 text-ink-muted hover:text-ink" aria-label="Cerrar aviso">
+                  ✕
+                </button>
+              </div>
+            )}
+            {abierto ? (
+              <>
+                {abierto.aceptado && (
+                  <SeguimientoCliente
+                    proyectoId={abierto.id}
+                    aceptadoEn={abierto.aceptadoEn}
+                    tipo={abierto.tipoServicio}
+                  />
+                )}
+                {(abierto.documento || abierto.html) && abierto.ficha ? (
+                  <WebPreview
+                    cuerpo={abierto.html}
+                    documento={abierto.documento}
+                    plantilla={abierto.plantilla?.nombre}
+                    plantillaBase={abierto.plantilla?.base}
+                    ficha={abierto.ficha}
+                    usage={abierto.usage}
+                    guardado="guardado"
+                    aceptacion={aceptacionAbierto}
+                    onAceptar={aceptarConIngeniero}
+                    onGuardarEdicion={guardarCambiosAbierto}
+                    proyectoId={abierto.id}
+                    conSeguimiento={abierto.aceptado}
+                    precio={precioAbierto}
+                    servicio={servicioAbierto}
+                  />
+                ) : (
+                  <PrototypePreview
+                    code={abierto.reactCode ?? ''}
+                    servicio={abierto.servicio}
+                    respuestas={abierto.respuestas}
+                    usage={abierto.usage}
+                    guardado="guardado"
+                    aceptacion={aceptacionAbierto}
+                    onAceptar={aceptarConIngeniero}
+                  />
+                )}
+              </>
+            ) : tipoActivo === 'web' ? (
+              <FlujoWeb
+                onGuardado={refrescarLista}
+                onEnviado={esAnonimo ? ofrecerGuardar : undefined}
+                empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
+                elegirIngeniero={!vinoConSuIngeniero}
+                onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
+              />
+            ) : tipoActivo ? (
+              <FlujoServicio
+                key={claveServicio(tipoActivo, otro)}
+                tipo={tipoActivo}
+                otro={otro ?? undefined}
+                empresaInicial={esInvitado ? (invitacion?.negocio ?? undefined) : undefined}
+                conSuIngeniero={vinoConSuIngeniero}
+                onEmpezar={esInvitado ? registrarInicioInvitacion : undefined}
+                onGuardado={refrescarLista}
+                onEnviado={esAnonimo ? ofrecerGuardar : undefined}
+              />
+            ) : esInvitado ? (
+              <BienvenidaInvitado
+                negocio={invitacion?.negocio ?? null}
+                desdePortada={invitacion?.origen === 'portada'}
+                conCuenta={clienteConCuenta}
+                ingeniero={invitacion?.origen === 'ingeniero' ? (invitacion?.ingeniero ?? null) : null}
+                servicios={servicios}
+                otros={disponibles?.otros ?? []}
+                onElegir={elegirServicio}
+                cargandoProyecto={cargandoProyecto}
+                onAbrir={abrirProyecto}
+                versionLista={versionLista}
+              />
+            ) : (
+              <section className="animate-fade-up mx-auto max-w-3xl py-14 text-center sm:py-20">
+                {cuentaVacia && (
+                  <div role="status" className="mb-10 rounded-xl border border-caution/40 bg-caution/10 px-5 py-4 text-left text-sm text-ink">
+                    <p className="font-medium">No encontramos proyectos en {session.user.email || 'esta cuenta'}.</p>
+                    <p className="mt-1 text-ink-muted">
+                      Si guardaste tu proyecto con otra cuenta de Google u otro correo, sal y entra con esa.
+                    </p>
+                    <button type="button" onClick={() => void entrarConOtraCuenta()} className="btn btn-ghost mt-3 !py-1.5 text-sm">
+                      Entrar con otra cuenta
+                    </button>
+                  </div>
+                )}
+                <p className="mb-3 text-sm font-medium tracking-widest text-accent uppercase">
+                  Empecemos
+                </p>
+                <h1 className="text-4xl font-bold text-balance sm:text-5xl">
+                  ¿Qué necesitas para tu negocio?
+                </h1>
+                <p className="mx-auto mt-4 max-w-lg text-base text-ink-muted">
+                  Elige una opción y te guiamos paso a paso, sin tecnicismos. Al final
+                  verás una primera versión de tu proyecto.
+                </p>
 
-              <EleccionServicio servicios={servicios} otros={disponibles?.otros ?? []} onElegir={elegirServicio} />
+                <EleccionServicio servicios={servicios} otros={disponibles?.otros ?? []} onElegir={elegirServicio} />
 
-              {/* Al ingeniero que prueba como cliente la lista solo le mostraba sus
-                  pruebas: lo suyo lo ve en el panel. */}
-              {perfil.rol === 'ingeniero' ? null : cargandoProyecto ? (
-                <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>
-              ) : (
-                <ProyectosGuardados onAbrir={abrirProyecto} recargar={versionLista} />
-              )}
-            </section>
-          )}
+                {/* Al ingeniero que prueba como cliente la lista solo le mostraba sus
+                    pruebas: lo suyo lo ve en el panel. */}
+                {perfil.rol === 'ingeniero' ? null : cargandoProyecto ? (
+                  <p className="mt-14 text-sm text-ink-subtle">Abriendo proyecto…</p>
+                ) : (
+                  <ProyectosGuardados onAbrir={abrirProyecto} recargar={versionLista} />
+                )}
+              </section>
+            )}
+          </Suspense>
         </Shell>
       </main>
 
-      {abierto && eligiendoIngeniero && (
-        <ElegirIngeniero
-          proyectoId={abierto.id}
-          rubro={abierto.ficha?.categoria || undefined}
-          servicio={abierto.tipoServicio ?? 'web'}
-          onElegido={(nombre) => {
-            setIngenieroElegido(nombre);
-            setEligiendoIngeniero(false);
-            setPidiendoContacto(true);
-          }}
-          onCancelar={() => setEligiendoIngeniero(false)}
-        />
-      )}
-      {abierto && pidiendoContacto && (
-        <ContactoEncargo
-          ingeniero={ingenieroElegido}
-          tipoServicio={abierto.tipoServicio}
-          objetivo={abierto.ficha?.objetivo}
-          // Si ya respondió las preguntas de su ingeniero en el formulario, no se repiten.
-          preguntasDe={abierto.historial.some((h) => h.question_id.startsWith('ing-')) ? null : abierto.id}
-          enviando={aceptacionAbierto === 'procesando'}
-          error={errorEnvio}
-          onEnviar={(datos) => void aceptarAbierto(datos)}
-          onCancelar={() => setPidiendoContacto(false)}
-        />
-      )}
+      {/* Las ventanas del encargo bajan al abrirse: mientras tanto, nada. */}
+      <Suspense fallback={null}>
+        {abierto && eligiendoIngeniero && (
+          <ElegirIngeniero
+            proyectoId={abierto.id}
+            rubro={abierto.ficha?.categoria || undefined}
+            servicio={abierto.tipoServicio ?? 'web'}
+            onElegido={(nombre) => {
+              setIngenieroElegido(nombre);
+              setEligiendoIngeniero(false);
+              setPidiendoContacto(true);
+            }}
+            onCancelar={() => setEligiendoIngeniero(false)}
+          />
+        )}
+        {abierto && pidiendoContacto && (
+          <ContactoEncargo
+            ingeniero={ingenieroElegido}
+            tipoServicio={abierto.tipoServicio}
+            objetivo={abierto.ficha?.objetivo}
+            // Si ya respondió las preguntas de su ingeniero en el formulario, no se repiten.
+            preguntasDe={abierto.historial.some((h) => h.question_id.startsWith('ing-')) ? null : abierto.id}
+            enviando={aceptacionAbierto === 'procesando'}
+            error={errorEnvio}
+            onEnviar={(datos) => void aceptarAbierto(datos)}
+            onCancelar={() => setPidiendoContacto(false)}
+          />
+        )}
+      </Suspense>
       {/* Sigue abierta aunque la sesión deje de ser anónima: el aviso lo pone onListo. */}
       {guardando && guardando.de === usuarioId && (
         <AccesoCliente

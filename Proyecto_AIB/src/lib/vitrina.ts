@@ -8,6 +8,7 @@
 
 import { supabase } from './supabase';
 import { documentoDeDiseno, type DisenoPublico } from './perfilPublico';
+import { cargarPlantillasBase, conPlantillasBase } from './plantillasBase';
 import type { TipoServicio } from './servicios';
 
 export interface ServicioVitrina {
@@ -52,13 +53,15 @@ export interface Vitrina {
 
 /** null si no se pudo leer: la portada se arregla sin ella. */
 export async function vitrinaPortada(): Promise<Vitrina | null> {
+  // Los diseños base bajan en paralelo con la consulta.
+  const plantillas = cargarPlantillasBase();
   const { data, error } = await supabase.rpc('vitrina_portada');
   if (error || !data) {
     if (error) console.warn('[AIB+] No se pudo leer la vitrina:', error.message);
     return null;
   }
   const v = data as Partial<Vitrina>;
-  return { servicios: v.servicios ?? [], plantillas: v.plantillas ?? [] };
+  return { servicios: v.servicios ?? [], plantillas: await conPlantillasBase(v.plantillas ?? [], plantillas) };
 }
 
 /**
@@ -67,12 +70,13 @@ export async function vitrinaPortada(): Promise<Vitrina | null> {
  * no solo los 6 de la vitrina (supabase_rubros.sql). [] si no hay o falla.
  */
 export async function disenosDeRubro(palabras: string[], categoria: string): Promise<DisenoVitrina[]> {
+  const plantillas = cargarPlantillasBase();
   const { data, error } = await supabase.rpc('disenos_de_rubro', { p_palabras: palabras, p_categoria: categoria });
   if (error) {
     console.warn('[AIB+] No se pudieron leer los diseños del rubro:', error.message);
     return [];
   }
-  return (data as DisenoVitrina[] | null) ?? [];
+  return conPlantillasBase((data as DisenoVitrina[] | null) ?? [], plantillas);
 }
 
 /**
