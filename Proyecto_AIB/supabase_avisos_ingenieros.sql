@@ -88,9 +88,10 @@ $$;
 REVOKE ALL ON FUNCTION public.clave_servidor_valida(TEXT) FROM PUBLIC, anon, authenticated;
 
 -- A quién avisar de un encargo recién aceptado: su ingeniero, si no es el
--- administrador (a él ya le avisa el WhatsApp del servidor) y tiene los avisos
--- listos. El servidor solo la llama después de registrar_aviso_encargo, así que
--- cada encargo avisa una vez.
+-- administrador (a él ya le avisan el correo y el WhatsApp del servidor). Va
+-- por correo siempre y, si tiene CallMeBot (whatsapp y apikey), también por
+-- WhatsApp. El servidor solo la llama después de registrar_aviso_encargo, así
+-- que cada encargo avisa una vez.
 CREATE OR REPLACE FUNCTION public.aviso_ingeniero_de_encargo(p_clave TEXT, p_proyecto UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -107,19 +108,20 @@ BEGIN
 
   SELECT jsonb_build_object(
     'estado', 'ok',
-    'nombre', split_part(pi.nombre, ' ', 1),
-    'whatsapp', regexp_replace(pi.whatsapp, '[^0-9]', '', 'g'),
+    'nombre', split_part(COALESCE(pi.nombre, ''), ' ', 1),
+    'whatsapp', regexp_replace(COALESCE(pi.whatsapp, ''), '[^0-9]', '', 'g'),
     'apikey', a.callmebot_apikey,
+    'correo', NULLIF(u.email, ''),
     'negocio', COALESCE(p.payload->'ficha'->>'empresa', p.payload->>'servicio')
   )
   INTO v_fila
   FROM public.proyectos p
-  JOIN public.perfiles_ingeniero pi ON pi.user_id = p.ingeniero_id
-  JOIN public.avisos_ingeniero a ON a.user_id = p.ingeniero_id
+  JOIN auth.users u ON u.id = p.ingeniero_id
+  LEFT JOIN public.perfiles_ingeniero pi ON pi.user_id = p.ingeniero_id
+  LEFT JOIN public.avisos_ingeniero a ON a.user_id = p.ingeniero_id
   WHERE p.id = p_proyecto
     AND p.payload->>'aceptado' = 'true'
-    AND NOT public.es_admin_id(p.ingeniero_id)
-    AND pi.whatsapp IS NOT NULL;
+    AND NOT public.es_admin_id(p.ingeniero_id);
 
   RETURN COALESCE(v_fila, jsonb_build_object('estado', 'sin_canal'));
 END;

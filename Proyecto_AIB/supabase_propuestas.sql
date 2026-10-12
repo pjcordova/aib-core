@@ -302,8 +302,9 @@ $$;
 REVOKE ALL ON FUNCTION public.vista_previa_propuesta(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.vista_previa_propuesta(TEXT) TO anon, authenticated;
 
--- El servidor avisa al ingeniero por WhatsApp de que el cliente respondió.
--- Protegida con la clave del servidor; marca el aviso para no repetirlo.
+-- El servidor avisa al ingeniero, por correo y por WhatsApp, de que el cliente
+-- respondió. Protegida con la clave del servidor; marca el aviso para no
+-- repetirlo.
 CREATE OR REPLACE FUNCTION public.aviso_respuesta_propuesta(p_clave TEXT, p_token TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -327,7 +328,8 @@ BEGIN
     'es_admin', public.es_admin_id(pr.ingeniero_id),
     'nombre', split_part(COALESCE(pi.nombre, ''), ' ', 1),
     'whatsapp', regexp_replace(COALESCE(pi.whatsapp, ''), '[^0-9]', '', 'g'),
-    'apikey', a.callmebot_apikey
+    'apikey', a.callmebot_apikey,
+    'correo', (SELECT NULLIF(u.email, '') FROM auth.users u WHERE u.id = pr.ingeniero_id)
   )
   INTO v_id, v_fila
   FROM public.propuestas pr

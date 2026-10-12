@@ -10,7 +10,7 @@ const { Router } = require('express');
 const { config } = require('../config');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
-const { correoConfigurado, enviarCorreo, escapar } = require('../correo');
+const { correoConfigurado, resendConfigurado, enviarCorreo, escapar } = require('../correo');
 const { whatsappConfigurado, enviarWhatsapp } = require('../whatsapp');
 const { consultarComo } = require('../supabaseUsuario');
 const { enviarAvisosCliente } = require('../avisosCliente');
@@ -30,20 +30,84 @@ function consultarConClave(funcion, cuerpo) {
   return consultarComo(config.supabaseAnonKey, `rpc/${funcion}`, { cuerpo: { p_clave: config.cronSecret, ...cuerpo } });
 }
 
+/** Texto de un usuario para WhatsApp y asuntos: sin formato de WhatsApp y con un largo razonable. */
+const limpio = (valor, largo) =>
+  String(valor || '')
+    .replace(/[*_~`]/g, '')
+    .slice(0, largo);
+
+const soles = (n) => `S/ ${Number(n).toLocaleString('es-PE')}`;
+
+/**
+ * Correo al ingeniero, con el estilo de un correo personal (como los avisos al
+ * cliente): saludo, unos párrafos, un enlace y la firma.
+ */
+function componerCorreoIngeniero({ nombre, asunto, parrafos, enlace }) {
+  const saludo = nombre ? `Hola, ${nombre}:` : 'Hola:';
+  const html = `<div lang="es" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;max-width:560px">
+<p>${escapar(saludo)}</p>
+${parrafos.map((p) => `<p>${escapar(p)}</p>`).join('\n')}
+<p><a href="${escapar(enlace.url)}" style="color:#1a2d4d;font-weight:bold">${escapar(enlace.texto)}</a></p>
+<p>Saludos,<br>El equipo de AIB+</p>
+</div>`;
+  const texto = [saludo, '', ...parrafos.flatMap((p) => [p, '']), `${enlace.texto}: ${enlace.url}`, '', 'Saludos,', 'El equipo de AIB+'].join(
+    '\n'
+  );
+  return { asunto, html, texto };
+}
+
+/**
+ * Avisa al ingeniero por todos sus canales a la vez: por correo, siempre que
+ * tenga uno, y por WhatsApp (el del servidor si es el administrador; si no, su
+ * CallMeBot, si lo activó). Si un canal falla, el otro sale igual. `datos`: lo
+ * que devuelven las funciones aviso_* de la base de datos.
+ */
+async function avisarIngeniero(datos, { whatsapp, correo }) {
+  const envios = [];
+  if (datos.correo && resendConfigurado()) {
+    envios.push(['correo', enviarCorreo({ para: datos.correo, ...componerCorreoIngeniero({ nombre: datos.nombre, ...correo }) })]);
+  }
+  if (datos.es_admin) {
+    if (whatsappConfigurado()) envios.push(['whatsapp', enviarWhatsapp(whatsapp)]);
+  } else if (datos.whatsapp && datos.apikey) {
+    envios.push(['whatsapp', enviarWhatsapp(whatsapp, { telefono: datos.whatsapp, apikey: datos.apikey })]);
+  }
+
+  const resultados = await Promise.allSettled(envios.map(([, envio]) => envio));
+  const avisado = {};
+  resultados.forEach((resultado, i) => {
+    avisado[envios[i][0]] = resultado.status === 'fulfilled';
+    if (resultado.status === 'rejected') {
+      console.error(`[AIB+] No se pudo avisar al ingeniero por ${envios[i][0]}:`, resultado.reason?.message);
+    }
+  });
+  return avisado;
+}
+
 /**
  * Con varios ingenieros, el encargo también avisa a quien lo eligieron (si no
- * es el administrador, que ya recibe el aviso del servidor) por su propio
- * WhatsApp de CallMeBot. Devuelve false si no tiene los avisos activados.
+ * es el administrador, que ya recibe el aviso del servidor): por correo y, si
+ * activó CallMeBot, por WhatsApp. Devuelve false si no se le pudo avisar.
  */
 async function avisarAlIngeniero(proyectoId, enlacePanel) {
   const datos = await consultarConClave('aviso_ingeniero_de_encargo', { p_proyecto: proyectoId });
   if (datos?.estado !== 'ok') return false;
-  const texto = componerWhatsapp({ empresa: datos.negocio }, enlacePanel).replace(
+  const negocio = limpio(datos.negocio, 80) || 'un cliente';
+  const whatsapp = componerWhatsapp({ empresa: datos.negocio }, enlacePanel).replace(
     '*Nuevo encargo en AIB+*',
     `*${datos.nombre ? `${datos.nombre}, t` : 'T'}e eligieron en AIB+*`
   );
-  await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
-  return true;
+  const avisado = await avisarIngeniero(datos, {
+    whatsapp,
+    correo: {
+      asunto: `Te eligieron en AIB+: ${negocio}`,
+      parrafos: [
+        `Un cliente te eligió para su proyecto ${negocio}. En tu panel tienes todo lo que te contó y su WhatsApp para escribirle.`,
+      ],
+      enlace: { texto: 'Ver el encargo en mi panel', url: enlacePanel },
+    },
+  });
+  return Object.values(avisado).some(Boolean);
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -256,9 +320,9 @@ router.post('/planes/avisar-pedido', limitarPrueba, requireAuth, async (req, res
 
 /**
  * El cliente respondió una propuesta (la aceptó o pidió cambios): se le avisa
- * a su ingeniero por WhatsApp. El cliente puede no tener cuenta, así que basta
- * el token de la propuesta; la base de datos solo devuelve algo si hay una
- * respuesta sin avisar todavía, y la marca como avisada.
+ * a su ingeniero por correo y por WhatsApp. El cliente puede no tener cuenta,
+ * así que basta el token de la propuesta; la base de datos solo devuelve algo
+ * si hay una respuesta sin avisar todavía, y la marca como avisada.
  */
 router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
   try {
@@ -269,30 +333,30 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
     const datos = await consultarConClave('aviso_respuesta_propuesta', { p_token: token });
     if (datos?.estado !== 'ok') return res.status(202).json({ success: true, avisado: false });
 
-    const negocio = String(datos.negocio || 'Tu cliente')
-      .replace(/[*_~`]/g, '')
-      .slice(0, 80);
-    const comentario = String(datos.comentario || '')
-      .replace(/[*_~`]/g, '')
-      .slice(0, 300);
+    const negocio = limpio(datos.negocio, 80) || 'Tu cliente';
+    const comentario = limpio(datos.comentario, 300);
     const panel = `${origenDeLaApp(req)}/dashboard`;
-    const texto =
-      datos.respuesta === 'aceptada'
-        ? `🎉 *${negocio} aceptó tu propuesta* de S/ ${datos.precio}.\n\nEl encargo pasó a «En desarrollo». Míralo en tu panel: ${panel}`
-        : `✏️ *${negocio} pidió cambios en tu propuesta*:\n«${comentario}»\n\nEnvíale una nueva desde tu panel: ${panel}`;
+    const acepto = datos.respuesta === 'aceptada';
+    const whatsapp = acepto
+      ? `🎉 *${negocio} aceptó tu propuesta* de S/ ${datos.precio}.\n\nEl encargo pasó a «En desarrollo». Míralo en tu panel: ${panel}`
+      : `✏️ *${negocio} pidió cambios en tu propuesta*:\n«${comentario}»\n\nEnvíale una nueva desde tu panel: ${panel}`;
+    const correo = acepto
+      ? {
+          asunto: `${negocio} aceptó tu propuesta`,
+          parrafos: [`${negocio} aceptó tu propuesta de ${soles(datos.precio)}. El encargo pasó a «En desarrollo».`],
+          enlace: { texto: 'Ver el encargo en mi panel', url: panel },
+        }
+      : {
+          asunto: `${negocio} pidió cambios en tu propuesta`,
+          parrafos: [`${negocio} pidió cambios en tu propuesta:`, `«${comentario}»`, 'Puedes enviarle una nueva versión desde tu panel.'],
+          enlace: { texto: 'Ir a mi panel', url: panel },
+        };
 
     // El cliente aceptó: su encargo pasó a «En desarrollo» y se lo confirmamos por correo.
     await enviarAvisosCliente();
 
-    // El administrador recibe sus avisos en el WhatsApp del servidor; los demás, en el suyo.
-    if (datos.es_admin) {
-      if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
-      await enviarWhatsapp(texto);
-    } else {
-      if (!datos.whatsapp || !datos.apikey) return res.status(202).json({ success: true, avisado: false });
-      await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
-    }
-    return res.json({ success: true, avisado: true });
+    const avisado = await avisarIngeniero(datos, { whatsapp, correo });
+    return res.json({ success: true, avisado });
   } catch (error) {
     // La respuesta del cliente ya quedó guardada: el ingeniero la ve en su panel.
     console.error('[AIB+] No se pudo avisar de la respuesta a la propuesta:', error.message);
@@ -302,8 +366,8 @@ router.post('/propuestas/respuesta', limitarPrueba, async (req, res, next) => {
 
 /**
  * Propuesta por etapas: el cliente aprobó una entrega o pidió ajustes. Igual
- * que con la respuesta a la propuesta, basta el token y la base de datos solo
- * devuelve una respuesta sin avisar (aviso_respuesta_entrega).
+ * que con la respuesta a la propuesta (correo y WhatsApp), basta el token y la
+ * base de datos solo devuelve una respuesta sin avisar (aviso_respuesta_entrega).
  */
 router.post('/propuestas/entrega', limitarEntregas, async (req, res, next) => {
   try {
@@ -314,27 +378,32 @@ router.post('/propuestas/entrega', limitarEntregas, async (req, res, next) => {
     const datos = await consultarConClave('aviso_respuesta_entrega', { p_token: token });
     if (datos?.estado !== 'ok') return res.status(202).json({ success: true, avisado: false });
 
-    const limpio = (valor, largo) =>
-      String(valor || '')
-        .replace(/[*_~`]/g, '')
-        .slice(0, largo);
     const negocio = limpio(datos.negocio, 80) || 'Tu cliente';
     const etapa = limpio(datos.titulo, 60);
     const comentario = limpio(datos.comentario, 300);
     const panel = `${origenDeLaApp(req)}/dashboard`;
-    const texto =
-      datos.respuesta === 'aprobado'
-        ? `✅ *${negocio} aprobó la etapa «${etapa}»*.\n\nCuando te pague, márcala como cobrada en tu panel: ${panel}`
-        : `✏️ *${negocio} pidió ajustes en la etapa «${etapa}»*:\n«${comentario}»\n\nMíralo en tu panel: ${panel}`;
+    const aprobo = datos.respuesta === 'aprobado';
+    const whatsapp = aprobo
+      ? `✅ *${negocio} aprobó la etapa «${etapa}»*.\n\nCuando te pague, márcala como cobrada en tu panel: ${panel}`
+      : `✏️ *${negocio} pidió ajustes en la etapa «${etapa}»*:\n«${comentario}»\n\nMíralo en tu panel: ${panel}`;
+    const correo = aprobo
+      ? {
+          asunto: `${negocio} aprobó la etapa «${etapa}»`,
+          parrafos: [`${negocio} aprobó la etapa «${etapa}».`, 'Cuando te pague, márcala como cobrada en tu panel.'],
+          enlace: { texto: 'Ir a mi panel', url: panel },
+        }
+      : {
+          asunto: `${negocio} pidió ajustes en la etapa «${etapa}»`,
+          parrafos: [
+            `${negocio} pidió ajustes en la etapa «${etapa}»:`,
+            `«${comentario}»`,
+            'Cuando los tengas, márcala otra vez como entregada.',
+          ],
+          enlace: { texto: 'Ir a mi panel', url: panel },
+        };
 
-    if (datos.es_admin) {
-      if (!whatsappConfigurado()) return res.status(202).json({ success: true, avisado: false });
-      await enviarWhatsapp(texto);
-    } else {
-      if (!datos.whatsapp || !datos.apikey) return res.status(202).json({ success: true, avisado: false });
-      await enviarWhatsapp(texto, { telefono: datos.whatsapp, apikey: datos.apikey });
-    }
-    return res.json({ success: true, avisado: true });
+    const avisado = await avisarIngeniero(datos, { whatsapp, correo });
+    return res.json({ success: true, avisado });
   } catch (error) {
     // La respuesta del cliente ya quedó guardada: el ingeniero la ve en su panel.
     console.error('[AIB+] No se pudo avisar de la respuesta a la entrega:', error.message);
@@ -384,3 +453,4 @@ router.post('/avisos/clientes', limitarClientes, async (_req, res) => {
 module.exports = router;
 module.exports.componerCorreo = componerCorreo;
 module.exports.componerWhatsapp = componerWhatsapp;
+module.exports.componerCorreoIngeniero = componerCorreoIngeniero;

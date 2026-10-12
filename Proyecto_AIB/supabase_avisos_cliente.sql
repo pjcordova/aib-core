@@ -10,7 +10,7 @@
 -- Google o con su correo). Si lo guardan poco después, el aviso pendiente
 -- les llega igual; pasados 3 días sin cuenta, se descarta. Por encargo se
 -- envía solo la novedad más reciente: si se juntan varias, no se le llena el
--- correo.
+-- correo. Y el mismo aviso no se repite en 10 minutos.
 --
 -- También las entregas de una propuesta por etapas (estado 'entrega', con el
 -- nombre del hito en nota; supabase_entregas.sql).
@@ -31,8 +31,13 @@ CREATE TABLE IF NOT EXISTS public.avisos_cliente (
   creado_en   TIMESTAMPTZ NOT NULL DEFAULT now(),
   -- NULL mientras está pendiente.
   enviado_en  TIMESTAMPTZ,
-  resultado   TEXT CHECK (resultado IN ('enviado', 'sin_correo', 'reemplazado', 'fallido'))
+  resultado   TEXT
 );
+
+-- 'repetido': el mismo aviso ya había salido hace unos minutos.
+ALTER TABLE public.avisos_cliente DROP CONSTRAINT IF EXISTS avisos_cliente_resultado_check;
+ALTER TABLE public.avisos_cliente ADD CONSTRAINT avisos_cliente_resultado_check
+  CHECK (resultado IN ('enviado', 'sin_correo', 'reemplazado', 'repetido', 'fallido'));
 
 CREATE INDEX IF NOT EXISTS avisos_cliente_pendientes_idx
   ON public.avisos_cliente (proyecto_id, id) WHERE enviado_en IS NULL;
@@ -89,6 +94,27 @@ BEGIN
     AND EXISTS (
       SELECT 1 FROM public.avisos_cliente b
       WHERE b.proyecto_id = a.proyecto_id AND b.enviado_en IS NULL AND b.id > a.id
+    );
+
+  -- El mismo aviso ya salió hace poco (por ejemplo, el ingeniero envió la
+  -- propuesta y además marcó la etapa a mano): no se repite. Sí salen las
+  -- entregas, que cada una es nueva, y lo que llegue después de una nueva
+  -- versión de la propuesta.
+  UPDATE public.avisos_cliente a
+  SET enviado_en = now(), resultado = 'repetido'
+  WHERE a.enviado_en IS NULL
+    AND a.estado <> 'entrega'
+    AND EXISTS (
+      SELECT 1 FROM public.avisos_cliente b
+      WHERE b.proyecto_id = a.proyecto_id
+        AND b.resultado = 'enviado'
+        AND b.estado = a.estado
+        AND COALESCE(b.nota, '') = COALESCE(a.nota, '')
+        AND b.enviado_en > now() - interval '10 minutes'
+        AND NOT EXISTS (
+          SELECT 1 FROM public.propuestas pr
+          WHERE pr.proyecto_id = a.proyecto_id AND pr.creada_en > b.creado_en
+        )
     );
 
   FOR r IN
