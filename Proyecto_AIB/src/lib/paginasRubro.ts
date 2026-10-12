@@ -17,8 +17,10 @@ export interface PaginaRubro {
   categoria: Exclude<CategoriaNegocio, 'otro'>;
   /**
    * Para encontrar los diseños de este negocio dentro de su categoría (un
-   * gimnasio y un spa comparten «salud»): se buscan en su nombre, descripción
-   * y etiquetas, sin tildes. Pueden ser raíces: «psicolog», «deportiv».
+   * gimnasio y un spa comparten «salud»): la base de datos las busca en su
+   * nombre, descripción y etiquetas, sin tildes (disenos_de_rubro, en
+   * supabase_rubros.sql). En minúsculas y sin tildes; pueden ser raíces:
+   * «psicolog», «deportiv».
    */
   palabras: string[];
   nombre: string;
@@ -38,18 +40,3 @@ export interface PaginaRubro {
 export const PAGINAS_RUBRO = datos as PaginaRubro[];
 
 export const paginaRubro = (slug: string | undefined) => PAGINAS_RUBRO.find((p) => p.slug === slug) ?? null;
-
-const sinTildes = (texto: string) =>
-  texto
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-
-/** Cuántas palabras del rubro aparecen en el nombre, la descripción o las etiquetas de un diseño. */
-export function coincidencias(
-  diseno: { nombre: string; descripcion: string | null; base: string | null; etiquetas: string[] | null },
-  palabras: string[]
-): number {
-  const texto = sinTildes([diseno.nombre, diseno.descripcion ?? '', diseno.base ?? '', ...(diseno.etiquetas ?? [])].join(' '));
-  return palabras.filter((p) => texto.includes(sinTildes(p))).length;
-}

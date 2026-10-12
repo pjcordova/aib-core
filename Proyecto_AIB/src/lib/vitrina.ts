@@ -62,6 +62,20 @@ export async function vitrinaPortada(): Promise<Vitrina | null> {
 }
 
 /**
+ * Para la página de un rubro: los diseños web de ese negocio (por sus palabras
+ * clave) o, si no hay, los de su categoría. Busca entre todos los publicados,
+ * no solo los 6 de la vitrina (supabase_rubros.sql). [] si no hay o falla.
+ */
+export async function disenosDeRubro(palabras: string[], categoria: string): Promise<DisenoVitrina[]> {
+  const { data, error } = await supabase.rpc('disenos_de_rubro', { p_palabras: palabras, p_categoria: categoria });
+  if (error) {
+    console.warn('[AIB+] No se pudieron leer los diseños del rubro:', error.message);
+    return [];
+  }
+  return (data as DisenoVitrina[] | null) ?? [];
+}
+
+/**
  * Lo que escribe en el buscador → el servicio que más se le parece. Palabras
  * de dueño de negocio, no de informático. null si no se parece a ninguno.
  */
