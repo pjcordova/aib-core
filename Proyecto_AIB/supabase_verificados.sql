@@ -89,6 +89,8 @@ GRANT EXECUTE ON FUNCTION public.pedir_verificacion() TO authenticated;
 -- ----------------------------------------------------------------------------
 
 -- Los verificados, primero.
+-- La versión vigente (Pro y Negocio primero) está en supabase_destacados.sql:
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.ingenieros_disponibles()
 RETURNS JSONB
 LANGUAGE sql
@@ -187,6 +189,8 @@ $$;
 REVOKE ALL ON FUNCTION public.ingenieros_para_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ingenieros_para_admin() TO authenticated;
 
+-- La versión vigente (Pro y Negocio primero) está en supabase_destacados.sql:
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.vitrina_portada()
 RETURNS JSONB
 LANGUAGE sql

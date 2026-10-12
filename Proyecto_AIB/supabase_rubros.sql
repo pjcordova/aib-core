@@ -13,6 +13,8 @@
 -- supabase_verificados.sql. Se puede ejecutar más de una vez.
 -- ============================================================================
 
+-- La versión vigente (Pro y Negocio primero) está en supabase_destacados.sql:
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.disenos_de_rubro(p_palabras TEXT[], p_categoria TEXT)
 RETURNS JSONB
 LANGUAGE sql
