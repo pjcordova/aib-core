@@ -5,6 +5,7 @@ import { PiePagina } from './ui/PiePagina';
 import { GaleriaDisenos } from './GaleriaDisenos';
 import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { useMetadatos } from '../hooks/useMetadatos';
+import { registrarVisita } from '../lib/medicionPortada';
 import { ingenierosDisponibles, ofreceServicio, type IngenieroPublico } from '../lib/ingenieros';
 import { PAGINAS_RUBRO } from '../lib/paginasRubro';
 import { PAGINAS_SERVICIO, PASOS_COMO_FUNCIONA as PASOS, paginaServicio } from '../lib/paginasServicio';
@@ -24,6 +25,10 @@ export function PaginaServicio() {
   const p = paginaServicio(slug);
   const navigate = useNavigate();
   useMetadatos(p);
+  // Para saber cuántos entran por esta página (y desde Google).
+  useEffect(() => {
+    if (p) registrarVisita(`servicios/${p.slug}`);
+  }, [p]);
 
   const [vitrina, setVitrina] = useState<Vitrina | null>(null);
   const [ingenieros, setIngenieros] = useState<IngenieroPublico[]>([]);

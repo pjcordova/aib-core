@@ -13,7 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wordmark } from './ui/Primitives';
 import { MiniVista } from './panel/MiniVista';
-import { canalDeLaVisita, registrarVisitaPortada } from '../lib/medicionPortada';
+import { canalDeLaVisita, registrarVisita } from '../lib/medicionPortada';
 import { ingenierosDisponibles, ofreceServicio, type IngenieroPublico } from '../lib/ingenieros';
 import { obtenerServicio, solesEnteros, type TipoServicio } from '../lib/servicios';
 import { documentoDeVitrina, servicioDeBusqueda, vitrinaPortada, type DisenoVitrina, type Vitrina } from '../lib/vitrina';
@@ -126,7 +126,7 @@ export function Portada({
   useEffect(() => {
     if (!medir) return;
     canalDeLaVisita();
-    registrarVisitaPortada();
+    registrarVisita('portada');
   }, [medir]);
 
   // undefined mientras carga; null si no se pudo leer (la portada sigue sin ella).

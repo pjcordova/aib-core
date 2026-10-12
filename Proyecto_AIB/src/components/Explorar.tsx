@@ -7,6 +7,7 @@ import { empezarConfirmando } from '../lib/perfilPublico';
 import { CATEGORIAS_NEGOCIO } from '../lib/plantillas';
 import { obtenerServicio, solesEnteros, type TipoServicio } from '../lib/servicios';
 import { preciosIngenieros, type PreciosIngeniero } from '../lib/vitrina';
+import { registrarVisita } from '../lib/medicionPortada';
 import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { PiePagina } from './ui/PiePagina';
 import { Wordmark } from './ui/Primitives';
@@ -87,6 +88,7 @@ export function Explorar() {
 
   useEffect(() => {
     document.title = 'Encuentra a tu ingeniero · AIB+';
+    registrarVisita('explorar');
     let vigente = true;
     void Promise.all([ingenierosDisponibles(), preciosIngenieros()]).then(([l, p]) => {
       if (!vigente) return;

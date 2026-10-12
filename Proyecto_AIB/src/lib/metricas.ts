@@ -7,6 +7,8 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
+import { PAGINAS_RUBRO } from './paginasRubro';
+import { PAGINAS_SERVICIO } from './paginasServicio';
 
 export interface SemanaMetricas {
   /** El lunes de la semana (AAAA-MM-DD). */
@@ -51,7 +53,7 @@ export type ClaveSerie = Exclude<keyof SemanaMetricas, 'semana'>;
 
 /** Qué es cada número, en el orden del embudo. */
 export const SERIES: { clave: ClaveSerie; nombre: string; soles?: boolean; ayuda: string }[] = [
-  { clave: 'visitas', nombre: 'Visitas', ayuda: 'Visitas a la portada' },
+  { clave: 'visitas', nombre: 'Visitas', ayuda: 'Visitas a la portada y a las páginas de servicios, rubros y el buscador' },
   { clave: 'pruebas', nombre: 'Pruebas', ayuda: 'Personas que empezaron a ver cómo quedaría lo suyo' },
   { clave: 'proyectos', nombre: 'Vistas previas', ayuda: 'Vistas previas guardadas por los clientes' },
   { clave: 'encargos', nombre: 'Encargos', ayuda: 'Proyectos enviados a un ingeniero' },
@@ -88,6 +90,74 @@ export async function leerMetricas(semanas = 8): Promise<Metricas | null> {
   return m;
 }
 
+// ------------------------------------------------------------ de dónde llegan
+// llegadas_admin (supabase_llegadas.sql): por canal y por página de entrada.
+// Google y las demás webs se distinguen desde el 12 de octubre de 2026; antes,
+// todo figura como «directo» y en la portada.
+
+export interface CanalLlegada {
+  canal: string;
+  visitas: number;
+  /** Pruebas sin cuenta que empezaron por ese canal. */
+  pruebas: number;
+  maqueta: number;
+  encargos: number;
+}
+
+export interface PaginaLlegada {
+  /** 'portada', 'explorar', 'servicios/<slug>', 'rubros/<slug>', 'otra' o 'sin-dato'. */
+  pagina: string;
+  visitas: number;
+  google: number;
+  pruebas: number;
+  encargos: number;
+}
+
+export interface Llegadas {
+  canales: CanalLlegada[];
+  paginas: PaginaLlegada[];
+}
+
+export async function leerLlegadas(semanas = 8): Promise<Llegadas | null> {
+  const { data, error } = await supabase.rpc('llegadas_admin', { p_semanas: semanas });
+  if (error || !data) {
+    console.error('[AIB+] No se pudo leer de dónde llegan las visitas:', error?.message);
+    return null;
+  }
+  return data as Llegadas;
+}
+
+const NOMBRES_CANAL: Record<string, string> = {
+  google: 'Google',
+  buscador: 'Otros buscadores',
+  directo: 'Directo',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  linkedin: 'LinkedIn',
+  youtube: 'YouTube',
+  whatsapp: 'WhatsApp',
+  x: 'X (Twitter)',
+  correo: 'Correo',
+  'otra-web': 'Otras webs',
+  otro: 'Otros',
+};
+
+/** «Google», «Otros buscadores»… o el ?c= del enlace con mayúscula («Maps»). */
+export const nombreCanal = (canal: string) => NOMBRES_CANAL[canal] ?? canal.charAt(0).toUpperCase() + canal.slice(1);
+
+/** «Portada», «Rubro: Restaurantes», «Servicio: CRM»… */
+export function nombrePagina(pagina: string): string {
+  if (pagina === 'portada') return 'Portada';
+  if (pagina === 'explorar') return 'Buscador de ingenieros';
+  if (pagina === 'otra') return 'Otras';
+  if (pagina === 'sin-dato') return 'Sin dato (pruebas de antes del 12 oct)';
+  const [tipo, slug] = pagina.split('/');
+  if (tipo === 'rubros') return `Rubro: ${PAGINAS_RUBRO.find((p) => p.slug === slug)?.nombre ?? slug}`;
+  if (tipo === 'servicios') return `Servicio: ${PAGINAS_SERVICIO.find((p) => p.slug === slug)?.nombre ?? slug}`;
+  return pagina;
+}
+
 export const numero = (n: number) => n.toLocaleString('es-PE');
 export const soles = (n: number) => `S/ ${n.toLocaleString('es-PE')}`;
 export const valor = (clave: ClaveSerie, n: number) => (SERIES.find((s) => s.clave === clave)?.soles ? soles(n) : numero(n));
@@ -110,8 +180,24 @@ export const total = (m: Metricas, clave: ClaveSerie) => m.semanas.reduce((suma,
 /** «1 reseña», «3 reseñas». */
 const contar = (n: number, uno: string, varios: string) => `${numero(n)} ${n === 1 ? uno : varios}`;
 
+/** «Desde Google: 12 visitas y 2 pruebas. Otros canales: …» (vacío si no hay datos). */
+function textoLlegadas(llegadas?: Llegadas | null): string {
+  if (!llegadas?.canales.length) return '';
+  const google = llegadas.canales.find((c) => c.canal === 'google');
+  const otros = llegadas.canales
+    .filter((c) => c.canal !== 'google' && c.visitas > 0)
+    .slice(0, 4)
+    .map((c) => `${nombreCanal(c.canal)} ${numero(c.visitas)}`);
+  return [
+    `Desde Google: ${contar(google?.visitas ?? 0, 'visita', 'visitas')} y ${contar(google?.pruebas ?? 0, 'prueba', 'pruebas')}.`,
+    otros.length ? `Otros canales (visitas): ${otros.join(', ')}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /** Un párrafo listo para pegar en el informe. */
-export function resumenTexto(m: Metricas): string {
+export function resumenTexto(m: Metricas, llegadas?: Llegadas | null): string {
   const semanas = m.semanas;
   const ultima = semanas.at(-1);
   const a = m.actual;
@@ -121,10 +207,11 @@ export function resumenTexto(m: Metricas): string {
   const lineas = [
     `AIB+ — resumen de las últimas ${semanas.length} semanas (del ${fecha(new Date(`${semanas[0].semana}T12:00:00`))} al ${fecha(new Date(), true)}).`,
     '',
-    `Embudo: ${contar(t('visitas'), 'visita', 'visitas')} a la portada, ${contar(t('pruebas'), 'prueba', 'pruebas')}, ${contar(t('proyectos'), 'vista previa', 'vistas previas')}, ${contar(t('encargos'), 'encargo enviado', 'encargos enviados')} a ingenieros, ${contar(t('propuestas'), 'propuesta', 'propuestas')} y ${contar(t('aceptadas'), 'aceptada', 'aceptadas')} (${soles(t('vendido'))} vendidos por los ingenieros).`,
+    `Embudo: ${contar(t('visitas'), 'visita', 'visitas')} a la web, ${contar(t('pruebas'), 'prueba', 'pruebas')}, ${contar(t('proyectos'), 'vista previa', 'vistas previas')}, ${contar(t('encargos'), 'encargo enviado', 'encargos enviados')} a ingenieros, ${contar(t('propuestas'), 'propuesta', 'propuestas')} y ${contar(t('aceptadas'), 'aceptada', 'aceptadas')} (${soles(t('vendido'))} vendidos por los ingenieros).`,
     ultima
       ? `Esta semana (del ${etiquetaSemana(ultima.semana, true)}): ${contar(ultima.visitas, 'visita', 'visitas')}, ${contar(ultima.pruebas, 'prueba', 'pruebas')} y ${contar(ultima.encargos, 'encargo', 'encargos')}.`
       : '',
+    textoLlegadas(llegadas),
     '',
     `Oferta: ${contar(a.ingenieros_aprobados, 'ingeniero aprobado', 'ingenieros aprobados')} (${contar(a.ingenieros_verificados, 'verificado', 'verificados')}, ${a.ingenieros_con_disenos} con diseños publicados) y ${contar(a.disenos_publicados, 'diseño publicado', 'diseños publicados')}.`,
     `Clientes: ${a.clientes_con_cuenta} con cuenta, ${contar(a.encargos, 'encargo', 'encargos')} en total, ${contar(a.resenas, 'reseña', 'reseñas')}${a.promedio ? ` (promedio ${a.promedio} ★)` : ''}.`,
@@ -133,8 +220,8 @@ export function resumenTexto(m: Metricas): string {
   return lineas.filter((l, i, todas) => l !== '' || todas[i - 1] !== '').join('\n');
 }
 
-/** Excel con dos hojas: por semana y la situación actual. */
-export async function descargarExcel(m: Metricas): Promise<void> {
+/** Excel con tres hojas: por semana, la situación actual y de dónde llegan. */
+export async function descargarExcel(m: Metricas, llegadas?: Llegadas | null): Promise<void> {
   const XLSX = await import('xlsx');
   const filas = m.semanas.map((s) => ({
     'Semana del': etiquetaSemana(s.semana, true),
@@ -160,5 +247,15 @@ export async function descargarExcel(m: Metricas): Promise<void> {
   const libro = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filas), 'Por semana');
   XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([['Indicador', 'Valor'], ...actual]), 'Situación actual');
+  if (llegadas) {
+    const hoja = [
+      ['Canal', 'Visitas', 'Pruebas', 'Vieron su maqueta', 'Encargos'],
+      ...llegadas.canales.map((c) => [nombreCanal(c.canal), c.visitas, c.pruebas, c.maqueta, c.encargos]),
+      [],
+      ['Página de entrada', 'Visitas', 'Desde Google', 'Pruebas', 'Encargos'],
+      ...llegadas.paginas.map((p) => [nombrePagina(p.pagina), p.visitas, p.google, p.pruebas, p.encargos]),
+    ];
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(hoja), 'De dónde llegan');
+  }
   XLSX.writeFile(libro, `aibplus-metricas-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }

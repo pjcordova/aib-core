@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
-import { canalDeLaVisita } from './medicionPortada';
+import { canalDeLaVisita, paginaDeEntrada } from './medicionPortada';
 import { conCaptcha } from './captcha';
 
 /* -------------------------------------------------------------------------- */
@@ -283,8 +283,12 @@ export async function empezarSinCuenta(): Promise<ResultadoPrueba> {
     abrioSesion = true;
   }
 
-  // El canal por el que llegó a la portada (?c=), para saber cuál trae clientes.
-  const { data, error } = await supabase.rpc('empezar_prueba_libre', { p_canal: canalDeLaVisita() });
+  // El canal (?c= o la web de la que viene) y la página por la que entró,
+  // para saber qué trae clientes.
+  const { data, error } = await supabase.rpc('empezar_prueba_libre', {
+    p_canal: canalDeLaVisita(),
+    p_entrada: paginaDeEntrada(),
+  });
   const estado = (data as { estado?: string } | null)?.estado;
   if (!error && estado === 'ok') return 'ok';
 

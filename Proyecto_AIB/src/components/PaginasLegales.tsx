@@ -131,8 +131,8 @@ export function Privacidad() {
             de publicidad ni herramientas de seguimiento de terceros.
           </li>
           <li>
-            Estadísticas sin datos personales: cuántas visitas recibe la portada o la página de un ingeniero, y por qué
-            canal llegaste (por ejemplo, Instagram) si el enlace lo indica.
+            Estadísticas sin datos personales: cuántas visitas reciben nuestras páginas o la de un ingeniero, por cuál
+            entraste y de dónde llegaste (por ejemplo, Google o Instagram), según el enlace o la web que te trajo.
           </li>
           <li>
             Registros técnicos del servidor, como la dirección IP, para mantener la plataforma segura y evitar abusos.
