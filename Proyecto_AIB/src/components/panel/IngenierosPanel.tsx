@@ -43,7 +43,8 @@ export function IngenierosPanel({ esAdmin }: { esAdmin: boolean }) {
 
 function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
   const [perfil, setPerfil] = useState<MiPerfil | null | undefined>(undefined);
-  const [guardado, setGuardado] = useState(false);
+  // El texto del aviso tras guardar; null si no hay.
+  const [guardado, setGuardado] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -64,7 +65,7 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
       </p>
       {guardado && (
         <p role="status" className="mb-4 text-sm text-positive">
-          ✓ Perfil guardado.
+          {guardado}
         </p>
       )}
       {perfil?.slug && perfil.estado === 'aprobado' && <TuPaginaPublica slug={perfil.slug} />}
@@ -77,9 +78,15 @@ function MiPerfilIngeniero({ esAdmin }: { esAdmin: boolean }) {
           <FormularioPerfil
             inicial={perfil}
             textoBoton="Guardar perfil"
-            onGuardado={() => {
-              setGuardado(true);
-              setTimeout(() => setGuardado(false), 3000);
+            onGuardado={(estado) => {
+              // Un miembro de equipo que crea su perfil público: lo revisa el administrador.
+              const enRevision = estado === 'pendiente';
+              setGuardado(
+                enRevision
+                  ? '✓ Perfil guardado. AIB+ lo revisará antes de mostrarlo en el buscador.'
+                  : '✓ Perfil guardado.'
+              );
+              setTimeout(() => setGuardado(null), enRevision ? 8000 : 3000);
             }}
           />
         </div>

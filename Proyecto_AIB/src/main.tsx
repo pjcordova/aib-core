@@ -22,13 +22,9 @@ import { PaginaServicio } from './components/PaginaServicio';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
-// enlace desde el celular no baja el panel, ABI ni el informe antiguo (este
-// último trae Excel, PDF y gráficos, más de 800 KB).
+// enlace desde el celular no baja el panel ni ABI.
 const PanelIngeniero = lazy(() =>
   import('./components/panel/PanelIngeniero').then((m) => ({ default: m.PanelIngeniero }))
-);
-const DashboardIngeniero = lazy(() =>
-  import('./components/DashboardIngeniero').then((m) => ({ default: m.DashboardIngeniero }))
 );
 
 const cargando = (
@@ -73,8 +69,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/terminos" element={<Terminos />} />
             {/* La reseña que deja el cliente con el enlace de su ingeniero, sin cuenta. */}
             <Route path="/resena/:token" element={<PaginaResena />} />
-            {/* Vista antigua del formulario, sin enlazar desde ningún sitio. */}
-            <Route path="/dashboard/legado" element={<DashboardIngeniero />} />
             {/* Cualquier otra ruta vuelve al inicio en vez de dejar la página en blanco. */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

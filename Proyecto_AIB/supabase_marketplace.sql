@@ -123,7 +123,9 @@ CREATE POLICY "perfil ingeniero: el suyo o el admin"
   USING (user_id = (SELECT auth.uid()) OR public.es_admin());
 
 -- Crea o actualiza el perfil de quien llama. Una solicitud nueva (o una que
--- se rechazó) queda pendiente; quien ya es ingeniero queda aprobado.
+-- se rechazó) queda pendiente; solo el perfil del administrador queda
+-- aprobado de entrada. Los miembros de un equipo ya son ingenieros, pero su
+-- perfil público también pasa por la revisión del administrador.
 CREATE OR REPLACE FUNCTION public.guardar_perfil_ingeniero(
   p_nombre TEXT,
   p_titular TEXT,
@@ -155,7 +157,7 @@ BEGIN
     v_usuario, btrim(p_nombre), btrim(p_titular), btrim(COALESCE(p_bio, '')), COALESCE(p_especialidades, '{}'),
     p_anios, NULLIF(btrim(COALESCE(p_ciudad, '')), ''), NULLIF(btrim(COALESCE(p_portafolio, '')), ''),
     NULLIF(btrim(COALESCE(p_foto, '')), ''), NULLIF(btrim(COALESCE(p_whatsapp, '')), ''),
-    CASE WHEN public.es_ingeniero() THEN 'aprobado' ELSE 'pendiente' END
+    CASE WHEN public.es_admin() THEN 'aprobado' ELSE 'pendiente' END
   )
   ON CONFLICT (user_id) DO UPDATE SET
     nombre = EXCLUDED.nombre,

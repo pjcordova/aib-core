@@ -15,12 +15,11 @@
     "@codesandbox/sandpack-react": "^2.20.0",
     "@supabase/supabase-js": "^2.106.2",
     "chart.js": "^4.5.1",
-    "jspdf": "^3.0.4",
     "mustache": "^4.2.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6",
+    "react-router-dom": "^7.18.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

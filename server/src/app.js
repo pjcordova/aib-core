@@ -30,6 +30,9 @@ const app = express();
 // la IP real de X-Forwarded-For.
 app.set('trust proxy', 1);
 
+// Sin «X-Powered-By: Express»: no hace falta anunciar qué hay detrás.
+app.disable('x-powered-by');
+
 // CORS. El navegador manda `Origin` también en las peticiones POST al mismo
 // dominio, así que una lista blanca que solo contenga localhost rechaza el
 // propio sitio en producción. Aceptamos siempre el mismo origen —donde la web y
@@ -72,8 +75,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Público: solo dice si el servidor responde (ni el modelo de IA ni el tiempo encendido).
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', model: config.model, uptime: Math.round(process.uptime()) });
+  res.json({ status: 'ok' });
 });
 
 app.use('/api', discoveryRoutes);
