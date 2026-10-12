@@ -1,0 +1,282 @@
+[
+  {
+    "slug": "restaurantes",
+    "categoria": "restaurante",
+    "nombre": "Restaurantes",
+    "icono": "🍽️",
+    "titulo": "Página web para restaurantes en Perú | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu restaurante, cevichería o pollería: tu carta, pedidos por WhatsApp y tu ubicación. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu restaurante",
+    "intro": "Tu carta con fotos y precios, un botón para pedir por WhatsApp y cómo llegar, en una web que se ve bien en el celular. Sirve para un restaurante, una cevichería, una pollería o un negocio de delivery. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tu carta con fotos y precios, fácil de cambiar cuando subes un plato",
+      "Un botón que abre WhatsApp con el pedido ya escrito",
+      "Horario, dirección y el mapa para llegar",
+      "Reservas para mesas o eventos",
+      "Carta digital con un código QR para las mesas"
+    ],
+    "tambien": [
+      { "servicio": "automatizacion", "texto": "Que los pedidos y reservas lleguen ordenados a tu WhatsApp, con respuestas automáticas." },
+      { "servicio": "erp", "texto": "Llevar el control de insumos, ventas y caja del día." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Puedo cambiar la carta y los precios yo mismo?",
+        "respuesta": "Sí, si lo pides. Al contar lo que necesitas lo indicas y tu ingeniero lo incluye en su propuesta: una carta que editas tú o que él actualiza cuando le avisas."
+      },
+      {
+        "pregunta": "¿Sirve para recibir pedidos de delivery?",
+        "respuesta": "Sí. Lo más común es un botón que abre WhatsApp con el pedido ya escrito, para que lo confirmes tú. Si quieres pedidos con pago en línea, tu ingeniero te propone cómo hacerlo y cuánto cuesta."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta la web de un restaurante?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "salones-de-belleza",
+    "categoria": "salud-bienestar",
+    "nombre": "Salones de belleza y barberías",
+    "icono": "💇",
+    "titulo": "Página web para salones de belleza, barberías y spas | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu salón, barbería o spa: tus servicios con precios, tus trabajos y citas por WhatsApp. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu salón de belleza o barbería",
+    "intro": "Que tus clientes vean tus servicios y precios, miren fotos de tus trabajos y separen su cita sin llamarte. Para salones, barberías, spas, centros de estética y uñas. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tus servicios con precios y cuánto dura cada uno",
+      "Una galería con fotos de tus trabajos",
+      "Citas por WhatsApp o con un calendario para elegir el horario",
+      "Tu equipo, con la especialidad de cada uno",
+      "Promociones y paquetes del mes"
+    ],
+    "tambien": [
+      { "servicio": "automatizacion", "texto": "Recordatorios de citas por WhatsApp para que no te dejen plantado." },
+      { "servicio": "crm", "texto": "Saber quiénes son tus clientes frecuentes y cuándo volver a escribirles." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Mis clientes pueden reservar su cita desde la web?",
+        "respuesta": "Sí. Puede ser un botón que abre WhatsApp con la cita ya pedida, o un calendario donde eligen el día y la hora. Lo indicas al contar lo que necesitas y tu ingeniero te propone la mejor opción."
+      },
+      {
+        "pregunta": "¿Puedo mostrar fotos de mis trabajos?",
+        "respuesta": "Sí. La galería de trabajos es de lo que más ayuda a decidir a un cliente nuevo. Tu ingeniero la arma con tus fotos y te explica cómo agregar más."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "consultorios",
+    "categoria": "salud-bienestar",
+    "nombre": "Consultorios y clínicas",
+    "icono": "🩺",
+    "titulo": "Página web para consultorios, clínicas y dentistas | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu consultorio o clínica: especialidades, horarios, citas por WhatsApp y cómo llegar. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu consultorio o clínica",
+    "intro": "Una web que transmita confianza: quién te atiende, qué especialidades ofreces, tus horarios y cómo pedir una cita. Para médicos, dentistas, psicólogos, fisioterapeutas, nutricionistas y clínicas. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tus especialidades y los tratamientos que ofreces",
+      "Quién atiende, con su formación y colegiatura",
+      "Horarios, dirección y el mapa para llegar",
+      "Citas por WhatsApp o con un calendario",
+      "Respuestas a las preguntas que más te hacen los pacientes"
+    ],
+    "tambien": [
+      { "servicio": "automatizacion", "texto": "Recordatorios de citas y confirmaciones por WhatsApp." },
+      { "servicio": "crm", "texto": "Ordenar a tus pacientes y sus próximas citas en un solo lugar." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Los pacientes pueden pedir cita desde la web?",
+        "respuesta": "Sí. Puede ser un botón que abre WhatsApp con la cita ya pedida o un calendario con tus horarios libres. Tu ingeniero te propone la opción que mejor encaja con tu forma de atender."
+      },
+      {
+        "pregunta": "¿La web guarda historias clínicas?",
+        "respuesta": "Una web de presentación no guarda datos médicos. Si necesitas un sistema para historias clínicas o pacientes, cuéntalo y tu ingeniero te propone cómo hacerlo de forma segura."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "gimnasios",
+    "categoria": "salud-bienestar",
+    "nombre": "Gimnasios y centros deportivos",
+    "icono": "🏋️",
+    "titulo": "Página web para gimnasios y centros deportivos | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu gimnasio, box o academia de baile: planes, horarios de clases e inscripciones por WhatsApp. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu gimnasio",
+    "intro": "Que quien busca dónde entrenar vea tus planes, tus horarios de clases y cómo es tu local, y se inscriba sin tener que ir primero. Para gimnasios, boxes de crossfit, estudios de yoga o pilates y academias de baile. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tus planes y membresías con precios",
+      "El horario de clases de la semana",
+      "Fotos de tu local, tus máquinas y tus entrenadores",
+      "Inscripción o clase de prueba por WhatsApp",
+      "Promociones de temporada"
+    ],
+    "tambien": [
+      { "servicio": "crm", "texto": "Saber qué membresías vencen y a quién escribirle para que renueve." },
+      { "servicio": "apps-moviles", "texto": "Una app para que tus socios reserven clases y vean su rutina." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Puedo mostrar el horario de clases y cambiarlo?",
+        "respuesta": "Sí. Lo indicas al contar lo que necesitas y tu ingeniero lo incluye: un horario que editas tú o que él actualiza cuando le avisas."
+      },
+      {
+        "pregunta": "¿Se pueden inscribir desde la web?",
+        "respuesta": "Sí. Lo más simple es un botón que abre WhatsApp con el plan elegido. Si quieres cobrar la membresía en línea, tu ingeniero te propone cómo hacerlo."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "tiendas-de-ropa",
+    "categoria": "tienda-ropa",
+    "nombre": "Tiendas de ropa",
+    "icono": "👗",
+    "titulo": "Página web para tiendas de ropa y boutiques | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu tienda de ropa o boutique: catálogo con tallas y precios, pedidos por WhatsApp o tienda online. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu tienda de ropa",
+    "intro": "Tu catálogo con fotos, tallas y precios, y un botón para pedir por WhatsApp o comprar en línea. Para boutiques, tiendas de ropa, calzado y accesorios, con local o solo por redes. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Catálogo por categorías, con fotos, tallas y precios",
+      "Pedido por WhatsApp con el producto y la talla ya escritos",
+      "Novedades y ofertas de la temporada",
+      "Medios de pago y envíos a provincias",
+      "Tu local en el mapa, si tienes tienda física"
+    ],
+    "tambien": [
+      { "servicio": "tiendas-online", "texto": "Una tienda online completa, con carrito y pago en línea." },
+      { "servicio": "erp", "texto": "Controlar tu stock por talla y color, y tus ventas del día." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Puedo vender en línea o solo mostrar mi ropa?",
+        "respuesta": "Las dos cosas. Puedes empezar con un catálogo y pedidos por WhatsApp, o ir directo a una tienda online con carrito y pago en línea. Lo eliges al contar lo que necesitas y tu ingeniero te propone el precio de cada opción."
+      },
+      {
+        "pregunta": "¿Puedo subir productos nuevos sin depender del ingeniero?",
+        "respuesta": "Sí, si lo pides. Tu ingeniero arma un catálogo que puedes editar tú y te enseña a usarlo."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "estudios-contables",
+    "categoria": "servicios-profesionales",
+    "nombre": "Estudios contables",
+    "icono": "📊",
+    "titulo": "Página web para estudios contables y contadores | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu estudio contable: tus servicios, tu equipo y consultas por WhatsApp. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu estudio contable",
+    "intro": "Una web seria que explique qué haces, para quién trabajas y cómo empezar: contabilidad, tributación, planillas y constitución de empresas. Para estudios contables y contadores independientes. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tus servicios explicados en simple, para quien no es contador",
+      "Tu equipo, con su experiencia y colegiatura",
+      "Consultas por WhatsApp o con un formulario",
+      "Fechas importantes del calendario tributario",
+      "Testimonios o empresas con las que trabajas"
+    ],
+    "tambien": [
+      { "servicio": "crm", "texto": "Llevar a tus clientes, sus vencimientos y lo que les falta enviarte." },
+      { "servicio": "automatizacion", "texto": "Recordatorios automáticos de documentos y fechas de pago." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Qué debe tener la web de un estudio contable?",
+        "respuesta": "Lo básico es explicar tus servicios, mostrar quién está detrás y facilitar el primer contacto. Muchos estudios suman fechas del calendario tributario o artículos cortos que ayudan a que los encuentren en Google."
+      },
+      {
+        "pregunta": "¿Mis clientes pueden enviarme sus documentos por la web?",
+        "respuesta": "Se puede. Cuéntalo al responder las preguntas y tu ingeniero te propone cómo hacerlo de forma segura, por ejemplo con un área de clientes."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "estudios-de-abogados",
+    "categoria": "servicios-profesionales",
+    "nombre": "Estudios de abogados",
+    "icono": "⚖️",
+    "titulo": "Página web para estudios de abogados | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu estudio jurídico: áreas de práctica, tu equipo y consultas por WhatsApp. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu estudio de abogados",
+    "intro": "Una web que genere confianza desde el primer vistazo: tus áreas de práctica, tu equipo y una forma fácil de hacer una consulta. Para estudios jurídicos y abogados independientes. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tus áreas de práctica: familia, laboral, civil, penal, empresarial",
+      "Tu equipo, con su experiencia y colegiatura",
+      "Consulta por WhatsApp o con un formulario",
+      "Casos o resultados que puedas mostrar",
+      "Artículos que respondan dudas legales frecuentes"
+    ],
+    "tambien": [
+      { "servicio": "crm", "texto": "Seguir a cada cliente y el estado de su caso en un solo lugar." },
+      { "servicio": "automatizacion", "texto": "Respuestas automáticas a las consultas que llegan fuera de horario." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Qué debe tener la web de un estudio de abogados?",
+        "respuesta": "Tus áreas de práctica explicadas en simple, quién te atenderá y una forma fácil de hacer la primera consulta. Los artículos sobre dudas frecuentes ayudan a que te encuentren en Google."
+      },
+      {
+        "pregunta": "¿Puedo recibir consultas desde la web?",
+        "respuesta": "Sí: un botón de WhatsApp o un formulario que te llega al correo. Tu ingeniero te propone la opción que mejor encaja con tu forma de trabajar."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  },
+  {
+    "slug": "colegios-y-academias",
+    "categoria": "institucion",
+    "nombre": "Colegios y academias",
+    "icono": "🎓",
+    "titulo": "Página web para colegios, academias e institutos | AIB+",
+    "descripcion": "Mira gratis cómo quedaría la web de tu colegio, academia o instituto: niveles, matrículas, noticias y contacto. Elige a tu ingeniero y recibe su propuesta.",
+    "h1": "Página web para tu colegio o academia",
+    "intro": "Que las familias y los alumnos encuentren lo que buscan: tu propuesta educativa, los niveles o cursos, el proceso de matrícula y las noticias del año. Para colegios, academias preuniversitarias, institutos y centros de idiomas. La ves gratis con tu nombre y tus colores antes de decidir.",
+    "necesita": [
+      "Tu propuesta educativa y lo que te diferencia",
+      "Niveles, cursos o carreras, con horarios",
+      "Proceso de admisión y matrícula paso a paso",
+      "Noticias, eventos y galería de actividades",
+      "Contacto por WhatsApp y ubicación"
+    ],
+    "tambien": [
+      { "servicio": "crm", "texto": "Ordenar a los interesados en matricularse y hacerles seguimiento." },
+      { "servicio": "erp", "texto": "Llevar pensiones, pagos y deudas de cada alumno." }
+    ],
+    "preguntas": [
+      {
+        "pregunta": "¿Las familias pueden pedir información o separar una vacante desde la web?",
+        "respuesta": "Sí. Puede ser un formulario de admisión o un botón de WhatsApp. Lo indicas al contar lo que necesitas y tu ingeniero te propone la mejor opción."
+      },
+      {
+        "pregunta": "¿Puedo publicar noticias y comunicados?",
+        "respuesta": "Sí, si lo pides. Tu ingeniero arma una sección de noticias que puedes actualizar tú y te enseña a usarla."
+      },
+      {
+        "pregunta": "¿Cuánto cuesta?",
+        "respuesta": "Cada ingeniero publica sus diseños con un precio «desde», y antes de empezar te envía una propuesta con el precio final, el plazo y lo que incluye. AIB+ no te cobra comisión."
+      }
+    ]
+  }
+]

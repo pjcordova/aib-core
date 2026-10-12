@@ -29,6 +29,13 @@ export interface PaginaServicio {
 
 export const PAGINAS_SERVICIO = datos as PaginaServicio[];
 
+/** «Cómo funciona», igual en las páginas de servicio y de rubro (y en su HTML para Google). */
+export const PASOS_COMO_FUNCIONA = [
+  { titulo: 'Cuéntanos de tu negocio', texto: 'Respondes unas preguntas, casi todas con un clic.' },
+  { titulo: 'Mira cómo quedaría', texto: 'En un minuto ves una primera versión con tu nombre y tus colores, gratis.' },
+  { titulo: 'Elige a tu ingeniero', texto: 'Te envía su propuesta con precio y plazo, y sigues el avance desde AIB+.' },
+];
+
 export const paginaServicio = (slug: string | undefined) => PAGINAS_SERVICIO.find((p) => p.slug === slug) ?? null;
 
 /** La página de un servicio de AIB+ (para enlazarla desde la portada). */

@@ -157,6 +157,10 @@
       "destination": "/servicios/:slug/index.html"
     },
     {
+      "source": "/rubros/:slug(restaurantes|salones-de-belleza|consultorios|gimnasios|tiendas-de-ropa|estudios-contables|estudios-de-abogados|colegios-y-academias)",
+      "destination": "/rubros/:slug/index.html"
+    },
+    {
       "source": "/((?!api|health|assets|favicon).*)",
       "destination": "/index.html"
     }

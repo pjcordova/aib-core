@@ -4,8 +4,10 @@ import { Wordmark } from './ui/Primitives';
 import { PiePagina } from './ui/PiePagina';
 import { GaleriaDisenos } from './GaleriaDisenos';
 import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
+import { useMetadatos } from '../hooks/useMetadatos';
 import { ingenierosDisponibles, ofreceServicio, type IngenieroPublico } from '../lib/ingenieros';
-import { PAGINAS_SERVICIO, paginaServicio, type PaginaServicio as Pagina } from '../lib/paginasServicio';
+import { PAGINAS_RUBRO } from '../lib/paginasRubro';
+import { PAGINAS_SERVICIO, PASOS_COMO_FUNCIONA as PASOS, paginaServicio } from '../lib/paginasServicio';
 import { solesEnteros } from '../lib/servicios';
 import { vitrinaPortada, type Vitrina } from '../lib/vitrina';
 
@@ -16,28 +18,6 @@ import { vitrinaPortada, type Vitrina } from '../lib/vitrina';
 // HTML para Google (scripts/prerender.mjs). Lo que cambia (diseños, precios e
 // ingenieros) se lee aquí, como en la portada.
 // ---------------------------------------------------------------------------
-
-const PASOS = [
-  { titulo: 'Cuéntanos de tu negocio', texto: 'Respondes unas preguntas, casi todas con un clic.' },
-  { titulo: 'Mira cómo quedaría', texto: 'En un minuto ves una primera versión con tu nombre y tus colores, gratis.' },
-  { titulo: 'Elige a tu ingeniero', texto: 'Te envía su propuesta con precio y plazo, y sigues el avance desde AIB+.' },
-];
-
-/** Cambia el título y la descripción de la pestaña mientras se ve la página. */
-function useMetadatos(p: Pagina | null) {
-  useEffect(() => {
-    if (!p) return;
-    const descripcion = document.querySelector('meta[name="description"]');
-    const antes = { titulo: document.title, descripcion: descripcion?.getAttribute('content') ?? '' };
-    document.title = p.titulo;
-    descripcion?.setAttribute('content', p.descripcion);
-    window.scrollTo(0, 0);
-    return () => {
-      document.title = antes.titulo;
-      descripcion?.setAttribute('content', antes.descripcion);
-    };
-  }, [p]);
-}
 
 export function PaginaServicio() {
   const { slug } = useParams();
@@ -134,6 +114,25 @@ export function PaginaServicio() {
             </ul>
           </div>
         </section>
+
+        {/* --------------------------------------------------- según el rubro */}
+        {p.clave === 'web' && (
+          <nav aria-label="Según tu tipo de negocio" className="mx-auto max-w-4xl px-4 pt-14 text-center sm:px-6">
+            <h2 className="text-2xl">Según tu tipo de negocio</h2>
+            <ul className="mt-5 flex flex-wrap justify-center gap-2">
+              {PAGINAS_RUBRO.map((r) => (
+                <li key={r.slug}>
+                  <Link
+                    to={`/rubros/${r.slug}`}
+                    className="inline-block rounded-full border border-line-strong bg-surface-raised px-3.5 py-1.5 text-sm text-ink hover:border-accent/60"
+                  >
+                    <span aria-hidden="true">{r.icono}</span> {r.nombre}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
         {/* ------------------------------------------------------------ diseños */}
         {disenos.length > 0 && (

@@ -74,7 +74,11 @@ export function Explorar() {
   const [precios, setPrecios] = useState<Map<string, PreciosIngeniero>>(new Map());
   const [busqueda, setBusqueda] = useState('');
   const [servicio, setServicio] = useState<Clave | ''>(CLAVES.includes(inicial as Clave) ? (inicial as Clave) : '');
-  const [rubro, setRubro] = useState('');
+  // ?rubro=restaurante: desde la página de ese tipo de negocio.
+  const [rubro, setRubro] = useState(() => {
+    const r = parametros.get('rubro') ?? '';
+    return CATEGORIAS_NEGOCIO.some((c) => c.valor === r && c.valor !== 'otro') ? r : '';
+  });
   const [tope, setTope] = useState<number | null>(null);
   const [orden, setOrden] = useState<Orden>('estrellas');
   const [soloVerificados, setSoloVerificados] = useState(false);

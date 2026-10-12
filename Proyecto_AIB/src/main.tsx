@@ -19,6 +19,7 @@ import { PaginaResena } from './components/PaginaResena';
 import { Explorar } from './components/Explorar';
 import { Privacidad, Terminos } from './components/PaginasLegales';
 import { PaginaServicio } from './components/PaginaServicio';
+import { PaginaRubro } from './components/PaginaRubro';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Lo del ingeniero se descarga solo cuando él entra: el cliente que abre su
@@ -65,6 +66,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             {/* Política de privacidad y términos: Google los pide para verificar la marca. */}
             {/* Una página por servicio, para quien llega desde Google. */}
             <Route path="/servicios/:slug" element={<PaginaServicio />} />
+            {/* Y una por tipo de negocio: «página web para restaurantes»… */}
+            <Route path="/rubros/:slug" element={<PaginaRubro />} />
             <Route path="/privacidad" element={<Privacidad />} />
             <Route path="/terminos" element={<Terminos />} />
             {/* La reseña que deja el cliente con el enlace de su ingeniero, sin cuenta. */}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Wordmark } from './Primitives';
 import { PAGINAS_SERVICIO } from '../../lib/paginasServicio';
+import { PAGINAS_RUBRO } from '../../lib/paginasRubro';
 
 // ---------------------------------------------------------------------------
 // Pie de página de las páginas públicas
@@ -28,7 +29,7 @@ export function PiePagina({
   return (
     <footer className="pie-marca">
       <div className="mx-auto max-w-6xl px-4 pt-12 pb-8 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr_1fr]">
           <div>
             <Link to="/" aria-label="Ir a la portada de AIB+" className="inline-block">
               <Wordmark />
@@ -89,6 +90,19 @@ export function PiePagina({
                 <li key={p.slug}>
                   <Link to={`/servicios/${p.slug}`} className={enlace}>
                     {p.nombre}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Páginas web por tipo de negocio">
+            <p className={titulo}>Webs para</p>
+            <ul className="space-y-2">
+              {PAGINAS_RUBRO.map((r) => (
+                <li key={r.slug}>
+                  <Link to={`/rubros/${r.slug}`} className={enlace}>
+                    {r.nombre}
                   </Link>
                 </li>
               ))}
