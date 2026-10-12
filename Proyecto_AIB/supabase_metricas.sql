@@ -62,7 +62,8 @@ BEGIN
           'visitas', COALESCE((SELECT sum(v.visitas) FROM public.visitas_portada v
                                WHERE v.dia >= s.lunes AND v.dia < s.lunes + 7), 0),
           'pruebas', (SELECT count(*) FROM public.invitaciones i
-                      WHERE (i.empezada_en AT TIME ZONE 'America/Lima')::date >= s.lunes
+                      WHERE NOT i.es_prueba
+                        AND (i.empezada_en AT TIME ZONE 'America/Lima')::date >= s.lunes
                         AND (i.empezada_en AT TIME ZONE 'America/Lima')::date < s.lunes + 7),
           'proyectos', (SELECT count(*) FROM clientes_proyectos c WHERE c.creado >= s.lunes AND c.creado < s.lunes + 7),
           'encargos', (SELECT count(*) FROM clientes_proyectos c WHERE c.enviado >= s.lunes AND c.enviado < s.lunes + 7),

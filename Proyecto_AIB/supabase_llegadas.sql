@@ -164,7 +164,8 @@ GRANT EXECUTE ON FUNCTION public.empezar_prueba_libre(TEXT, TEXT) TO authenticat
 -- ----------------------------------------------------------------------------
 -- Mismo periodo que metricas_admin: las últimas p_semanas semanas de lunes a
 -- domingo, hora de Lima. Pruebas = pruebas sin cuenta (origen 'portada') de
--- clientes reales; maqueta y encargo, de esas mismas pruebas.
+-- clientes reales que empezaron el cuestionario en el periodo, como «Pruebas»
+-- en metricas_admin; maqueta y encargo, de esas mismas pruebas.
 CREATE OR REPLACE FUNCTION public.llegadas_admin(p_semanas INTEGER DEFAULT 8)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -198,7 +199,7 @@ BEGIN
       JOIN public.invitaciones_resumen r ON r.id = i.id
       WHERE i.origen = 'portada'
         AND NOT i.es_prueba
-        AND (i.created_at AT TIME ZONE 'America/Lima')::date >= v_inicio
+        AND (i.empezada_en AT TIME ZONE 'America/Lima')::date >= v_inicio
     )
     SELECT jsonb_build_object(
       'canales', (
