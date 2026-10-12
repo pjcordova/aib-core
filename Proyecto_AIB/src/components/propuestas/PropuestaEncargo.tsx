@@ -11,6 +11,7 @@ import {
   retirarPropuesta,
   textoPlazo,
   urlPropuesta,
+  type EtapaNueva,
   type Propuesta,
 } from '../../lib/propuestas';
 import { solesEnteros } from '../../lib/servicios';
@@ -43,12 +44,23 @@ function incluyeSugerido(encargo: ProyectoCompleto): string[] {
   ];
 }
 
-export function PropuestaEncargo({ encargo }: { encargo: ProyectoCompleto }) {
+export function PropuestaEncargo({
+  encargo,
+  etapasSugeridas,
+}: {
+  encargo: ProyectoCompleto;
+  /** «Usar en mi propuesta» de la documentación: cada clic trae una `vez` nueva. */
+  etapasSugeridas?: { etapas: EtapaNueva[]; vez: number } | null;
+}) {
   const [propuesta, setPropuesta] = useState<Propuesta | null | undefined>(undefined);
   const [armando, setArmando] = useState(false);
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  // El plan de la documentación con el que se abre el formulario.
+  const [vezAtendida, setVezAtendida] = useState<number | null>(null);
+  const [plan, setPlan] = useState<EtapaNueva[] | null>(null);
+  const [planSinUso, setPlanSinUso] = useState(false);
 
   const cargar = async () => setPropuesta(await propuestaDeEncargo(encargo.id));
 
@@ -63,6 +75,23 @@ export function PropuestaEncargo({ encargo }: { encargo: ProyectoCompleto }) {
   }, [encargo.id]);
 
   if (propuesta === undefined) return null;
+
+  // Un clic nuevo en «Usar en mi propuesta»: abre el formulario por etapas
+  // con ese plan, salvo que ya haya una propuesta aceptada.
+  if (etapasSugeridas && etapasSugeridas.vez !== vezAtendida) {
+    const aceptada = propuesta?.estado === 'aceptada';
+    setVezAtendida(etapasSugeridas.vez);
+    setPlanSinUso(aceptada);
+    if (!aceptada) {
+      setPlan(etapasSugeridas.etapas);
+      setArmando(true);
+    }
+  }
+
+  const cerrarFormulario = () => {
+    setArmando(false);
+    setPlan(null);
+  };
 
   const enlace = propuesta ? urlPropuesta(propuesta.token) : '';
   const nombreCliente = encargo.contacto?.nombre?.split(/\s+/)[0] ?? '';
@@ -97,7 +126,7 @@ export function PropuestaEncargo({ encargo }: { encargo: ProyectoCompleto }) {
   const abierta = propuesta && ['enviada', 'cambios', 'vencida'].includes(propuesta.estado);
 
   return (
-    <section className="mb-6 rounded-xl border border-line p-4" aria-label="Propuesta">
+    <section id={`propuesta-${encargo.id}`} className="mb-6 scroll-mt-24 rounded-xl border border-line p-4" aria-label="Propuesta">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold tracking-wide text-accent uppercase">Propuesta</p>
         {!armando && (!propuesta || propuesta.estado === 'retirada') && (
@@ -106,14 +135,21 @@ export function PropuestaEncargo({ encargo }: { encargo: ProyectoCompleto }) {
           </button>
         )}
       </div>
+      {planSinUso && (
+        <p className="mt-2 rounded-lg border border-accent-alt/50 bg-accent-alt/10 px-3 py-2 text-sm text-ink">
+          Este encargo ya tiene una propuesta aceptada, así que el plan de la documentación queda solo como referencia.
+        </p>
+      )}
 
       {armando ? (
         <FormularioPropuesta
+          key={vezAtendida ?? 0}
           encargo={encargo}
           anterior={propuesta && propuesta.estado !== 'aceptada' ? propuesta : null}
-          onCancelar={() => setArmando(false)}
+          etapasIniciales={plan}
+          onCancelar={cerrarFormulario}
           onEnviada={async () => {
-            setArmando(false);
+            cerrarFormulario();
             await cargar();
           }}
         />
@@ -225,12 +261,15 @@ function Cobros({
 function FormularioPropuesta({
   encargo,
   anterior,
+  etapasIniciales,
   onCancelar,
   onEnviada,
 }: {
   encargo: ProyectoCompleto;
   /** Para una nueva versión: arranca con los datos de la anterior. */
   anterior: Propuesta | null;
+  /** El plan por etapas de la documentación: arranca «Por etapas» con él. */
+  etapasIniciales: EtapaNueva[] | null;
   onCancelar: () => void;
   onEnviada: () => void;
 }) {
@@ -242,9 +281,11 @@ function FormularioPropuesta({
   const [unidad, setUnidad] = useState<'semanas' | 'dias'>(semanasIniciales % 7 === 0 ? 'semanas' : 'dias');
   const [incluye, setIncluye] = useState((anterior?.incluye.length ? anterior.incluye : incluyeSugerido(encargo)).join('\n'));
   // Un porcentaje de adelanto, o 'etapas'.
-  const [pago, setPago] = useState<number | 'etapas'>(anterior?.hitos.length ? 'etapas' : (anterior?.adelanto_pct ?? 50));
+  const [pago, setPago] = useState<number | 'etapas'>(
+    etapasIniciales || anterior?.hitos.length ? 'etapas' : (anterior?.adelanto_pct ?? 50)
+  );
   const [etapas, setEtapas] = useState(
-    (anterior?.hitos.length ? anterior.hitos : ETAPAS_SUGERIDAS).map((h) => ({
+    (etapasIniciales ?? (anterior?.hitos.length ? anterior.hitos : ETAPAS_SUGERIDAS)).map((h) => ({
       titulo: h.titulo,
       porcentaje: String(h.porcentaje),
       dias: String(h.dias),
@@ -322,6 +363,11 @@ function FormularioPropuesta({
       {anterior && (
         <p className="text-xs text-ink-subtle">
           La nueva versión reemplaza a la anterior: el cliente verá solo esta.
+        </p>
+      )}
+      {etapasIniciales && (
+        <p className="text-xs text-ink-subtle">
+          Las etapas vienen del plan de la documentación. Ajusta nombres, porcentajes y días si quieres, y pon tu precio.
         </p>
       )}
       <div className="grid gap-4 sm:grid-cols-3">

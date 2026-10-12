@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { cargarProyecto, documentarComoIngeniero } from '../lib/proyectos';
+import { cargarProyecto, contextoParaDocumentar, documentarComoIngeniero } from '../lib/proyectos';
+import { imprimirDocumentacion } from '../lib/documentoPdf';
+import type { EtapaNueva } from '../lib/propuestas';
+import { DocumentacionTecnica } from './DocumentacionEncargo';
 import type { ProyectoCompleto } from '../lib/proyectos';
 import { generarDocumentacion, ApiError, type Documentacion } from '../lib/api';
 import { enlaceWhatsapp, formatearWhatsapp } from '../lib/contacto';
@@ -411,6 +414,9 @@ function DetalleEncargo({
   onDocumentada: (documentacion: Documentacion) => void;
 }) {
   const [fallo, setFallo] = useState(false);
+  // «Usar en mi propuesta»: el plan por etapas de la documentación, para la propuesta.
+  const [sugerencia, setSugerencia] = useState<{ etapas: EtapaNueva[]; vez: number } | null>(null);
+  const [pdfBloqueado, setPdfBloqueado] = useState(false);
 
   useEffect(() => {
     if (detalle) return;
@@ -434,6 +440,36 @@ function DetalleEncargo({
   }
 
   const doc = detalle.documentacion;
+  const lista = (documentacion: Documentacion) => {
+    onDetalle({ ...detalle, documentacion });
+    onDocumentada(documentacion);
+  };
+
+  /** Con el formato nuevo, reemplazando la que tenía. */
+  const regenerar = async () => {
+    const contexto = await contextoParaDocumentar(detalle.id);
+    const { documentacion } = await generarDocumentacion(detalle.servicio, detalle.historial, contexto);
+    const { ok, error } = await documentarComoIngeniero(detalle.id, documentacion, true);
+    if (!ok) throw new Error(error ?? 'No se guardó la documentación.');
+    lista(documentacion);
+  };
+
+  const usarEtapas = (etapas: EtapaNueva[]) => {
+    setSugerencia({ etapas, vez: Date.now() });
+    // La propuesta está más arriba en el mismo encargo.
+    requestAnimationFrame(() =>
+      document.getElementById(`propuesta-${detalle.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    );
+  };
+
+  const descargarPdf = () => {
+    if (!doc) return;
+    const abierto = imprimirDocumentacion(
+      { negocio: fila.empresa ?? detalle.servicio, servicio: detalle.servicio, cliente: detalle.contacto?.nombre },
+      doc
+    );
+    setPdfBloqueado(!abierto);
+  };
 
   return (
     <div className="animate-fade-up border-t border-line p-5 pt-6">
@@ -446,30 +482,29 @@ function DetalleEncargo({
           onCambio={onResponsable}
         />
       )}
-      <PropuestaEncargo encargo={detalle} />
+      <PropuestaEncargo encargo={detalle} etapasSugeridas={sugerencia} />
       <ResenaEncargo encargo={detalle} publicada={cambios.at(-1)?.estado === 'publicada'} />
       <EditorSeguimiento encargo={detalle} cambios={cambios} onCambio={onCambio} />
       {!doc ? (
-        <SinDocumentacion
-          encargo={detalle}
-          onLista={(documentacion) => {
-            onDetalle({ ...detalle, documentacion });
-            onDocumentada(documentacion);
-          }}
-        />
+        <SinDocumentacion encargo={detalle} onLista={lista} />
       ) : (
-        <DocumentacionTecnica doc={doc} />
+        <DocumentacionTecnica doc={doc} onUsarEtapas={usarEtapas} onRegenerar={regenerar} />
       )}
 
       {/* Fuera de la rama anterior: la maqueta se puede descargar
           aunque la documentación aún no esté. */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-wrap items-center gap-2">
         {doc && (
-          <button type="button" onClick={() => descargarDoc(detalle)} className="btn btn-ghost">
-            Descargar documentación (JSON)
+          <button type="button" onClick={descargarPdf} className="btn btn-ghost">
+            Descargar documentación (PDF)
           </button>
         )}
         {fila.tieneMaqueta && <BotonMaqueta id={fila.id} />}
+        {pdfBloqueado && (
+          <p role="alert" className="w-full text-xs text-negative">
+            Tu navegador bloqueó la ventana del PDF. Permite las ventanas emergentes de AIB+ y vuelve a intentarlo.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -493,122 +528,6 @@ function BotonMaqueta({ id }: { id: string }) {
           ? 'No se pudo descargar: reintentar'
           : 'Descargar maqueta (index.html)'}
     </button>
-  );
-}
-
-/** La documentación técnica, por bloques. */
-function DocumentacionTecnica({ doc }: { doc: Documentacion }) {
-  return (
-    <div className="space-y-6 text-sm">
-      <Bloque titulo="Resumen">
-        <p className="text-ink-muted">{doc.resumen}</p>
-      </Bloque>
-
-      <Bloque titulo="Objetivo">
-        <p className="text-ink-muted">{doc.objetivo}</p>
-      </Bloque>
-
-      <Bloque titulo="Funcionalidades">
-        <ul className="space-y-2">
-          {doc.funcionalidades?.map((f) => (
-            <li key={f.nombre} className="flex gap-3">
-              <span
-                className={
-                  'mt-0.5 h-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ' +
-                  (f.prioridad === 'alta'
-                    ? 'bg-negative/15 text-negative'
-                    : f.prioridad === 'media'
-                      ? 'bg-caution/15 text-caution'
-                      : 'bg-line text-ink-subtle')
-                }
-              >
-                {f.prioridad}
-              </span>
-              <span>
-                <strong className="text-ink">{f.nombre}</strong>
-                <span className="text-ink-muted"> — {f.descripcion}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Bloque>
-
-      <Bloque titulo="Modelo de datos">
-        <div className="space-y-2">
-          {doc.modelo_datos?.map((m) => (
-            <div key={m.entidad} className="rounded-lg border border-line bg-surface-deep/40 p-3">
-              <p className="font-medium text-ink">{m.entidad}</p>
-              <p className="mt-1 font-mono text-xs text-ink-muted">{m.campos?.join(', ')}</p>
-              {m.relaciones && <p className="mt-1 text-xs text-ink-subtle">{m.relaciones}</p>}
-            </div>
-          ))}
-        </div>
-      </Bloque>
-
-      <Bloque titulo="Flujos críticos">
-        <div className="space-y-3">
-          {doc.flujos_criticos?.map((f) => (
-            <div key={f.nombre}>
-              <p className="font-medium text-ink">{f.nombre}</p>
-              <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-ink-muted">
-                {f.pasos?.map((paso, i) => (
-                  <li key={i}>{paso}</li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
-      </Bloque>
-
-      <Bloque titulo="Criterios de aceptación">
-        <ul className="list-disc space-y-1 pl-5 text-ink-muted">
-          {doc.criterios_aceptacion?.map((c, i) => (
-            <li key={i}>{c}</li>
-          ))}
-        </ul>
-      </Bloque>
-
-      {doc.stack_sugerido && (
-        <Bloque titulo="Stack sugerido">
-          <dl className="grid gap-2 sm:grid-cols-3">
-            {(
-              [
-                ['Frontend', doc.stack_sugerido.frontend],
-                ['Backend', doc.stack_sugerido.backend],
-                ['Datos', doc.stack_sugerido.datos],
-              ] as const
-            ).map(([k, v]) => (
-              <div key={k} className="rounded-lg border border-line p-3">
-                <dt className="text-xs text-ink-subtle">{k}</dt>
-                <dd className="mt-0.5 font-medium text-ink">{v}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-2 text-xs text-ink-subtle">{doc.stack_sugerido.justificacion}</p>
-        </Bloque>
-      )}
-
-      <Bloque titulo="Riesgos">
-        <ul className="space-y-1.5">
-          {doc.riesgos?.map((r) => (
-            <li key={r.riesgo}>
-              <strong className="text-ink">{r.riesgo}</strong>
-              <span className="text-ink-muted"> → {r.mitigacion}</span>
-            </li>
-          ))}
-        </ul>
-      </Bloque>
-
-      {doc.estimacion && (
-        <Bloque titulo={`Estimación: ~${doc.estimacion.semanas} semanas`}>
-          <ul className="list-disc space-y-1 pl-5 text-ink-muted">
-            {doc.estimacion.supuestos?.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
-        </Bloque>
-      )}
-    </div>
   );
 }
 
@@ -707,7 +626,8 @@ function SinDocumentacion({
   const generar = async () => {
     setEstado('generando');
     try {
-      const { documentacion } = await generarDocumentacion(encargo.servicio, encargo.historial);
+      const contexto = await contextoParaDocumentar(encargo.id);
+      const { documentacion } = await generarDocumentacion(encargo.servicio, encargo.historial, contexto);
       const { ok, error: errorGuardado } = await documentarComoIngeniero(encargo.id, documentacion);
       if (errorGuardado) throw new Error(errorGuardado);
       // Si no se guardó es que llegó antes la del cliente: se muestra esa.
@@ -750,29 +670,6 @@ function SinDocumentacion({
       </button>
     </div>
   );
-}
-
-function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h4 className="mb-2 text-xs font-semibold tracking-wide text-accent uppercase">{titulo}</h4>
-      {children}
-    </div>
-  );
-}
-
-function descargarDoc(encargo: ProyectoCompleto) {
-  const contenido = JSON.stringify(
-    { servicio: encargo.servicio, discovery: encargo.historial, documentacion: encargo.documentacion },
-    null,
-    2
-  );
-  const url = URL.createObjectURL(new Blob([contenido], { type: 'application/json' }));
-  const enlace = document.createElement('a');
-  enlace.href = url;
-  enlace.download = `encargo-${encargo.id.slice(0, 8)}.json`;
-  enlace.click();
-  URL.revokeObjectURL(url);
 }
 
 /** Etiqueta del tipo de servicio. Las filas antiguas no lo tienen: eran de software. */

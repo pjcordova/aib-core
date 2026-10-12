@@ -11,7 +11,13 @@
 
 import { supabase } from './supabase';
 import type { QAHistory } from '../Types/productOwner';
-import { avisarIngeniero, generarDocumentacion, type TokenUsage, type Documentacion } from './api';
+import {
+  avisarIngeniero,
+  generarDocumentacion,
+  type ContextoDocumentacion,
+  type Documentacion,
+  type TokenUsage,
+} from './api';
 import type { FichaWeb, Paleta, TipoServicio } from './servicios';
 
 /** Plantilla del catálogo con la que se hizo la maqueta. */
@@ -387,22 +393,46 @@ export async function enviarEncargo(
  * desde su panel con `documentarComoIngeniero`.
  */
 export function documentarEnSegundoPlano(id: string, servicio: string, historial: QAHistory[]): void {
-  void generarDocumentacion(servicio, historial)
+  void contextoParaDocumentar(id)
+    .then((contexto) => generarDocumentacion(servicio, historial, contexto))
     .then(({ documentacion }) => modificarPayload(id, { documentacion }, 'adjuntar la documentación'))
     .catch((e) => console.error('[AIB+] No se pudo generar la documentación:', e));
+}
+
+/**
+ * El tipo de servicio, el negocio y el diseño elegido, para que la IA ajuste
+ * la documentación (las respuestas del cliente ya van en el historial). Lo
+ * leen el cliente y su ingeniero. Sin nada si no se puede leer: se documenta
+ * igual, como un sistema.
+ */
+export async function contextoParaDocumentar(id: string): Promise<ContextoDocumentacion> {
+  const { data, error } = await supabase
+    .from('proyectos')
+    .select('tipo_servicio:payload->>tipo_servicio, empresa:payload->ficha->>empresa, plantilla:payload->plantilla')
+    .eq('id', id)
+    .maybeSingle();
+  if (error || !data) return {};
+  const fila = data as unknown as { tipo_servicio: TipoServicio | null; empresa: string | null; plantilla: PlantillaUsada | null };
+  return {
+    tipo_servicio: fila.tipo_servicio ?? undefined,
+    empresa: fila.empresa,
+    plantilla: fila.plantilla ? { nombre: fila.plantilla.nombre, precio_desde: fila.plantilla.precio_desde ?? null } : null,
+  };
 }
 
 /**
  * Adjunta la documentación a un encargo ajeno, desde el panel del ingeniero.
  * El ingeniero no puede escribir en `proyectos`: pasa por una función de la
  * base de datos que solo rellena la documentación de encargos aceptados que
- * aún no la tienen. Devuelve false si otro ya la había adjuntado.
+ * aún no la tienen. Devuelve false si otro ya la había adjuntado. Con
+ * `reemplazar`, cambia la que tenía (regenerarla con el formato nuevo).
  */
 export async function documentarComoIngeniero(
   id: string,
-  documentacion: Documentacion
+  documentacion: Documentacion,
+  reemplazar = false
 ): Promise<{ ok: boolean; error: string | null }> {
-  const { data, error } = await supabase.rpc('adjuntar_documentacion', {
+  const { data, error } = await supabase.rpc(reemplazar ? 'reemplazar_documentacion' : 'adjuntar_documentacion', {
     p_proyecto: id,
     p_documentacion: documentacion,
   });

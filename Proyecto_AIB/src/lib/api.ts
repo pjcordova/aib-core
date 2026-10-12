@@ -11,6 +11,7 @@
 import type { ProductOwnerResponse, QAHistory } from '../Types/productOwner';
 import { supabase } from './supabase';
 import type { EstadoEncargo } from './seguimiento';
+import type { TipoServicio } from './servicios';
 
 // En desarrollo el backend vive en otro puerto. En producción (Vercel) la API
 // se sirve desde el mismo origen que la web, así que una base vacía produce
@@ -142,27 +143,53 @@ export async function generarPreguntas(
 }
 
 /** Documento técnico que recibe el ingeniero cuando el cliente acepta. */
+/**
+ * La documentación de un encargo. La versión 2 (desde el 2026-10-12) trae lo
+ * de la primera llamada, los materiales y un plan por etapas; si es una web,
+ * su mapa del sitio, SEO y publicación en vez de datos, flujos y stack. Las
+ * anteriores no tienen `version`: todo lo que no estaba antes es opcional.
+ */
 export interface Documentacion {
+  version?: 2;
+  /** 'web' para páginas web; 'sistema' para CRM, ERP, apps y automatizaciones. */
+  tipo?: 'web' | 'sistema';
   resumen: string;
   objetivo: string;
-  usuarios: { rol: string; necesidad: string }[];
+  preguntas_llamada?: string[];
+  pedir_al_cliente?: { material: string; detalle: string }[];
   funcionalidades: { nombre: string; descripcion: string; prioridad: 'alta' | 'media' | 'baja' }[];
-  modelo_datos: { entidad: string; campos: string[]; relaciones: string }[];
-  flujos_criticos: { nombre: string; pasos: string[] }[];
+  mapa_sitio?: { pagina: string; secciones: string[] }[];
+  usuarios?: { rol: string; necesidad: string }[];
+  modelo_datos?: { entidad: string; campos: string[]; relaciones: string }[];
+  flujos_criticos?: { nombre: string; pasos: string[] }[];
+  integraciones?: string[];
+  seo?: string[];
+  stack_sugerido?: { frontend: string; backend: string; datos: string; justificacion: string };
+  /** Para publicar la web o poner en marcha el sistema. */
+  publicacion?: string[];
+  /** Listas para la propuesta «Por etapas»: suman 100 %. */
+  etapas?: { titulo: string; porcentaje: number; dias: number; entregable: string }[];
   criterios_aceptacion: string[];
-  stack_sugerido: { frontend: string; backend: string; datos: string; justificacion: string };
   riesgos: { riesgo: string; mitigacion: string }[];
   estimacion: { semanas: number; supuestos: string[] };
+}
+
+/** Lo que ayuda a la IA a ajustar la documentación al encargo, además de las respuestas. */
+export interface ContextoDocumentacion {
+  tipo_servicio?: TipoServicio;
+  empresa?: string | null;
+  plantilla?: { nombre: string; precio_desde?: number | null } | null;
 }
 
 /** Genera la documentación técnica a partir del discovery ya cerrado. */
 export async function generarDocumentacion(
   servicio: string,
-  historial: QAHistory[]
+  historial: QAHistory[],
+  contexto: ContextoDocumentacion = {}
 ): Promise<{ documentacion: Documentacion; usage?: TokenUsage }> {
   const data = await post<{ success: boolean; documentacion?: Documentacion; error?: string; usage?: TokenUsage }>(
     '/api/generar-documentacion',
-    { servicio, historial },
+    { servicio, historial, contexto },
     TIMEOUT_MS.documentation
   );
 
