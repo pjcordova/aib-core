@@ -184,7 +184,7 @@ export function PaginaPropuesta() {
               <p className="rounded-xl border border-positive/30 bg-positive/10 p-4 text-sm text-ink" role="status">
                 <strong>✓ Aceptaste esta propuesta</strong>
                 {propuesta.respondida_en ? ` el ${fecha(propuesta.respondida_en)}` : ''}. {Quien} ya está al tanto y empieza
-                a construir tu web.
+                a trabajar en tu proyecto.
               </p>
               {propuesta.hitos.length > 0 && (
                 <div className="mt-6">

@@ -32,14 +32,51 @@ function enDias(n: number): string {
   return d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 }
 
-/** Lo que suele incluir una web, para no empezar de cero. */
+/** Una web o un sistema (CRM, ERP, app…). Los encargos de antes de los servicios eran webs. */
+function esWeb(encargo: ProyectoCompleto): boolean {
+  if (encargo.documentacion?.tipo) return encargo.documentacion.tipo === 'web';
+  return !encargo.tipoServicio || encargo.tipoServicio === 'web';
+}
+
+/**
+ * Para no empezar de cero: lo principal de la documentación (sin lo de
+ * prioridad baja) o, si aún no la tiene, lo típico de su servicio.
+ */
 function incluyeSugerido(encargo: ProyectoCompleto): string[] {
-  const secciones = encargo.ficha?.secciones?.length ?? 0;
+  const doc = encargo.documentacion;
+  const funcionalidades = (doc?.funcionalidades ?? [])
+    .filter((f) => f.prioridad !== 'baja' && f.nombre?.trim())
+    .slice(0, 8)
+    .map((f) => f.nombre.trim());
+
+  if (esWeb(encargo)) {
+    const paginas = doc?.mapa_sitio?.map((p) => p.pagina).filter(Boolean) ?? [];
+    const secciones = encargo.ficha?.secciones?.length ?? 0;
+    const web =
+      paginas.length > 1
+        ? `Web de ${paginas.length} páginas${paginas.join(', ').length <= 100 ? `: ${paginas.join(', ')}` : ''}`
+        : secciones > 0
+          ? `Página web de ${secciones + 1} secciones`
+          : 'Página web completa';
+    return [
+      web,
+      ...(funcionalidades.length ? funcionalidades : ['Botón de WhatsApp']),
+      'Diseño adaptado a celular',
+      'Dominio .com y hosting por 1 año',
+      '2 rondas de cambios',
+    ];
+  }
+
+  const queEs =
+    encargo.tipoServicio === 'app-movil' ? 'la app' : encargo.tipoServicio === 'automatizacion' ? 'la automatización' : 'el sistema';
   return [
-    secciones > 0 ? `Página web de ${secciones + 1} secciones` : 'Página web completa',
-    'Diseño adaptado a celular',
-    'Botón de WhatsApp',
-    'Dominio .com y hosting por 1 año',
+    encargo.servicio,
+    ...(funcionalidades.length
+      ? funcionalidades
+      : encargo.tipoServicio === 'app-movil'
+        ? []
+        : ['Acceso desde computadora y celular']),
+    `Capacitación para usar ${queEs}`,
     '2 rondas de cambios',
   ];
 }
@@ -99,7 +136,7 @@ export function PropuestaEncargo({
     propuesta && encargo.contacto?.whatsapp
       ? enlaceWhatsapp(
           encargo.contacto.whatsapp,
-          `Hola ${nombreCliente}, te envío la propuesta para tu web: ${solesEnteros(propuesta.precio)}, lista en ${textoPlazo(
+          `Hola ${nombreCliente}, te envío la propuesta para ${esWeb(encargo) ? 'tu web' : 'tu proyecto'}: ${solesEnteros(propuesta.precio)}, lista en ${textoPlazo(
             propuesta.plazo_dias
           )}. Aquí la ves con el detalle y la puedes aceptar: ${enlace}`
         )
