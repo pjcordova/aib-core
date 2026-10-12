@@ -41,6 +41,16 @@ export function UneteIngeniero() {
   const [miPerfil, setMiPerfil] = useState<MiPerfil | null | undefined>(undefined);
   const [recienEnviada, setRecienEnviada] = useState<EstadoIngeniero | null>(null);
 
+  // Su propio título, para Google y para la pestaña del navegador.
+  useEffect(() => {
+    const anterior = document.title;
+    document.title = 'Únete como ingeniero y consigue clientes · AIB+';
+    // Al salir sin recargar, que no se quede este título.
+    return () => {
+      document.title = anterior;
+    };
+  }, []);
+
   useEffect(() => {
     if (!conCuenta) return;
     let vigente = true;
