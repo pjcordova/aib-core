@@ -12,7 +12,7 @@ import { PiePagina } from './ui/PiePagina';
 // cambiar la fecha.
 // ---------------------------------------------------------------------------
 
-const ACTUALIZADA = '11 de octubre de 2026';
+const ACTUALIZADA = '12 de octubre de 2026';
 const RESPONSABLE = 'Cordova Solutions';
 const CORREO_CONTACTO = 'contacto@aibplus.app';
 
@@ -178,6 +178,10 @@ export function Privacidad() {
                 cliente.
               </li>
               <li>Resend: envío de correos.</li>
+              <li>
+                Cloudflare: comprobación de que eres una persona y no un programa automático (captcha) al empezar una
+                prueba, ingresar o pedir un código. Usa datos técnicos de tu navegador, como la dirección IP.
+              </li>
               <li>Google Fonts y jsDelivr: tipografías y estilos de la web.</li>
             </ul>
           </li>
