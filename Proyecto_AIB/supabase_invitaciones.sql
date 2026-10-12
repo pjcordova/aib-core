@@ -545,7 +545,10 @@ ALTER TABLE public.invitaciones ADD COLUMN IF NOT EXISTS canal TEXT
 
 -- Devuelve {estado}: 'ok' (también si esta sesión ya tenía su invitación),
 -- 'lleno' (no quedan pruebas por hoy) o 'no_anonimo'.
+-- La versión vigente (con la página de entrada) está en supabase_llegadas.sql:
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 DROP FUNCTION IF EXISTS public.empezar_prueba_libre();
+DROP FUNCTION IF EXISTS public.empezar_prueba_libre(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION public.empezar_prueba_libre(p_canal TEXT DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
