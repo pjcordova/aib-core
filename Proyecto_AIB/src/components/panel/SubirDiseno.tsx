@@ -112,6 +112,8 @@ export function SubirDiseno({
   const [precio, setPrecio] = useState(fila?.precio_desde ? String(fila.precio_desde) : '');
   const [primario, setPrimario] = useState(fila?.color_primario ?? '#1a2d4d');
   const [secundario, setSecundario] = useState(fila?.color_secundario ?? '#c4a26a');
+  // Los colores con los que se abrió, para saber si los cambió al editar.
+  const [coloresIniciales] = useState({ primario, secundario });
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -222,6 +224,18 @@ export function SubirDiseno({
   const valorPrecio = precio.trim() ? Number(precio.replace(/[^\d]/g, '')) : null;
   const precioValido = valorPrecio === null || (valorPrecio > 0 && valorPrecio < 1_000_000);
 
+  /**
+   * El diseño con los colores elegidos, para guardarlo o descargarlo: siempre
+   * en uno recién hecho con IA y, al editar uno publicado, si cambió los
+   * colores y el diseño usa las variables de AIB+ (--aib-primario). Si no los
+   * tocó, queda como está: así un HTML subido conserva sus propios colores.
+   */
+  const conColores = (d: DisenoPropio): DisenoPropio => {
+    const cambio = primario !== coloresIniciales.primario || secundario !== coloresIniciales.secundario;
+    const aplicar = deIa || (!!fila && cambio && /--aib-primario/.test(d.css));
+    return aplicar ? { ...d, css: fijarColores(d.css, { primario, secundario }) } : d;
+  };
+
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (generando) return;
@@ -230,8 +244,8 @@ export function SubirDiseno({
     if (!precioValido) return setError('Revisa el precio: en soles, sin decimales.');
     setGuardando(true);
     setError('');
-    // El de la IA se guarda con los colores que eligió: así sale en el catálogo y en su página.
-    const final = deIa ? { ...diseno, css: fijarColores(diseno.css, { primario, secundario }) } : diseno;
+    // Se guarda con los colores que eligió: así sale en el catálogo y en su página.
+    const final = conColores(diseno);
     const datos = {
       servicio,
       nombre: nombre.trim().slice(0, 80),
@@ -377,7 +391,7 @@ export function SubirDiseno({
                     </label>
                     <button
                       type="button"
-                      onClick={() => descargar(documentoCompleto(deIa ? { ...diseno, css: fijarColores(diseno.css, { primario, secundario }) } : diseno), nombreDeArchivo(nombre))}
+                      onClick={() => descargar(documentoCompleto(conColores(diseno)), nombreDeArchivo(nombre))}
                       className="mt-2 text-xs font-medium text-accent hover:underline"
                     >
                       Descargar el HTML para editarlo a mano
