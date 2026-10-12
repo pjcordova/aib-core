@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from './supabase';
+import { conCaptcha } from './captcha';
 import type { ResenaPublica } from './ingenieros';
 import type { FilaPlantilla } from './catalogo';
 import type { Trabajo } from './portafolio';
@@ -85,7 +86,7 @@ export async function empezarConIngeniero(slug: string): Promise<ResultadoEmpeza
 
   let abrioSesion = false;
   if (!session) {
-    const { error } = await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.signInAnonymously({ options: await conCaptcha() });
     if (error) {
       console.error('[AIB+] No se pudo abrir la sesión de prueba:', error.message);
       return 'error';

@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { despertarAvisosCliente } from './api';
+import { MENSAJE_CAPTCHA, conCaptcha, esErrorDeCaptcha } from './captcha';
 
 const CLAVE = 'aib-acceso-cliente';
 /** Lo apuntado caduca a la hora, como el código de traspaso. */
@@ -90,6 +91,7 @@ async function prepararTraspaso(): Promise<string | null> {
 export function mensajeDeAcceso(error: Pick<AuthError, 'code' | 'message'> | null | undefined): string {
   const codigo = error?.code ?? '';
   const texto = error?.message ?? '';
+  if (esErrorDeCaptcha(error)) return MENSAJE_CAPTCHA;
   if (codigo === 'manual_linking_disabled' || codigo === 'provider_disabled' || /provider is not enabled/i.test(texto)) {
     return 'El ingreso con Google todavía no está activo. Usa tu correo por ahora.';
   }
@@ -241,7 +243,7 @@ export async function pedirCodigo(
   apuntar({ accion, via: 'correo', traspaso: await prepararTraspaso() });
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false, emailRedirectTo: destino() },
+    options: { shouldCreateUser: false, emailRedirectTo: destino(), ...(await conCaptcha()) },
   });
   if (error) {
     olvidar();
@@ -254,10 +256,14 @@ export async function pedirCodigo(
 /** Vuelve a enviar el código, del mismo tipo. */
 export async function reenviarCodigo(correo: string, tipo: TipoCodigo): Promise<{ error: string | null }> {
   const email = correo.trim().toLowerCase();
+  const captcha = await conCaptcha();
   const { error } =
     tipo === 'cambio'
-      ? await supabase.auth.resend({ type: 'email_change', email, options: { emailRedirectTo: destino() } })
-      : await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: destino() } });
+      ? await supabase.auth.resend({ type: 'email_change', email, options: { emailRedirectTo: destino(), ...captcha } })
+      : await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false, emailRedirectTo: destino(), ...captcha },
+        });
   if (error) console.error('[AIB+] No se pudo reenviar el código:', error.message);
   return { error: error ? mensajeDeAcceso(error) : null };
 }

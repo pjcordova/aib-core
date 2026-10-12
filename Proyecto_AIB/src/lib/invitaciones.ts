@@ -9,6 +9,7 @@
 
 import { supabase } from './supabase';
 import { canalDeLaVisita } from './medicionPortada';
+import { conCaptcha } from './captcha';
 
 /* -------------------------------------------------------------------------- */
 /* Ingeniero                                                                  */
@@ -191,7 +192,7 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
     const { data: valida, error: errorValida } = await supabase.rpc('invitacion_valida', { p_token: token });
     if (!errorValida && valida === false) return { estado: 'no_existe' };
 
-    const { error } = await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.signInAnonymously({ options: await conCaptcha() });
     if (error) {
       console.error('[AIB+] No se pudo abrir la sesión de invitado:', error.message);
       return { estado: 'error' };
@@ -201,7 +202,7 @@ export async function entrarConInvitacion(token: string): Promise<ResultadoEntra
   let resultado = await reclamar(token);
   if (resultado?.estado === 'otra') {
     await supabase.auth.signOut();
-    const { error } = await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.signInAnonymously({ options: await conCaptcha() });
     if (error) return { estado: 'error' };
     resultado = await reclamar(token);
   }
@@ -274,7 +275,7 @@ export async function empezarSinCuenta(): Promise<ResultadoPrueba> {
     const { data: cupo, error: errorCupo } = await supabase.rpc('hay_cupo_prueba_libre');
     if (!errorCupo && cupo === false) return 'lleno';
 
-    const { error } = await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.signInAnonymously({ options: await conCaptcha() });
     if (error) {
       console.error('[AIB+] No se pudo abrir la sesión de prueba:', error.message);
       return 'error';
