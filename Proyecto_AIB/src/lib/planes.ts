@@ -32,6 +32,7 @@ export const PLANES: { id: Plan; nombre: string; resumen: string; incluye: strin
     resumen: 'Para el ingeniero que quiere ir más rápido.',
     incluye: [
       'Todo lo del plan Free',
+      'Apareces primero: antes que los ingenieros Free en el buscador, la portada y las páginas por servicio y por rubro',
       'ABI, tu asistente con IA: te dice a quién responder, te redacta los mensajes y te ayuda a cotizar',
     ],
   },

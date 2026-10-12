@@ -88,6 +88,8 @@ export interface IngenieroPublico {
   slug?: string | null;
   /** Tiene la insignia «Verificado» (supabase_verificados.sql). */
   verificado?: boolean;
+  /** Tiene Pro o Negocio: aparece antes que los de Free (supabase_destacados.sql). */
+  destacado?: boolean;
 }
 
 /** Lo que ve el administrador de cada ingeniero o solicitud. */

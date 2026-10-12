@@ -227,7 +227,8 @@ function PlanesIngeniero() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="text-center text-3xl sm:text-4xl">Planes para ingenieros</h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-ink-muted">
-          Los clientes llegan gratis en todos los planes. Pagas solo si quieres a ABI o trabajar en equipo.
+          Los clientes llegan gratis en todos los planes. Pagas solo si quieres aparecer primero, tener a ABI o
+          trabajar en equipo.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           {PLANES.map((p) => (

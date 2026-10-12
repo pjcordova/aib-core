@@ -17,11 +17,13 @@ import { Wordmark } from './ui/Primitives';
 // ---------------------------------------------------------------------------
 // Como en un marketplace: el cliente filtra por servicio, tipo de negocio y
 // presupuesto, ordena por estrellas, reseñas o precio, y empieza con quien
-// elija. Sin cuenta. ?servicio=crm llega con el servicio ya elegido.
+// elija. Sin cuenta. ?servicio=crm llega con el servicio ya elegido. Por
+// defecto, «Recomendados»: primero los de Pro y Negocio (es un beneficio del
+// plan), luego los verificados y luego por estrellas.
 // ---------------------------------------------------------------------------
 
 type Clave = Exclude<TipoServicio, 'otro'>;
-type Orden = 'estrellas' | 'resenas' | 'precio' | 'nuevos';
+type Orden = 'recomendados' | 'estrellas' | 'resenas' | 'precio' | 'nuevos';
 
 const CLAVES: Clave[] = ['web', 'crm', 'erp', 'automatizacion', 'app-movil'];
 
@@ -32,6 +34,7 @@ const TOPES: { valor: number; etiqueta: string }[] = [
 ];
 
 const ORDENES: { valor: Orden; etiqueta: string }[] = [
+  { valor: 'recomendados', etiqueta: 'Recomendados' },
   { valor: 'estrellas', etiqueta: 'Mejor calificados' },
   { valor: 'resenas', etiqueta: 'Más reseñas' },
   { valor: 'precio', etiqueta: 'Menor precio' },
@@ -81,7 +84,7 @@ export function Explorar() {
     return CATEGORIAS_NEGOCIO.some((c) => c.valor === r && c.valor !== 'otro') ? r : '';
   });
   const [tope, setTope] = useState<number | null>(null);
-  const [orden, setOrden] = useState<Orden>('estrellas');
+  const [orden, setOrden] = useState<Orden>('recomendados');
   const [soloVerificados, setSoloVerificados] = useState(false);
   const [empezando, setEmpezando] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -133,7 +136,9 @@ export function Explorar() {
       if (orden === 'nuevos') {
         return Date.parse(precios.get(b.id)?.creado_en ?? '') - Date.parse(precios.get(a.id)?.creado_en ?? '') || 0;
       }
-      return Number(b.promedio ?? 0) - Number(a.promedio ?? 0) || b.resenas - a.resenas;
+      const porEstrellas = Number(b.promedio ?? 0) - Number(a.promedio ?? 0) || b.resenas - a.resenas;
+      if (orden === 'estrellas') return porEstrellas;
+      return Number(!!b.destacado) - Number(!!a.destacado) || Number(!!b.verificado) - Number(!!a.verificado) || porEstrellas;
     });
     // desdeDe depende de precios y servicio, que ya están en la lista.
     // eslint-disable-next-line react-hooks/exhaustive-deps

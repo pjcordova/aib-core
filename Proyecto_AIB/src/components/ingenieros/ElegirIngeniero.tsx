@@ -44,8 +44,10 @@ export function ElegirIngeniero({
         onElegido(null);
         return;
       }
-      // Primero quienes trabajan su rubro; dentro de eso, el orden por estrellas.
-      setLista(rubro ? [...l].sort((a, b) => Number(b.especialidades.includes(rubro)) - Number(a.especialidades.includes(rubro))) : l);
+      // Primero los de Pro y Negocio (beneficio del plan); dentro de cada
+      // grupo, quienes trabajan su rubro y luego el orden por estrellas.
+      const suRubro = (i: IngenieroPublico) => Number(!!rubro && i.especialidades.includes(rubro));
+      setLista([...l].sort((a, b) => Number(!!b.destacado) - Number(!!a.destacado) || suRubro(b) - suRubro(a)));
     });
     return () => {
       vigente = false;
