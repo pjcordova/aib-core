@@ -6,7 +6,7 @@ import { GaleriaDisenos } from './GaleriaDisenos';
 import { TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { useMetadatos } from '../hooks/useMetadatos';
 import { ingenierosDisponibles, ofreceServicio, type IngenieroPublico } from '../lib/ingenieros';
-import { PAGINAS_RUBRO, paginaRubro } from '../lib/paginasRubro';
+import { PAGINAS_RUBRO, coincidencias, paginaRubro } from '../lib/paginasRubro';
 import { PAGINAS_SERVICIO, PASOS_COMO_FUNCIONA as PASOS } from '../lib/paginasServicio';
 import { solesEnteros } from '../lib/servicios';
 import { vitrinaPortada, type Vitrina } from '../lib/vitrina';
@@ -16,7 +16,8 @@ import { vitrinaPortada, type Vitrina } from '../lib/vitrina';
 // ---------------------------------------------------------------------------
 // Los textos son fijos (paginasRubro.json) y al compilar se escriben en HTML
 // para Google (scripts/prerender.mjs). Los diseños y los ingenieros se leen
-// aquí: primero los de su rubro y, si todavía no hay, los de páginas web.
+// aquí: primero los de su negocio (por sus palabras clave), luego los de su
+// categoría y, si todavía no hay, los de páginas web.
 // ---------------------------------------------------------------------------
 
 export function PaginaRubro() {
@@ -40,8 +41,15 @@ export function PaginaRubro() {
 
   const probar = () => navigate('/probar?servicio=web');
 
+  // Primero los diseños de este negocio (por sus palabras), luego los de su
+  // categoría (un gimnasio comparte «salud» con un spa) y, si no hay, los de web.
   const web = (vitrina?.plantillas ?? []).filter((d) => d.servicio === 'web');
-  const delRubro = web.filter((d) => d.categoria === p.categoria);
+  const deEsteNegocio = web
+    .map((d) => ({ d, puntos: coincidencias(d, p.palabras) }))
+    .filter((x) => x.puntos > 0)
+    .sort((a, b) => b.puntos - a.puntos)
+    .map((x) => x.d);
+  const delRubro = deEsteNegocio.length > 0 ? deEsteNegocio : web.filter((d) => d.categoria === p.categoria);
   const disenos = (delRubro.length > 0 ? delRubro : web).slice(0, 6);
   const precios = disenos.map((d) => d.precio_desde).filter((n): n is number => n !== null);
   const desde =

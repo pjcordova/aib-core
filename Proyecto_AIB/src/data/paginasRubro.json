@@ -2,6 +2,17 @@
   {
     "slug": "restaurantes",
     "categoria": "restaurante",
+    "palabras": [
+      "restaurante",
+      "cevicheria",
+      "polleria",
+      "comida",
+      "carta",
+      "cafeteria",
+      "delivery",
+      "chifa",
+      "pizzeria"
+    ],
     "nombre": "Restaurantes",
     "icono": "🍽️",
     "titulo": "Página web para restaurantes en Perú | AIB+",
@@ -16,8 +27,14 @@
       "Carta digital con un código QR para las mesas"
     ],
     "tambien": [
-      { "servicio": "automatizacion", "texto": "Que los pedidos y reservas lleguen ordenados a tu WhatsApp, con respuestas automáticas." },
-      { "servicio": "erp", "texto": "Llevar el control de insumos, ventas y caja del día." }
+      {
+        "servicio": "automatizacion",
+        "texto": "Que los pedidos y reservas lleguen ordenados a tu WhatsApp, con respuestas automáticas."
+      },
+      {
+        "servicio": "erp",
+        "texto": "Llevar el control de insumos, ventas y caja del día."
+      }
     ],
     "preguntas": [
       {
@@ -37,6 +54,16 @@
   {
     "slug": "salones-de-belleza",
     "categoria": "salud-bienestar",
+    "palabras": [
+      "salon",
+      "barberia",
+      "peluqueria",
+      "spa",
+      "estetica",
+      "belleza",
+      "unas",
+      "maquillaje"
+    ],
     "nombre": "Salones de belleza y barberías",
     "icono": "💇",
     "titulo": "Página web para salones de belleza, barberías y spas | AIB+",
@@ -51,8 +78,14 @@
       "Promociones y paquetes del mes"
     ],
     "tambien": [
-      { "servicio": "automatizacion", "texto": "Recordatorios de citas por WhatsApp para que no te dejen plantado." },
-      { "servicio": "crm", "texto": "Saber quiénes son tus clientes frecuentes y cuándo volver a escribirles." }
+      {
+        "servicio": "automatizacion",
+        "texto": "Recordatorios de citas por WhatsApp para que no te dejen plantado."
+      },
+      {
+        "servicio": "crm",
+        "texto": "Saber quiénes son tus clientes frecuentes y cuándo volver a escribirles."
+      }
     ],
     "preguntas": [
       {
@@ -72,6 +105,18 @@
   {
     "slug": "consultorios",
     "categoria": "salud-bienestar",
+    "palabras": [
+      "consultorio",
+      "clinica",
+      "dentista",
+      "dental",
+      "odontolog",
+      "medic",
+      "psicolog",
+      "fisioterap",
+      "nutricion",
+      "pacientes"
+    ],
     "nombre": "Consultorios y clínicas",
     "icono": "🩺",
     "titulo": "Página web para consultorios, clínicas y dentistas | AIB+",
@@ -86,8 +131,14 @@
       "Respuestas a las preguntas que más te hacen los pacientes"
     ],
     "tambien": [
-      { "servicio": "automatizacion", "texto": "Recordatorios de citas y confirmaciones por WhatsApp." },
-      { "servicio": "crm", "texto": "Ordenar a tus pacientes y sus próximas citas en un solo lugar." }
+      {
+        "servicio": "automatizacion",
+        "texto": "Recordatorios de citas y confirmaciones por WhatsApp."
+      },
+      {
+        "servicio": "crm",
+        "texto": "Ordenar a tus pacientes y sus próximas citas en un solo lugar."
+      }
     ],
     "preguntas": [
       {
@@ -107,6 +158,18 @@
   {
     "slug": "gimnasios",
     "categoria": "salud-bienestar",
+    "palabras": [
+      "gimnasio",
+      "gym",
+      "crossfit",
+      "fitness",
+      "entrenamiento",
+      "entrenador",
+      "yoga",
+      "pilates",
+      "deportiv",
+      "baile"
+    ],
     "nombre": "Gimnasios y centros deportivos",
     "icono": "🏋️",
     "titulo": "Página web para gimnasios y centros deportivos | AIB+",
@@ -121,8 +184,14 @@
       "Promociones de temporada"
     ],
     "tambien": [
-      { "servicio": "crm", "texto": "Saber qué membresías vencen y a quién escribirle para que renueve." },
-      { "servicio": "apps-moviles", "texto": "Una app para que tus socios reserven clases y vean su rutina." }
+      {
+        "servicio": "crm",
+        "texto": "Saber qué membresías vencen y a quién escribirle para que renueve."
+      },
+      {
+        "servicio": "apps-moviles",
+        "texto": "Una app para que tus socios reserven clases y vean su rutina."
+      }
     ],
     "preguntas": [
       {
@@ -142,6 +211,14 @@
   {
     "slug": "tiendas-de-ropa",
     "categoria": "tienda-ropa",
+    "palabras": [
+      "ropa",
+      "moda",
+      "boutique",
+      "prendas",
+      "tallas",
+      "calzado"
+    ],
     "nombre": "Tiendas de ropa",
     "icono": "👗",
     "titulo": "Página web para tiendas de ropa y boutiques | AIB+",
@@ -156,8 +233,14 @@
       "Tu local en el mapa, si tienes tienda física"
     ],
     "tambien": [
-      { "servicio": "tiendas-online", "texto": "Una tienda online completa, con carrito y pago en línea." },
-      { "servicio": "erp", "texto": "Controlar tu stock por talla y color, y tus ventas del día." }
+      {
+        "servicio": "tiendas-online",
+        "texto": "Una tienda online completa, con carrito y pago en línea."
+      },
+      {
+        "servicio": "erp",
+        "texto": "Controlar tu stock por talla y color, y tus ventas del día."
+      }
     ],
     "preguntas": [
       {
@@ -177,6 +260,14 @@
   {
     "slug": "estudios-contables",
     "categoria": "servicios-profesionales",
+    "palabras": [
+      "contable",
+      "contabilidad",
+      "contador",
+      "tributari",
+      "planillas",
+      "impuestos"
+    ],
     "nombre": "Estudios contables",
     "icono": "📊",
     "titulo": "Página web para estudios contables y contadores | AIB+",
@@ -191,8 +282,14 @@
       "Testimonios o empresas con las que trabajas"
     ],
     "tambien": [
-      { "servicio": "crm", "texto": "Llevar a tus clientes, sus vencimientos y lo que les falta enviarte." },
-      { "servicio": "automatizacion", "texto": "Recordatorios automáticos de documentos y fechas de pago." }
+      {
+        "servicio": "crm",
+        "texto": "Llevar a tus clientes, sus vencimientos y lo que les falta enviarte."
+      },
+      {
+        "servicio": "automatizacion",
+        "texto": "Recordatorios automáticos de documentos y fechas de pago."
+      }
     ],
     "preguntas": [
       {
@@ -212,6 +309,13 @@
   {
     "slug": "estudios-de-abogados",
     "categoria": "servicios-profesionales",
+    "palabras": [
+      "abogad",
+      "juridic",
+      "legal",
+      "derecho",
+      "bufete"
+    ],
     "nombre": "Estudios de abogados",
     "icono": "⚖️",
     "titulo": "Página web para estudios de abogados | AIB+",
@@ -226,8 +330,14 @@
       "Artículos que respondan dudas legales frecuentes"
     ],
     "tambien": [
-      { "servicio": "crm", "texto": "Seguir a cada cliente y el estado de su caso en un solo lugar." },
-      { "servicio": "automatizacion", "texto": "Respuestas automáticas a las consultas que llegan fuera de horario." }
+      {
+        "servicio": "crm",
+        "texto": "Seguir a cada cliente y el estado de su caso en un solo lugar."
+      },
+      {
+        "servicio": "automatizacion",
+        "texto": "Respuestas automáticas a las consultas que llegan fuera de horario."
+      }
     ],
     "preguntas": [
       {
@@ -247,6 +357,16 @@
   {
     "slug": "colegios-y-academias",
     "categoria": "institucion",
+    "palabras": [
+      "colegio",
+      "academia",
+      "instituto",
+      "escuela",
+      "educacion",
+      "educativ",
+      "alumnos",
+      "matricula"
+    ],
     "nombre": "Colegios y academias",
     "icono": "🎓",
     "titulo": "Página web para colegios, academias e institutos | AIB+",
@@ -261,8 +381,14 @@
       "Contacto por WhatsApp y ubicación"
     ],
     "tambien": [
-      { "servicio": "crm", "texto": "Ordenar a los interesados en matricularse y hacerles seguimiento." },
-      { "servicio": "erp", "texto": "Llevar pensiones, pagos y deudas de cada alumno." }
+      {
+        "servicio": "crm",
+        "texto": "Ordenar a los interesados en matricularse y hacerles seguimiento."
+      },
+      {
+        "servicio": "erp",
+        "texto": "Llevar pensiones, pagos y deudas de cada alumno."
+      }
     ],
     "preguntas": [
       {
