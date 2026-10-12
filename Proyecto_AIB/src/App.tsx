@@ -35,6 +35,13 @@ type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
 const TIPOS: TipoServicio[] = ['web', 'crm', 'erp', 'automatizacion', 'app-movil'];
 
 /**
+ * Al guardar su proyecto: que agende el remitente. Con el dominio aún nuevo,
+ * es lo que más ayuda a que Gmail deje los avisos en la bandeja principal.
+ */
+const AGENDAR_REMITENTE =
+  ' Te avisaremos de cada avance desde contacto@aibplus.app: guárdalo en tus contactos para que no se pierda.';
+
+/**
  * El servicio con el que llega desde la portada o la página de un ingeniero
  * ({ clave: 'crm' } o { clave: 'otro:Chatbots' }). Sin él, elige en la bienvenida.
  */
@@ -175,7 +182,7 @@ export default function Home() {
         if (r.accion === 'guardar') {
           setAviso({
             ok: true,
-            texto: `Tu proyecto quedó guardado con tu ${r.via === 'google' ? 'cuenta de Google' : 'correo'}. Para volver desde cualquier celular o computadora, entra a AIB+ y toca «Recupera tu proyecto».`,
+            texto: `Tu proyecto quedó guardado con tu ${r.via === 'google' ? 'cuenta de Google' : 'correo'}. Para volver desde cualquier celular o computadora, entra a AIB+ y toca «Recupera tu proyecto».${AGENDAR_REMITENTE}`,
           });
         }
         setVersionInvitacion((v) => v + 1);
@@ -608,7 +615,7 @@ export default function Home() {
             setGuardando(null);
             setAviso({
               ok: true,
-              texto: `${yaTeniaCuenta ? 'Entraste a tu cuenta y trajimos este proyecto.' : 'Tu proyecto quedó guardado.'} Para volver desde cualquier celular o computadora, entra a AIB+, toca «Recupera tu proyecto» y usa ${correo}.`,
+              texto: `${yaTeniaCuenta ? 'Entraste a tu cuenta y trajimos este proyecto.' : 'Tu proyecto quedó guardado.'} Para volver desde cualquier celular o computadora, entra a AIB+, toca «Recupera tu proyecto» y usa ${correo}.${AGENDAR_REMITENTE}`,
             });
             window.scrollTo({ top: 0, behavior: 'smooth' });
             // Si entró a una cuenta que ya tenía, su invitación y sus proyectos son otros.

@@ -114,6 +114,8 @@ BEGIN
         NULLIF(btrim(r.payload->'ficha'->>'empresa'), ''),
         (SELECT NULLIF(i.negocio, 'Sin nombre todavía') FROM public.invitaciones i WHERE i.cliente_id = r.user_id)
       ),
+      -- Su primer nombre, para saludarlo («Hola, Ana:»).
+      'cliente', NULLIF(split_part(btrim(COALESCE(r.payload->'contacto'->>'nombre', '')), ' ', 1), ''),
       'ingeniero', (
         SELECT NULLIF(split_part(btrim(pi.nombre), ' ', 1), '')
         FROM public.perfiles_ingeniero pi WHERE pi.user_id = r.ingeniero_id
