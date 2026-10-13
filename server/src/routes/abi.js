@@ -88,8 +88,8 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
   const inicio = Date.now();
 
   try {
-    // Su nombre, su enlace de agenda y lo que le pidió recordar.
-    const [ajustes, recuerdos] = await Promise.all([
+    // Su nombre, su enlace de agenda, lo que le pidió recordar y si conectó su calendario.
+    const [ajustes, recuerdos, calendario] = await Promise.all([
       leerOpcional(req.tokenUsuario, 'ajustes_ingeniero', [['select', 'nombre,enlace_agenda']], []).then(
         (filas) => filas[0] ?? null
       ),
@@ -103,9 +103,17 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
         ],
         []
       ).then((filas) => filas.map((f) => f.texto)),
+      leerOpcional(req.tokenUsuario, 'calendarios_ingeniero', [['select', 'correo']], []),
     ]);
 
-    const r = await conversarConAbi({ token: req.tokenUsuario, conversacion, ajustes, recuerdos });
+    const r = await conversarConAbi({
+      token: req.tokenUsuario,
+      conversacion,
+      ajustes,
+      recuerdos,
+      usuarioId: req.usuario.id,
+      calendarioConectado: calendario.length > 0,
+    });
     await anotar(req.tokenUsuario, pregunta, r);
     return res.json({ success: true, respuesta: r.texto, acciones: r.acciones });
   } catch (error) {

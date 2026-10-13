@@ -6,13 +6,16 @@
 // token del propio ingeniero (supabaseUsuario.js): ve lo mismo que él.
 //
 // No envía ni cambia nada por su cuenta. Lo que propone (un WhatsApp, cambiar
-// la etapa de un encargo, crear una invitación, recordar una preferencia)
-// llega al panel como una tarjeta con su botón, y lo hace el ingeniero.
+// la etapa de un encargo, crear una invitación, recordar una preferencia,
+// agendar una reunión en su Google Calendar) llega al panel como una tarjeta
+// con su botón, y lo hace el ingeniero. Con el calendario conectado
+// (calendario.js) también ve su disponibilidad.
 // ---------------------------------------------------------------------------
 
 const { anthropic } = require('./claude');
 const { config } = require('./config');
 const { consultarComo } = require('./supabaseUsuario');
+const calendario = require('./calendario');
 
 const IDENTIDAD = `Eres ABI, el asistente del ingeniero en AIB+.
 
@@ -31,10 +34,10 @@ Reglas:
 - No puedes enviar mensajes ni cambiar nada por tu cuenta: solo propones y el ingeniero confirma con un botón. Para dejar un mensaje listo usa preparar_whatsapp; para cambiar la etapa de un encargo, proponer_etapa; para crear una invitación, proponer_invitacion. Nunca digas que algo ya está enviado o hecho: di que le dejaste el botón para confirmarlo.
 - Memoria: si el ingeniero te cuenta una preferencia o un dato estable de cómo trabaja ("recuerda que…", su precio mínimo, su horario), propón guardarlo con proponer_recuerdo; él lo confirma. No guardes datos de clientes. Lo que ya recuerdas aparece en el contexto: síguelo.
 - Cuando redactes para un cliente: tono cercano y profesional, mensaje corto de WhatsApp, menciona su negocio y firma con el nombre del ingeniero si lo conoces.
-- Para proponer una reunión (virtual o presencial): si el ingeniero tiene enlace de agenda, inclúyelo para que el cliente elija el horario; si no, propón dos o tres horarios concretos de los próximos días hábiles y sugiérele crear su enlace en los ajustes de ABI.
+- Para proponer una reunión: si tiene su Google Calendar conectado (lo dice el contexto), mira su disponibilidad con ver_disponibilidad, elige un horario libre que encaje con lo que pidió y propónlo con proponer_reunion: al confirmarlo se crea en su calendario con Google Meet y, si el cliente dejó correo, Google le manda la invitación. Si el cliente aún no confirmó el horario, ofrécele también un WhatsApp con dos o tres opciones libres. Sin calendario conectado: si tiene enlace de agenda, inclúyelo para que el cliente elija; si no, propón dos o tres horarios concretos de los próximos días hábiles y sugiérele conectar su Google Calendar en los ajustes de ABI.
 - Precios: AIB+ no fija precios. Si te piden una cifra, propón un rango en soles razonado con lo que hay: el presupuesto que marcó el cliente, la documentación técnica (funcionalidades y semanas estimadas) y el precio "desde" del catálogo si existe. Deja claro que es una sugerencia y que decide el ingeniero.
 - Los encargos y las invitaciones de prueba son del propio ingeniero: no los cuentes como clientes salvo que te lo pida.
-- Si el ingeniero pide algo que no puedes hacer (enviar, borrar, agendar en su calendario), díselo y ofrécele lo más cercano que sí puedes: el borrador, la propuesta para confirmar o los pasos para hacerlo él desde el panel.`;
+- Si el ingeniero pide algo que no puedes hacer (enviar, borrar, cambiar o cancelar eventos de su calendario), díselo y ofrécele lo más cercano que sí puedes: el borrador, la propuesta para confirmar o los pasos para hacerlo él desde el panel.`;
 
 /* -------------------------------------------------------------------------- */
 /* Herramientas                                                               */
@@ -159,6 +162,34 @@ const HERRAMIENTAS = [
     input_schema: esquema({
       negocio: { type: 'string', description: 'Nombre del negocio, como lo verá el cliente (máximo 80 caracteres).' },
       es_prueba: { type: 'boolean', description: 'true si es para que el ingeniero la pruebe él mismo.' },
+    }),
+    strict: true,
+  },
+  {
+    name: 'ver_disponibilidad',
+    description:
+      'Su disponibilidad en Google Calendar para los próximos días: lo ocupado y huecos libres de una hora (lunes a sábado, 9:00 a 19:00, hora de Lima). Solo si tiene el calendario conectado.',
+    input_schema: esquema({
+      dias: { type: 'integer', description: 'Cuántos días mirar, de 1 a 14.' },
+    }),
+    strict: true,
+  },
+  {
+    name: 'proponer_reunion',
+    description:
+      'Propone agendar una reunión con el cliente de un encargo en el Google Calendar del ingeniero, con Google Meet. NO la crea: el ingeniero verá un botón «Agendar». Si el cliente dejó correo, Google le manda la invitación al confirmarla. Usa un horario libre de ver_disponibilidad.',
+    input_schema: esquema({
+      encargo_id: { type: 'string' },
+      inicio: {
+        type: 'string',
+        description: 'Fecha y hora de inicio en ISO 8601 con zona, por ejemplo 2026-10-20T10:00:00-05:00 (hora de Lima).',
+      },
+      minutos: { type: 'integer', description: 'Duración en minutos, de 15 a 180. Lo normal: 30 o 45.' },
+      titulo: { type: 'string', description: 'Título corto del evento, por ejemplo «Reunión: Dulce Café y Piero».' },
+      nota: {
+        type: 'string',
+        description: 'Qué se verá en la reunión, para la descripción del evento (máximo 500 caracteres), o cadena vacía.',
+      },
     }),
     strict: true,
   },
@@ -457,6 +488,57 @@ const ejecutores = {
     };
   },
 
+  async ver_disponibilidad({ dias }, { usuarioId }) {
+    try {
+      return await calendario.disponibilidad(usuarioId, dias);
+    } catch (error) {
+      if (error instanceof calendario.CalendarioError && error.codigo !== 'google') {
+        throw new Error(`${error.message} Sugiérele conectarlo en los ajustes de ABI y, mientras, usa su enlace de agenda o propón horarios.`);
+      }
+      throw error;
+    }
+  },
+
+  async proponer_reunion({ encargo_id, inicio, minutos, titulo, nota }, { token, acciones, calendarioConectado }) {
+    if (!calendarioConectado) {
+      throw new Error('No tiene su Google Calendar conectado: sugiérele conectarlo en los ajustes de ABI.');
+    }
+    if (!ID.test(encargo_id)) throw new Error('Ese id de encargo no es válido.');
+    const comienzo = new Date(inicio);
+    if (Number.isNaN(comienzo.getTime())) throw new Error('La fecha de inicio no es válida: usa ISO 8601 con zona.');
+    if (comienzo.getTime() < Date.now()) throw new Error('Ese horario ya pasó.');
+    if (comienzo.getTime() > Date.now() + 90 * 86_400_000) throw new Error('Ese horario está demasiado lejos.');
+    const duracion = Math.round(Number(minutos));
+    if (!(duracion >= 15 && duracion <= 180)) throw new Error('La duración debe ser de 15 a 180 minutos.');
+    const limpia = String(nota ?? '').trim();
+    if (limpia.length > 500) throw new Error('La nota pasa de 500 caracteres: acórtala.');
+
+    const [encargo] = await consultarComo(token, 'encargos', {
+      params: [
+        ['select', 'empresa,cliente,servicio,whatsapp'],
+        ['id', `eq.${encargo_id}`],
+      ],
+    });
+    if (!encargo) throw new Error('No encontré ese encargo.');
+
+    acciones.push({
+      tipo: 'reunion',
+      encargoId: encargo_id,
+      para: encargo.empresa ?? encargo.cliente ?? encargo.servicio,
+      cliente: encargo.cliente ?? null,
+      whatsapp: String(encargo.whatsapp ?? '').replace(/\D/g, '') || null,
+      inicio: comienzo.toISOString(),
+      minutos: duracion,
+      titulo: String(titulo ?? '').trim().slice(0, 120),
+      nota: limpia,
+    });
+    return {
+      listo: true,
+      cuando: calendario.textoLima(comienzo),
+      nota: 'El ingeniero verá el botón «Agendar». Todavía no se creó nada en su calendario.',
+    };
+  },
+
   async proponer_recuerdo({ texto }, { acciones }) {
     const limpio = String(texto ?? '').trim();
     if (!limpio) throw new Error('No hay nada que recordar.');
@@ -488,7 +570,7 @@ function estimarCostoUsd(uso) {
 }
 
 /** Lo que cambia en cada pregunta va aparte, para no romper la caché de lo fijo. */
-function contexto(ajustes, recuerdos) {
+function contexto(ajustes, recuerdos, calendarioConectado) {
   const ahora = new Date().toLocaleString('es-PE', {
     timeZone: 'America/Lima',
     weekday: 'long',
@@ -506,6 +588,9 @@ function contexto(ajustes, recuerdos) {
     ajustes?.enlace_agenda
       ? `Su enlace para agendar reuniones: ${ajustes.enlace_agenda}`
       : 'No tiene enlace para agendar reuniones.',
+    calendarioConectado
+      ? 'Tiene su Google Calendar conectado: puedes ver su disponibilidad y proponer reuniones con Google Meet.'
+      : 'No tiene su Google Calendar conectado.',
     recuerdos?.length
       ? `Lo que el ingeniero te pidió recordar (síguelo):\n${recuerdos.map((r) => `- ${r}`).join('\n')}`
       : 'Todavía no te pidió recordar nada.',
@@ -521,8 +606,10 @@ function contexto(ajustes, recuerdos) {
  * @param {{ rol: 'usuario' | 'abi', texto: string }[]} entrada.conversacion
  * @param {{ nombre?: string | null, enlace_agenda?: string | null } | null} entrada.ajustes
  * @param {string[]} entrada.recuerdos Lo que el ingeniero le pidió recordar.
+ * @param {string} entrada.usuarioId El id del ingeniero (para su calendario).
+ * @param {boolean} entrada.calendarioConectado Si conectó su Google Calendar.
  */
-async function conversarConAbi({ token, conversacion, ajustes, recuerdos }) {
+async function conversarConAbi({ token, conversacion, ajustes, recuerdos, usuarioId, calendarioConectado }) {
   const inicio = Date.now();
   const mensajes = conversacion.map((m) => ({
     role: m.rol === 'abi' ? 'assistant' : 'user',
@@ -554,7 +641,7 @@ async function conversarConAbi({ token, conversacion, ajustes, recuerdos }) {
       output_config: { effort: config.abi.effort },
       system: [
         { type: 'text', text: IDENTIDAD, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: contexto(ajustes, recuerdos) },
+        { type: 'text', text: contexto(ajustes, recuerdos, calendarioConectado) },
       ],
       tools: HERRAMIENTAS,
       messages: mensajes,
@@ -592,7 +679,7 @@ async function conversarConAbi({ token, conversacion, ajustes, recuerdos }) {
         const ejecutar = ejecutores[pedida.name];
         try {
           if (!ejecutar) throw new Error(`Herramienta desconocida: ${pedida.name}`);
-          const resultado = await ejecutar(pedida.input ?? {}, { token, acciones });
+          const resultado = await ejecutar(pedida.input ?? {}, { token, acciones, usuarioId, calendarioConectado });
           return { type: 'tool_result', tool_use_id: pedida.id, content: JSON.stringify(resultado) };
         } catch (error) {
           console.warn(`[AIB+] abi — ${pedida.name} falló:`, error.message);

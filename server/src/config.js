@@ -116,6 +116,14 @@ const config = {
   // (Vercel la manda sola si existe CRON_SECRET). Su huella está en la tabla
   // claves_sistema. Sin ella, el resumen no se envía.
   cronSecret: process.env.CRON_SECRET?.trim() || null,
+
+  // Google Calendar para ABI (src/calendario.js): el cliente OAuth del proyecto
+  // de Google Cloud «AIB Plus». Sin los dos, conectar el calendario dice que
+  // aún no está disponible y ABI sigue con el enlace de agenda.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() || null,
+  },
 };
 
 module.exports = { config };

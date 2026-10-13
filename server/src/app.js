@@ -21,6 +21,7 @@ const disenosRoutes = require('./routes/disenos');
 const avisosRoutes = require('./routes/avisos');
 const abiRoutes = require('./routes/abi');
 const resumenDiarioRoutes = require('./routes/resumenDiario');
+const calendarioRoutes = require('./routes/calendario');
 const vistaPreviaRoutes = require('./routes/vistaPrevia');
 
 const app = express();
@@ -90,6 +91,7 @@ app.use('/api', disenosRoutes);
 app.use('/api', avisosRoutes);
 app.use('/api', abiRoutes);
 app.use('/api', resumenDiarioRoutes);
+app.use('/api', calendarioRoutes);
 
 // Fuera de /api: Vercel manda aquí los robots de WhatsApp y compañía cuando
 // piden /i/<código> o /ver/<código> (ver vercel.json).
