@@ -177,7 +177,7 @@ const HERRAMIENTAS = [
   {
     name: 'proponer_reunion',
     description:
-      'Propone agendar una reunión con el cliente de un encargo en el Google Calendar del ingeniero, con Google Meet. NO la crea: el ingeniero verá un botón «Agendar». Si el cliente dejó correo, Google le manda la invitación al confirmarla. Usa un horario libre de ver_disponibilidad.',
+      'Propone agendar una reunión con el cliente de un encargo en el Google Calendar del ingeniero, con Google Meet. NO la crea: el ingeniero verá un botón «Agendar». Si el cliente tiene correo (el del encargo o el de su cuenta), Google le manda la invitación al confirmarla. Usa un horario libre de ver_disponibilidad.',
     input_schema: esquema({
       encargo_id: { type: 'string' },
       inicio: {

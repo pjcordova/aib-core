@@ -495,7 +495,7 @@ function PropuestaReunion({
       {accion.titulo && <p className="mt-1 text-sm text-ink-muted">{accion.titulo}</p>}
       {accion.nota && <p className="mt-1 text-sm text-ink-muted">«{accion.nota}»</p>}
       <p className="mt-1 text-[11px] text-ink-subtle">
-        Si {accion.cliente ?? 'el cliente'} dejó su correo, Google le manda la invitación.
+        Google le manda la invitación al correo de {accion.cliente ?? 'tu cliente'}, si lo tiene.
       </p>
     </Propuesta>
   );

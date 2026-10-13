@@ -130,7 +130,15 @@ router.post('/calendario/reunion', limitar, requireAuth, conAbi, async (req, res
     if (!proyecto) return res.status(404).json({ success: false, error: 'No encontré ese encargo.' });
 
     const negocio = proyecto.empresa || proyecto.servicio || 'tu proyecto';
-    const invitado = CORREO.test(String(proyecto.correo ?? '')) ? proyecto.correo : null;
+    // Quien aceptó desde una prueba sin cuenta dejó el encargo sin correo: se
+    // usa el de la cuenta que guardó después (correo_cliente, supabase_calendario.sql).
+    let correo = proyecto.correo;
+    if (!CORREO.test(String(correo ?? ''))) {
+      correo = await consultarComo(req.tokenUsuario, 'rpc/correo_cliente', { cuerpo: { p_proyecto: encargoId } }).catch(
+        () => null
+      );
+    }
+    const invitado = CORREO.test(String(correo ?? '')) ? correo : null;
     const reunion = await crearReunion(req.usuario.id, {
       titulo: String(titulo ?? '').trim().slice(0, 120) || `Reunión: ${negocio} · AIB+`,
       inicio: comienzo.toISOString(),

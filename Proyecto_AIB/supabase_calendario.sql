@@ -115,3 +115,29 @@ REVOKE ALL ON FUNCTION public.borrar_calendario(TEXT, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.guardar_calendario(TEXT, UUID, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.token_calendario(TEXT, UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.borrar_calendario(TEXT, UUID) TO anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- El correo del cliente para la invitación
+-- ----------------------------------------------------------------------------
+-- Quien acepta desde una prueba sin cuenta deja su encargo sin correo
+-- (contacto.correo vacío) y guarda su cuenta con su correo después. Para la
+-- invitación de la reunión, el servidor usa ese correo de su cuenta. Solo lo
+-- puede pedir el ingeniero del encargo (o su equipo, o el administrador), y
+-- el panel no lo muestra: va directo a Google como invitado.
+CREATE OR REPLACE FUNCTION public.correo_cliente(p_proyecto UUID)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT NULLIF(u.email, '')
+  FROM public.proyectos p
+  JOIN auth.users u ON u.id = p.user_id AND NOT COALESCE(u.is_anonymous, false)
+  WHERE p.id = p_proyecto
+    AND p.payload->>'aceptado' = 'true'
+    AND (p.ingeniero_id = auth.uid() OR p.ingeniero_id = public.dueno_de_mi_equipo() OR public.es_admin());
+$$;
+
+REVOKE ALL ON FUNCTION public.correo_cliente(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.correo_cliente(UUID) TO authenticated;
