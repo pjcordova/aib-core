@@ -356,7 +356,21 @@ export type AccionAbi =
       nota: string;
     }
   | { tipo: 'invitacion'; negocio: string; esPrueba: boolean }
-  | { tipo: 'recuerdo'; texto: string };
+  | { tipo: 'recuerdo'; texto: string }
+  | {
+      /** Una reunión en su Google Calendar, con Meet (server/src/calendario.js). */
+      tipo: 'reunion';
+      encargoId: string;
+      para: string;
+      cliente: string | null;
+      /** Su WhatsApp, solo dígitos, para mandarle el enlace de Meet. */
+      whatsapp: string | null;
+      /** ISO 8601. */
+      inicio: string;
+      minutos: number;
+      titulo: string;
+      nota: string;
+    };
 
 const ETAPAS_VALIDAS: EstadoEncargo[] = ['recibido', 'en_revision', 'propuesta_enviada', 'en_desarrollo', 'publicada'];
 const ID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -383,6 +397,22 @@ function esAccionValida(a: unknown): a is AccionAbi {
       return texto(x.negocio, 80) && typeof x.esPrueba === 'boolean';
     case 'recuerdo':
       return texto(x.texto, 300);
+    case 'reunion':
+      return (
+        typeof x.encargoId === 'string' &&
+        ID_VALIDO.test(x.encargoId) &&
+        texto(x.para, 200) &&
+        typeof x.inicio === 'string' &&
+        !Number.isNaN(Date.parse(x.inicio)) &&
+        Number.isInteger(x.minutos) &&
+        (x.minutos as number) >= 15 &&
+        (x.minutos as number) <= 180 &&
+        typeof x.titulo === 'string' &&
+        x.titulo.length <= 120 &&
+        typeof x.nota === 'string' &&
+        x.nota.length <= 500 &&
+        (x.whatsapp === null || (typeof x.whatsapp === 'string' && /^\d{6,15}$/.test(x.whatsapp)))
+      );
     default:
       return false;
   }
@@ -401,6 +431,55 @@ export async function preguntarAbi(
     throw new ApiError(data.error ?? 'ABI no pudo responder. Vuelve a intentarlo.', 502, true);
   }
   return { respuesta: data.respuesta, acciones: (data.acciones ?? []).filter(esAccionValida) };
+}
+
+/* ------------------------------------------------- Google Calendar de ABI */
+
+export interface EstadoCalendario {
+  /** Si AIB+ ya tiene configurado el acceso a Google Calendar. */
+  disponible: boolean;
+  conectado: boolean;
+  correo: string | null;
+}
+
+export async function estadoCalendario(): Promise<EstadoCalendario | null> {
+  try {
+    const r = await post<{ success: boolean } & EstadoCalendario>('/api/calendario/estado', {}, 20_000);
+    return { disponible: r.disponible, conectado: r.conectado, correo: r.correo };
+  } catch {
+    return null;
+  }
+}
+
+/** La pantalla de Google para dar permiso; el panel lleva ahí al ingeniero. */
+export async function urlConectarCalendario(): Promise<string> {
+  const r = await post<{ success: boolean; url?: string; error?: string }>('/api/calendario/conectar', {}, 20_000);
+  if (!r.url) throw new ApiError(r.error ?? 'No se pudo conectar el calendario.', 502, true);
+  return r.url;
+}
+
+export async function desconectarCalendario(): Promise<void> {
+  await post<{ success: boolean }>('/api/calendario/desconectar', {}, 20_000);
+}
+
+export interface ReunionCreada {
+  meet: string | null;
+  enlace: string | null;
+  inicio: string;
+  fin: string;
+  /** Si Google le mandó la invitación al correo del cliente. */
+  invitado: boolean;
+}
+
+/** Crea la reunión que el ingeniero confirmó en la tarjeta de ABI. */
+export async function agendarReunion(
+  accion: Extract<AccionAbi, { tipo: 'reunion' }>
+): Promise<ReunionCreada> {
+  return post<{ success: boolean } & ReunionCreada>(
+    '/api/calendario/reunion',
+    { encargo_id: accion.encargoId, inicio: accion.inicio, minutos: accion.minutos, titulo: accion.titulo, nota: accion.nota },
+    30_000
+  );
 }
 
 /** El ingeniero se manda un WhatsApp de prueba para comprobar sus avisos. */

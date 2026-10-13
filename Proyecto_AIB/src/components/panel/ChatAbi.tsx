@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ApiError, preguntarAbi, type AccionAbi } from '../../lib/api';
+import {
+  ApiError,
+  agendarReunion,
+  desconectarCalendario,
+  estadoCalendario,
+  preguntarAbi,
+  urlConectarCalendario,
+  type AccionAbi,
+  type EstadoCalendario,
+} from '../../lib/api';
 import {
   guardarAjustes,
   guardarConversacion,
@@ -22,7 +31,8 @@ import { AvatarAbi } from './AvatarAbi';
 // Pregúntale a ABI
 // ---------------------------------------------------------------------------
 // El chat con ABI dentro de «Hoy». ABI lee los datos del ingeniero y propone:
-// mensajes de WhatsApp, cambios de etapa, invitaciones y cosas que recordar.
+// mensajes de WhatsApp, cambios de etapa, invitaciones, cosas que recordar y,
+// con su Google Calendar conectado (en los ajustes), reuniones con Meet.
 // Cada propuesta es una tarjeta con su botón y la hace el ingeniero, con sus
 // propios permisos. Los botones de WhatsApp solo abren el chat con el texto.
 // ---------------------------------------------------------------------------
@@ -248,6 +258,8 @@ function TarjetaAccion({
           <p className="text-sm text-ink">{accion.negocio}</p>
         </Propuesta>
       );
+    case 'reunion':
+      return <PropuestaReunion accion={accion} resultado={resultado} onResultado={onResultado} />;
     case 'recuerdo':
       return (
         <Propuesta
@@ -410,6 +422,164 @@ function BorradorWhatsapp({ accion }: { accion: Extract<AccionAbi, { tipo: 'what
   );
 }
 
+/** «martes 21 de octubre, 10:00 a. m.», en hora de Lima. */
+const fechaLima = (iso: string) =>
+  new Date(iso).toLocaleString('es-PE', {
+    timeZone: 'America/Lima',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+/**
+ * Una reunión en su Google Calendar. Al confirmarla, el servidor la crea con
+ * Meet (e invita al correo del cliente, si lo dejó); luego puede mandarle el
+ * enlace por WhatsApp.
+ */
+function PropuestaReunion({
+  accion,
+  resultado,
+  onResultado,
+}: {
+  accion: Extract<AccionAbi, { tipo: 'reunion' }>;
+  resultado: ResultadoAccion | undefined;
+  onResultado: (resultado: ResultadoAccion) => void;
+}) {
+  const cuando = fechaLima(accion.inicio);
+  const meet = resultado?.estado === 'hecha' ? resultado.enlace : undefined;
+  const nombre = accion.cliente?.split(/\s+/)[0] ?? '';
+  const mensaje = meet
+    ? `Hola${nombre ? ` ${nombre}` : ''}, te agendé la reunión para el ${cuando} (${accion.minutos} min). Entra a la hora con este enlace de Google Meet: ${meet}`
+    : '';
+
+  return (
+    <Propuesta
+      titulo={`Agendar reunión · ${accion.para}`}
+      textoConfirmar="Agendar"
+      resultado={resultado}
+      onResultado={onResultado}
+      hacer={async () => {
+        try {
+          const r = await agendarReunion(accion);
+          return { estado: 'hecha', enlace: r.meet ?? r.enlace ?? undefined };
+        } catch (e) {
+          return e instanceof ApiError ? e.message : 'No se pudo agendar. Vuelve a intentarlo.';
+        }
+      }}
+      hecho={
+        <span className="inline-flex flex-wrap items-center gap-2">
+          Reunión creada en tu Google Calendar.
+          {meet && (
+            <a href={meet} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+              Abrir Meet
+            </a>
+          )}
+          {meet && accion.whatsapp && (
+            <a
+              href={`https://wa.me/${accion.whatsapp}?text=${encodeURIComponent(mensaje)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary !px-3 !py-1.5 text-xs"
+            >
+              Mandarle el enlace por WhatsApp
+            </a>
+          )}
+        </span>
+      }
+    >
+      <p className="text-sm text-ink first-letter:uppercase">
+        {cuando} · {accion.minutos} min · Google Meet
+      </p>
+      {accion.titulo && <p className="mt-1 text-sm text-ink-muted">{accion.titulo}</p>}
+      {accion.nota && <p className="mt-1 text-sm text-ink-muted">«{accion.nota}»</p>}
+      <p className="mt-1 text-[11px] text-ink-subtle">
+        Si {accion.cliente ?? 'el cliente'} dejó su correo, Google le manda la invitación.
+      </p>
+    </Propuesta>
+  );
+}
+
+/** Conectar o desconectar su Google Calendar, dentro de los ajustes de ABI. */
+function CalendarioAjustes() {
+  const [estado, setEstado] = useState<EstadoCalendario | null | undefined>(undefined);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    void estadoCalendario().then((e) => vigente && setEstado(e));
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  const conectar = async () => {
+    setOcupado(true);
+    setError(null);
+    try {
+      // Lleva a Google; vuelve al panel con ?calendario=…
+      window.location.assign(await urlConectarCalendario());
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No se pudo conectar. Vuelve a intentarlo.');
+      setOcupado(false);
+    }
+  };
+
+  const desconectar = async () => {
+    if (!window.confirm('¿Desconectar tu Google Calendar? ABI ya no verá tu disponibilidad ni podrá agendar.')) return;
+    setOcupado(true);
+    setError(null);
+    try {
+      await desconectarCalendario();
+      setEstado((e) => (e ? { ...e, conectado: false, correo: null } : e));
+    } catch {
+      setError('No se pudo desconectar. Vuelve a intentarlo.');
+    }
+    setOcupado(false);
+  };
+
+  if (estado === undefined) return <p className="text-[11px] text-ink-subtle">Revisando tu Google Calendar…</p>;
+  if (!estado?.disponible) {
+    return (
+      <p className="text-[11px] text-ink-subtle">
+        Pronto podrás conectar tu Google Calendar para que ABI vea tu disponibilidad y agende reuniones con Google Meet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-line p-3">
+      <p className="text-sm font-medium text-ink">Google Calendar</p>
+      {estado.conectado ? (
+        <p className="mt-1 text-[11px] text-ink-muted">
+          ✓ Conectado{estado.correo ? ` con ${estado.correo}` : ''}. ABI ve tu disponibilidad y te propone reuniones con
+          Google Meet; nada se agenda sin que lo confirmes.
+        </p>
+      ) : (
+        <p className="mt-1 text-[11px] text-ink-muted">
+          Conéctalo y ABI verá tus horarios libres y te dejará la reunión lista con Google Meet: tú la confirmas con un
+          botón. Solo pide ver tu disponibilidad y crear eventos; no lee tus otros eventos.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-negative">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => void (estado.conectado ? desconectar() : conectar())}
+        disabled={ocupado}
+        className={'mt-2 !px-3 !py-1.5 text-xs ' + (estado.conectado ? 'btn btn-ghost' : 'btn btn-primary')}
+      >
+        {ocupado ? 'Un momento…' : estado.conectado ? 'Desconectar' : 'Conectar Google Calendar'}
+      </button>
+    </div>
+  );
+}
+
 function AjustesAbiForm({ onListo }: { onListo: () => void }) {
   const [ajustes, setAjustes] = useState<AjustesAbi | null>(null);
   const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
@@ -479,6 +649,7 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
           cliente elija el horario.
         </span>
       </label>
+      <CalendarioAjustes />
       <label className="flex items-start gap-2 text-sm text-ink-muted">
         <input
           type="checkbox"

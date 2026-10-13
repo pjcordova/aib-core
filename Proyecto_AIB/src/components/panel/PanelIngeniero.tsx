@@ -25,6 +25,15 @@ type Pestana = 'hoy' | 'encargos' | 'ingresos' | 'invitaciones' | 'comentarios' 
  * `/dashboard` lo podía abrir cualquiera con la URL. Es su portada: abre en
  * «Hoy», donde ABI le dice qué necesita su atención.
  */
+/** Cómo terminó la conexión con Google Calendar. */
+const AVISOS_CALENDARIO: Record<string, string> = {
+  conectado: '✓ Conectaste tu Google Calendar. Pídele a ABI, por ejemplo: «Agenda una reunión con mi último cliente».',
+  cancelado: 'No se conectó tu Google Calendar: cancelaste el permiso en Google.',
+  permisos:
+    'Faltan permisos: vuelve a conectar tu Google Calendar desde los ajustes de ABI y marca las dos casillas (ver tu disponibilidad y crear eventos).',
+  error: 'No pudimos conectar tu Google Calendar. Vuelve a intentarlo desde los ajustes de ABI.',
+};
+
 export function PanelIngeniero() {
   const { session, initializing, signOut } = useAuth();
   const perfil = usePerfil(session?.user.id);
@@ -34,6 +43,13 @@ export function PanelIngeniero() {
   const [nuevos, setNuevos] = useState(0);
   // Cómo se abre la pestaña de encargos. Cambiar `vez` la monta de nuevo con ese filtro.
   const [irEncargos, setIrEncargos] = useState<{ vez: number; destino: IrAEncargos }>({ vez: 0, destino: {} });
+
+  // Al volver de conectar su Google Calendar (/api/calendario/volver).
+  const [avisoCalendario, setAvisoCalendario] = useState<string | null>(() => {
+    const resultado = new URLSearchParams(window.location.search).get('calendario');
+    if (resultado) window.history.replaceState(null, '', window.location.pathname);
+    return resultado ? (AVISOS_CALENDARIO[resultado] ?? AVISOS_CALENDARIO.error) : null;
+  });
 
   // ABI viene con Pro y Negocio. null mientras se consulta.
   const [conAbi, setConAbi] = useState<boolean | null>(null);
@@ -164,6 +180,21 @@ export function PanelIngeniero() {
       </header>
 
       <main>
+        {avisoCalendario && (
+          <div className="mx-auto mt-4 max-w-4xl px-5">
+            <div role="status" className="flex items-start justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-ink">
+              <p>{avisoCalendario}</p>
+              <button
+                type="button"
+                onClick={() => setAvisoCalendario(null)}
+                className="shrink-0 text-ink-muted hover:text-ink"
+                aria-label="Cerrar aviso"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {pestana === 'hoy' ? (
           <HoyPanel
             onEncargos={abrirEncargos}
