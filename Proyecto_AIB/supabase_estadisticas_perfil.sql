@@ -57,6 +57,8 @@ REVOKE ALL ON FUNCTION public.registrar_visita_perfil(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.registrar_visita_perfil(TEXT) TO anon, authenticated;
 
 -- Las del ingeniero, de los últimos 30 días.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.estadisticas_mi_pagina()
 RETURNS JSONB
 LANGUAGE sql

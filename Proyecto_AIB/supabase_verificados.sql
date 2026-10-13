@@ -249,6 +249,8 @@ $$;
 REVOKE ALL ON FUNCTION public.vitrina_portada() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.vitrina_portada() TO anon, authenticated;
 
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.perfil_publico(p_slug TEXT)
 RETURNS JSONB
 LANGUAGE sql

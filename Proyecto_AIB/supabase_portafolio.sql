@@ -64,6 +64,8 @@ CREATE TRIGGER limitar_portafolio
   FOR EACH ROW EXECUTE FUNCTION public.limitar_portafolio();
 
 -- La misma de supabase_formularios_servicio.sql, con sus proyectos terminados.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.perfil_publico(p_slug TEXT)
 RETURNS JSONB
 LANGUAGE sql

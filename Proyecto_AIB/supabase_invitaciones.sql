@@ -367,6 +367,8 @@ CREATE POLICY "Cada usuario sube fotos a su carpeta"
 -- Igual que en supabase_cuota_ia.sql, más: un invitado necesita su
 -- invitación activa ('sin_invitacion' si no) y no pasa del tope total de su
 -- invitación.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.reservar_cuota_ia(p_tipo TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -455,6 +457,8 @@ GRANT EXECUTE ON FUNCTION public.reservar_cuota_ia(TEXT) TO authenticated;
 -- al cliente. Pasó con la primera invitación real. Como cualquiera con sesión
 -- podría llamarla sin que algo falle, tiene dos topes: como mucho 3
 -- devoluciones al día y nunca más de lo que gastó ese día.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.devolver_cuota_ia(p_tipo TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql

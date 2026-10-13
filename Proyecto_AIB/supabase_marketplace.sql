@@ -228,6 +228,8 @@ GRANT EXECUTE ON FUNCTION public.ingenieros_para_admin() TO authenticated;
 -- (pendiente → rechazado), 'pausar' (deja de salir a los clientes nuevos; sus
 -- encargos siguen siendo suyos) y 'reactivar'. El administrador no se toca a sí
 -- mismo.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.revisar_ingeniero(p_usuario UUID, p_accion TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql

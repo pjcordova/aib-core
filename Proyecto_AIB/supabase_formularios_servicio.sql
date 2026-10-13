@@ -154,6 +154,8 @@ REVOKE ALL ON FUNCTION public.catalogo_cliente() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.catalogo_cliente() TO authenticated;
 
 -- La misma de supabase_perfil_publico.sql, con el servicio de cada diseño.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.perfil_publico(p_slug TEXT)
 RETURNS JSONB
 LANGUAGE sql

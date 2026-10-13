@@ -8,8 +8,8 @@
 -- miembros de un equipo activo: plan_de en supabase_planes.sql). Dentro de
 -- cada grupo, el orden de siempre: verificados, estrellas, reseñas…
 --
--- ingenieros_disponibles devuelve además `destacado`, para que el buscador
--- (que ordena en el navegador) haga lo mismo.
+-- Todas devuelven además `destacado`: el buscador (que ordena en el
+-- navegador) hace lo mismo y las tarjetas muestran la insignia «Pro».
 --
 -- Reemplaza ingenieros_disponibles y vitrina_portada de
 -- supabase_verificados.sql y disenos_de_rubro de supabase_rubros.sql: si se
@@ -87,6 +87,7 @@ AS $$
   disenos AS (
     SELECT p.*, i.nombre AS ing_nombre, i.foto_url AS ing_foto, i.slug AS ing_slug,
            i.promedio AS ing_promedio, i.resenas AS ing_resenas, i.verificado AS ing_verificado,
+           i.destacado AS ing_destacado,
            row_number() OVER (
              PARTITION BY p.servicio
              ORDER BY i.destacado DESC, p.veces_aceptada DESC, i.promedio DESC NULLS LAST, p.created_at DESC
@@ -114,7 +115,8 @@ AS $$
         'html', d.html, 'css', d.css, 'fuentes', to_jsonb(d.fuentes),
         'ingeniero', jsonb_build_object(
           'nombre', d.ing_nombre, 'foto_url', d.ing_foto, 'slug', d.ing_slug,
-          'promedio', d.ing_promedio, 'resenas', d.ing_resenas, 'verificado', d.ing_verificado
+          'promedio', d.ing_promedio, 'resenas', d.ing_resenas, 'verificado', d.ing_verificado,
+          'destacado', d.ing_destacado
         )
       ) ORDER BY d.servicio, d.puesto), '[]'::jsonb)
       FROM disenos d
@@ -180,7 +182,8 @@ AS $$
     'html', e.html, 'css', e.css, 'fuentes', to_jsonb(e.fuentes),
     'ingeniero', jsonb_build_object(
       'nombre', e.ing_nombre, 'foto_url', e.ing_foto, 'slug', e.ing_slug,
-      'promedio', e.ing_promedio, 'resenas', e.ing_resenas, 'verificado', e.ing_verificado
+      'promedio', e.ing_promedio, 'resenas', e.ing_resenas, 'verificado', e.ing_verificado,
+      'destacado', e.ing_destacado
     )
   ) ORDER BY e.ing_destacado DESC, e.puntos DESC, e.veces_aceptada DESC, e.created_at DESC), '[]'::jsonb)
   FROM (

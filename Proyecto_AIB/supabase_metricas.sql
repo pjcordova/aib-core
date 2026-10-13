@@ -21,6 +21,8 @@
 -- supabase_verificados.sql. Se puede ejecutar más de una vez.
 -- ============================================================================
 
+-- supabase_plan_pro.sql ajusta esta función (sin las pruebas gratis de Pro):
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.metricas_admin(p_semanas INTEGER DEFAULT 8)
 RETURNS JSONB
 LANGUAGE plpgsql

@@ -321,6 +321,8 @@ GRANT EXECUTE ON FUNCTION public.recordatorios_del_dia(TEXT) TO anon, authentica
 --   - reseñas por pedir: «Publicada» en los últimos 30 días y sin reseña;
 --   - propuestas que vencen hoy o mañana y siguen sin respuesta;
 --   - su plan, si vence en 3 días o menos.
+-- supabase_plan_pro.sql ajusta esta función (sin las pruebas gratis de Pro):
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.mis_recordatorios()
 RETURNS JSONB
 LANGUAGE plpgsql

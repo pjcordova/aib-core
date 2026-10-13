@@ -114,6 +114,8 @@ GRANT EXECUTE ON FUNCTION public.cambiar_slug(TEXT) TO authenticated;
 -- 2. Lo que muestra la página (también sin sesión)
 -- ----------------------------------------------------------------------------
 -- Solo de ingenieros aprobados. Nada de contacto: ni WhatsApp ni correo.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.perfil_publico(p_slug TEXT)
 RETURNS JSONB
 LANGUAGE sql

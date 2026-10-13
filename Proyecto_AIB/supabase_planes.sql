@@ -204,6 +204,8 @@ REVOKE ALL ON FUNCTION public.precios_planes() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.precios_planes() TO anon, authenticated;
 
 -- Todo lo que necesita la pestaña «Mi plan». null si no es ingeniero.
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.mi_plan()
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -318,6 +320,8 @@ $$;
 
 -- Activa o renueva un plan. Si ya tenía ese mismo plan vigente, los días se
 -- suman al final; si no, cuentan desde hoy. p_cortesia: sin pago (un regalo).
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.activar_plan(p_usuario UUID, p_plan TEXT, p_meses INTEGER, p_cortesia BOOLEAN)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
@@ -391,6 +395,8 @@ END;
 $$;
 
 -- Precios, Yape, ingresos y cada ingeniero con su plan y su pedido.
+-- supabase_plan_pro.sql ajusta esta función (sin las pruebas gratis de Pro):
+-- si se vuelve a ejecutar este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.planes_para_admin()
 RETURNS JSONB
 LANGUAGE plpgsql

@@ -66,6 +66,8 @@ CREATE POLICY "Cada usuario ve su gasto"
 -- ~5 ¢, prototipo ~21 ¢. Si la llamada a la IA falla después, el gasto no se
 -- devuelve: una función para devolver gasto se podría abusar desde el cliente.
 
+-- La versión vigente está en supabase_plan_pro.sql: si se vuelve a ejecutar
+-- este archivo, ejecutar ese después.
 CREATE OR REPLACE FUNCTION public.reservar_cuota_ia(p_tipo TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
