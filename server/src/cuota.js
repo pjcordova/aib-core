@@ -20,6 +20,8 @@ const MENSAJES = {
     'El servicio de IA alcanzó su límite de hoy. Vuelve a intentarlo mañana.',
   sin_invitacion:
     'Tu enlace se abrió en otro navegador o dispositivo. Para seguir aquí, vuelve a abrir el enlace de tu invitación.',
+  // Diseños con IA del mes, según el plan (supabase_plan_pro.sql).
+  limite_plan: 'Ya usaste los diseños con IA que incluye tu plan este mes.',
 };
 
 /**
@@ -95,6 +97,9 @@ function cobrarCuota(tipo) {
       // Sesión anónima sin invitación activa (supabase_invitaciones.sql).
       if (estado === 'sin_invitacion') {
         return res.status(403).json({ success: false, error: MENSAJES.sin_invitacion });
+      }
+      if (estado === 'limite_plan') {
+        return res.status(429).json({ success: false, error: MENSAJES.limite_plan });
       }
       if (estado === 'limite_usuario') {
         console.warn(`[AIB+] Usuario ${req.usuario?.id} alcanzó su tope diario (${tipo}).`);
