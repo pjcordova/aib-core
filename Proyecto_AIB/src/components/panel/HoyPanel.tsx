@@ -21,6 +21,7 @@ import {
   type MisRecordatorios,
 } from '../../lib/recordatorios';
 import type { DestinoPaso } from '../../lib/primerosPasos';
+import { alcanceSemana } from '../../lib/planes';
 import { AvatarAbi } from './AvatarAbi';
 import { PrimerosPasos } from './PrimerosPasos';
 import { ChatAbi } from './ChatAbi';
@@ -68,6 +69,17 @@ export function HoyPanel({
   const [recordatorios, setRecordatorios] = useState<MisRecordatorios | null>(null);
   // Sube cuando ABI cambia algo (una etapa, una invitación): se vuelve a leer.
   const [version, setVersion] = useState(0);
+  // Con Free: cuánta gente pasó por AIB+ esta semana, para mostrarle lo que se pierde.
+  const [alcance, setAlcance] = useState<{ visitas: number; pruebas: number } | null>(null);
+
+  useEffect(() => {
+    if (conAbi !== false) return;
+    let vigente = true;
+    void alcanceSemana().then((a) => vigente && setAlcance(a));
+    return () => {
+      vigente = false;
+    };
+  }, [conAbi]);
 
   useEffect(() => {
     let vigente = true;
@@ -148,9 +160,24 @@ export function HoyPanel({
       ) : conAbi === false ? (
         <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-accent/30 bg-accent/5 p-5">
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-ink">Pregúntale a ABI con el plan Pro</p>
+            <p className="font-medium text-ink">Consigue más clientes con el plan Pro</p>
             <p className="mt-1 text-sm text-ink-muted">
-              Te dice qué responderle a cada cliente, te redacta los mensajes de WhatsApp y te ayuda a cotizar.
+              {alcance && alcance.visitas > 0 && (
+                <>
+                  Esta semana <strong className="text-ink tabular-nums">{alcance.visitas}</strong>{' '}
+                  {alcance.visitas === 1 ? 'persona visitó' : 'personas visitaron'} AIB+
+                  {alcance.pruebas > 0 && (
+                    <>
+                      {' '}
+                      y <strong className="text-ink tabular-nums">{alcance.pruebas}</strong>{' '}
+                      {alcance.pruebas === 1 ? 'empezó su proyecto' : 'empezaron su proyecto'}
+                    </>
+                  )}
+                  .{' '}
+                </>
+              )}
+              Con Pro apareces primero cuando eligen ingeniero, con insignia «Pro», y ABI te dice qué responderle a cada
+              cliente y te ayuda a cotizar.
             </p>
           </div>
           <button type="button" onClick={onVerPlan} className="btn btn-primary">
@@ -171,15 +198,18 @@ export function HoyPanel({
                 <Tarjeta>
                   <div className="min-w-0 grow basis-56">
                     <p className="font-semibold text-ink">
-                      Tu plan {NOMBRE_PLAN[recordatorios.plan.plan] ?? recordatorios.plan.plan} vence{' '}
-                      {cuando(recordatorios.plan.dias)}
+                      {recordatorios.plan.prueba
+                        ? `Tu prueba gratis de Pro termina ${cuando(recordatorios.plan.dias)}`
+                        : `Tu plan ${NOMBRE_PLAN[recordatorios.plan.plan] ?? recordatorios.plan.plan} vence ${cuando(recordatorios.plan.dias)}`}
                     </p>
                     <p className="mt-0.5 text-xs text-ink-subtle">
-                      Renuévalo para no perder ABI{recordatorios.plan.plan === 'negocio' ? ' ni a tu equipo' : ''}.
+                      {recordatorios.plan.prueba
+                        ? 'Pídelo para seguir apareciendo primero, con ABI y 30 diseños con IA al mes.'
+                        : `Renuévalo para no perder ABI${recordatorios.plan.plan === 'negocio' ? ' ni a tu equipo' : ''}.`}
                     </p>
                   </div>
                   <button type="button" onClick={onVerPlan} className="btn btn-primary !px-3 !py-1.5 text-xs">
-                    Renovar
+                    {recordatorios.plan.prueba ? 'Quiero Pro' : 'Renovar'}
                   </button>
                 </Tarjeta>
               )}

@@ -9,6 +9,7 @@ import { documentoDeVitrina, type DisenoVitrina } from '../lib/vitrina';
 import { MiniVista } from './panel/MiniVista';
 import { FotoIngeniero } from './ingenieros/TarjetaIngeniero';
 import { InsigniaVerificado } from './ui/InsigniaVerificado';
+import { InsigniaPro } from './ui/InsigniaPro';
 
 type Clave = Exclude<TipoServicio, 'otro'>;
 
@@ -104,6 +105,12 @@ function TarjetaDiseno({
               <>
                 {' '}
                 <InsigniaVerificado />
+              </>
+            )}
+            {d.ingeniero.destacado && (
+              <>
+                {' '}
+                <InsigniaPro />
               </>
             )}
             <span className="block">{textoEstrellas(d.ingeniero.promedio, d.ingeniero.resenas)}</span>

@@ -31,7 +31,8 @@ export interface PropuestaPorVencer extends ConCliente {
 }
 
 export interface MisRecordatorios {
-  plan: { plan: 'pro' | 'negocio'; venceEn: string; dias: number } | null;
+  /** `prueba`: lo que termina son sus días de Pro gratis. */
+  plan: { plan: 'pro' | 'negocio'; venceEn: string; dias: number; prueba: boolean } | null;
   resenas: ResenaPendiente[];
   propuestas: PropuestaPorVencer[];
 }
@@ -86,7 +87,7 @@ export async function misRecordatorios(): Promise<MisRecordatorios | null> {
   const { data, error } = await supabase.rpc('mis_recordatorios');
   const r = data as {
     estado?: string;
-    plan?: { plan: 'pro' | 'negocio'; vence_en: string; dias: number } | null;
+    plan?: { plan: 'pro' | 'negocio'; vence_en: string; dias: number; prueba?: boolean } | null;
     resenas?: (FilaCliente & { publicada_en: string })[];
     propuestas?: (FilaCliente & { valida_hasta: string })[];
   } | null;
@@ -95,7 +96,7 @@ export async function misRecordatorios(): Promise<MisRecordatorios | null> {
     return null;
   }
   return {
-    plan: r.plan ? { plan: r.plan.plan, venceEn: r.plan.vence_en, dias: r.plan.dias } : null,
+    plan: r.plan ? { plan: r.plan.plan, venceEn: r.plan.vence_en, dias: r.plan.dias, prueba: !!r.plan.prueba } : null,
     resenas: (r.resenas ?? []).map((f) => ({ ...conCliente(f), publicadaEn: f.publicada_en })),
     propuestas: (r.propuestas ?? []).map((f) => ({ ...conCliente(f), validaHasta: f.valida_hasta })),
   };

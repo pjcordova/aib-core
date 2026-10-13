@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, crearDiseno, type DisenoDeIa } from '../../lib/api';
+import { DISENOS_IA_MES, misDisenosIa, type DisenosIa } from '../../lib/planes';
 import { actualizarPlantilla, anadirPropia, type PlantillaDelCatalogo } from '../../lib/catalogo';
 import { CATEGORIAS_NEGOCIO, renderizarPlantilla, type CategoriaNegocio } from '../../lib/plantillas';
 import {
@@ -125,6 +126,17 @@ export function SubirDiseno({
   const [segundos, setSegundos] = useState(0);
   // Si lo hizo la IA, sus colores por defecto se ajustan a los que elija.
   const [deIa, setDeIa] = useState(false);
+  // Cuántos diseños con IA lleva este mes y cuántos le da su plan.
+  const [cupo, setCupo] = useState<DisenosIa | null>(null);
+  const sinCupo = !!cupo && cupo.limite !== null && cupo.usados >= cupo.limite;
+
+  useEffect(() => {
+    let vigente = true;
+    void misDisenosIa().then((c) => vigente && setCupo(c));
+    return () => {
+      vigente = false;
+    };
+  }, []);
 
   const cerrar = useCallback(() => {
     if (generando && !window.confirm('Tu diseño se está creando. ¿Cerrar igual? Se perderá.')) return;
@@ -195,8 +207,14 @@ export function SubirDiseno({
       usarDeIa(r);
       if (tipo === 'cambiar') setCambio('');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'No pudimos crear el diseño. Vuelve a intentarlo.');
+      const texto = e instanceof ApiError ? e.message : 'No pudimos crear el diseño. Vuelve a intentarlo.';
+      setError(
+        e instanceof ApiError && e.status === 429 && cupo?.plan === 'free'
+          ? `${texto} Con el plan Pro tienes ${DISENOS_IA_MES.pro} al mes: pídelo en «Mi plan».`
+          : texto
+      );
     } finally {
+      void misDisenosIa().then(setCupo);
       setGenerando(null);
     }
   };
@@ -382,7 +400,7 @@ export function SubirDiseno({
                         <button
                           type="button"
                           onClick={() => void pedirALaIa('cambiar')}
-                          disabled={!!generando || cambio.trim().length < 3}
+                          disabled={!!generando || sinCupo || cambio.trim().length < 3}
                           className="btn btn-primary shrink-0 !px-3"
                         >
                           {generando === 'cambiar' ? 'Cambiando…' : 'Aplicar'}
@@ -432,7 +450,7 @@ export function SubirDiseno({
                   <button
                     type="button"
                     onClick={() => void pedirALaIa('crear')}
-                    disabled={!!generando || idea.trim().length < 10}
+                    disabled={!!generando || sinCupo || idea.trim().length < 10}
                     className={diseno ? 'btn btn-ghost' : 'btn btn-primary'}
                   >
                     {generando === 'crear' ? 'Creando…' : diseno ? '✨ Crear uno nuevo' : '✨ Crear diseño'}
@@ -441,6 +459,14 @@ export function SubirDiseno({
                     Usa el servicio, el rubro, el estilo y el nivel que elijas. Tarda 1 o 2 minutos.
                   </span>
                 </div>
+                {cupo && cupo.limite !== null && (
+                  <p className={'text-xs ' + (sinCupo ? 'text-negative' : 'text-ink-subtle')}>
+                    {sinCupo
+                      ? `Ya usaste los ${cupo.limite} diseños con IA de este mes.`
+                      : `Este mes llevas ${cupo.usados} de ${cupo.limite} diseños con IA (crear o cambiar uno cuenta como uno).`}
+                    {cupo.plan === 'free' && ` Con el plan Pro tienes ${DISENOS_IA_MES.pro} al mes: pídelo en «Mi plan».`}
+                  </p>
+                )}
               </div>
             ) : (
               <>

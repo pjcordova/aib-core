@@ -1,9 +1,12 @@
 // ---------------------------------------------------------------------------
 // Planes de suscripción y equipos
 // ---------------------------------------------------------------------------
-// Los ingenieros pagan por usar AIB+: Free (sin ABI), Pro (con ABI) y Negocio
-// (con ABI y un equipo de hasta 5 personas). El pago es manual por ahora: el
-// ingeniero pide el plan, yapea y el administrador lo activa por 30 días
+// Los ingenieros pagan por usar AIB+: Free, Pro y Negocio (Pro con un equipo
+// de hasta 5 personas). Pro y Negocio aparecen primero, con insignia «Pro»,
+// tienen ABI, 30 diseños con IA al mes y estadísticas completas
+// (supabase_destacados.sql y supabase_plan_pro.sql). Cada ingeniero nuevo
+// empieza con 14 días de Pro gratis. El pago es manual por ahora: el ingeniero
+// pide el plan, yapea y el administrador lo activa por 30 días
 // (supabase_planes.sql).
 // ---------------------------------------------------------------------------
 
@@ -13,39 +16,53 @@ export type Plan = 'free' | 'pro' | 'negocio';
 export type PlanEfectivo = Plan | 'admin';
 
 export const CUPO_EQUIPO = 5;
+/** Los días de Pro gratis al aprobar a un ingeniero nuevo (revisar_ingeniero). */
+export const DIAS_PRUEBA = 14;
+/** Diseños con IA al mes (crear o cambiar uno es un uso). Los mismos que limites_ia. */
+export const DISENOS_IA_MES = { free: 3, pro: 30 };
 
-/** Lo que trae cada plan, para las tarjetas. */
+/** Lo principal de cada plan, para las tarjetas. El detalle está en COMPARATIVA. */
 export const PLANES: { id: Plan; nombre: string; resumen: string; incluye: string[] }[] = [
   {
     id: 'free',
     nombre: 'Free',
     resumen: 'Para empezar a recibir clientes.',
-    incluye: [
-      'Tu perfil para que los clientes te elijan',
-      'Encargos e invitaciones sin límite',
-      'Avisos y resumen de la mañana por WhatsApp',
-    ],
+    incluye: ['Tu página y encargos sin límite', `${DISENOS_IA_MES.free} diseños con IA al mes`],
   },
   {
     id: 'pro',
     nombre: 'Pro',
-    resumen: 'Para el ingeniero que quiere ir más rápido.',
+    resumen: 'Para conseguir más clientes y atenderlos más rápido.',
     incluye: [
-      'Todo lo del plan Free',
-      'Apareces primero: antes que los ingenieros Free en el buscador, la portada y las páginas por servicio y por rubro',
-      'ABI, tu asistente con IA: te dice a quién responder, te redacta los mensajes y te ayuda a cotizar',
+      'Apareces primero, con insignia «Pro»',
+      'ABI, tu asistente con IA',
+      `${DISENOS_IA_MES.pro} diseños con IA al mes y estadísticas completas`,
     ],
   },
   {
     id: 'negocio',
     nombre: 'Negocio',
     resumen: 'Para agencias y equipos.',
-    incluye: [
-      'Todo lo del plan Pro',
-      `Tu equipo de hasta ${CUPO_EQUIPO} personas, con ABI para todos`,
-      'Repartes los encargos: cada uno sabe cuáles lleva',
-    ],
+    incluye: ['Todo lo del plan Pro', `Tu equipo de hasta ${CUPO_EQUIPO} personas, con ABI para todos`],
   },
+];
+
+/** Beneficio por beneficio: true (lo tiene), false (no) o un texto. */
+export const COMPARATIVA: { beneficio: string; free: boolean | string; pro: boolean | string; negocio: boolean | string }[] = [
+  { beneficio: 'Tu página pública y tu perfil en el buscador', free: true, pro: true, negocio: true },
+  { beneficio: 'Encargos, invitaciones y diseños publicados sin límite', free: true, pro: true, negocio: true },
+  { beneficio: 'Avisos por WhatsApp y correo', free: true, pro: true, negocio: true },
+  {
+    beneficio: 'Diseños con IA (crear o cambiar uno)',
+    free: `${DISENOS_IA_MES.free} al mes`,
+    pro: `${DISENOS_IA_MES.pro} al mes`,
+    negocio: `${DISENOS_IA_MES.pro} al mes c/u`,
+  },
+  { beneficio: 'Apareces primero en el buscador, la portada y los rubros', free: false, pro: true, negocio: true },
+  { beneficio: 'Insignia «Pro» en tu tarjeta y tu página', free: false, pro: true, negocio: true },
+  { beneficio: 'Estadísticas de tu página', free: 'Visitas', pro: 'Completas', negocio: 'Completas' },
+  { beneficio: 'ABI, tu asistente con IA', free: false, pro: true, negocio: true },
+  { beneficio: `Equipo de hasta ${CUPO_EQUIPO} personas`, free: false, pro: false, negocio: true },
 ];
 
 export const nombrePlan = (p: PlanEfectivo) =>
@@ -54,7 +71,8 @@ export const nombrePlan = (p: PlanEfectivo) =>
 export interface MiPlan {
   plan: PlanEfectivo;
   nombre: string | null;
-  propio: { plan: Exclude<Plan, 'free'>; vence_en: string; vigente: boolean } | null;
+  /** `prueba`: los días de Pro gratis de un ingeniero nuevo. */
+  propio: { plan: Exclude<Plan, 'free'>; vence_en: string; vigente: boolean; prueba?: boolean } | null;
   /** Free, pero con Negocio por estar en un equipo activo. */
   por_equipo: boolean;
   pedido: { plan: Exclude<Plan, 'free'>; creado_en: string } | null;
@@ -69,6 +87,29 @@ export async function miPlan(): Promise<MiPlan | null> {
     return null;
   }
   return (data as MiPlan | null) ?? null;
+}
+
+/** Los diseños con IA de este mes. `limite` null: sin límite (el administrador). */
+export interface DisenosIa {
+  usados: number;
+  limite: number | null;
+  plan: PlanEfectivo;
+}
+
+export async function misDisenosIa(): Promise<DisenosIa | null> {
+  const { data, error } = await supabase.rpc('mis_disenos_ia');
+  if (error) {
+    console.warn('[AIB+] No se pudo leer tu cupo de diseños con IA:', error.message);
+    return null;
+  }
+  return (data as DisenosIa | null) ?? null;
+}
+
+/** Visitas a AIB+ y pruebas de clientes de los últimos 7 días, para animar a pasar a Pro. */
+export async function alcanceSemana(): Promise<{ visitas: number; pruebas: number } | null> {
+  const { data, error } = await supabase.rpc('alcance_semana');
+  if (error || !data) return null;
+  return data as { visitas: number; pruebas: number };
 }
 
 export async function preciosPlanes(): Promise<{ pro: number; negocio: number } | null> {
@@ -98,6 +139,8 @@ export interface IngenieroPlan {
   plan: PlanEfectivo;
   propio: Exclude<Plan, 'free'> | null;
   vence_en: string | null;
+  /** Está en sus días de Pro gratis. */
+  prueba?: boolean;
   equipo_de: string | null;
   miembros: number;
   pedido: { plan: Exclude<Plan, 'free'>; creado_en: string } | null;
@@ -105,7 +148,8 @@ export interface IngenieroPlan {
 
 export interface PlanesAdmin {
   config: { precio_pro: number; precio_negocio: number; yape_numero: string | null; yape_titular: string | null };
-  ingresos: { cobrado_mes: number; mensual: number; pro: number; negocio: number };
+  /** Sin las pruebas gratis, que no son ingreso; `en_prueba`, cuántas hay. */
+  ingresos: { cobrado_mes: number; mensual: number; pro: number; negocio: number; en_prueba?: number };
   ingenieros: IngenieroPlan[];
 }
 

@@ -49,6 +49,8 @@ export interface PerfilPublico {
   foto_url: string | null;
   /** Tiene la insignia «Verificado». */
   verificado?: boolean;
+  /** Tiene Pro o Negocio: insignia «Pro». */
+  destacado?: boolean;
   promedio: number | null;
   resenas: number;
   /** Webs suyas que ya están publicadas. */
@@ -172,12 +174,14 @@ export function registrarVisitaPerfil(slug: string): void {
 export interface EstadisticasPagina {
   visitas_30: number;
   visitas_7: number;
+  /** Con Pro o Negocio llegan también las tres de abajo; con Free, solo las visitas. */
+  completas?: boolean;
   /** Pulsaron «Trabajar con…» o «Lo quiero» en sus diseños. */
-  empezaron: number;
+  empezaron?: number;
   /** Llegaron a ver cómo quedaría su proyecto. */
-  vieron: number;
+  vieron?: number;
   /** Lo aceptaron: el encargo le llegó. */
-  eligieron: number;
+  eligieron?: number;
 }
 
 /** Las de los últimos 30 días. null si no se pudieron leer. */

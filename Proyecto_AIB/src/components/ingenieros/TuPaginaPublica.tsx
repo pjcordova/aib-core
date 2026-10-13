@@ -133,12 +133,21 @@ export function TuPaginaPublica({ slug: inicial }: { slug: string }) {
               ] as const
             ).map(([texto, valor, nota]) => (
               <div key={texto} className="rounded-xl border border-line bg-surface-raised/50 p-3">
-                <dd className="text-2xl font-semibold text-ink tabular-nums">{valor}</dd>
+                {/* Con Free solo llegan las visitas: las demás, bloqueadas. */}
+                <dd className={'text-2xl font-semibold tabular-nums ' + (valor === undefined ? 'text-ink-subtle' : 'text-ink')}>
+                  {valor ?? '🔒'}
+                </dd>
                 <dt className="text-xs text-ink-muted">{texto}</dt>
                 {nota && <p className="mt-0.5 text-[11px] text-ink-subtle">{nota}</p>}
               </div>
             ))}
           </dl>
+          {estadisticas.completas === false && (
+            <p className="mt-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-ink">
+              Con el plan Pro ves cuántos empezaron contigo, cuántos vieron su proyecto y cuántos te eligieron: así
+              sabes qué diseños y precios te traen clientes. Pídelo en «Mi plan».
+            </p>
+          )}
           <p className="mt-2 text-[11px] text-ink-subtle">
             {estadisticas.visitas_30 === 0
               ? 'Aún nadie abrió tu página este mes: compártela por WhatsApp y en tus redes.'

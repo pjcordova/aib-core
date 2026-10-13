@@ -76,7 +76,7 @@ export function PlanesAdmin() {
         <Cifra
           titulo="Suscriptores"
           valor={String(ingresos.pro + ingresos.negocio)}
-          nota={`${ingresos.pro} Pro · ${ingresos.negocio} Negocio`}
+          nota={`${ingresos.pro} Pro · ${ingresos.negocio} Negocio${ingresos.en_prueba ? ` · ${ingresos.en_prueba} en prueba gratis` : ''}`}
         />
       </div>
 
@@ -185,13 +185,15 @@ function FilaIngeniero({
           </span>
         </div>
         <p className="mt-0.5 text-xs text-ink-subtle">
-          {vigente && i.vence_en
-            ? `Vence el ${fechaCorta(i.vence_en)}`
-            : i.equipo_de
-              ? `En el equipo de ${i.equipo_de}`
-              : i.vence_en
-                ? `Venció el ${fechaCorta(i.vence_en)}`
-                : 'Nunca ha pagado'}
+          {vigente && i.vence_en && i.prueba
+            ? `Prueba gratis hasta el ${fechaCorta(i.vence_en)}`
+            : vigente && i.vence_en
+              ? `Vence el ${fechaCorta(i.vence_en)}`
+              : i.equipo_de
+                ? `En el equipo de ${i.equipo_de}`
+                : i.vence_en
+                  ? `Venció el ${fechaCorta(i.vence_en)}`
+                  : 'Nunca ha pagado'}
           {i.miembros > 0 ? ` · equipo de ${i.miembros + 1}` : ''}
           {i.correo ? ` · ${i.correo}` : ''}
         </p>

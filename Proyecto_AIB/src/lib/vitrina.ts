@@ -29,6 +29,8 @@ export interface DisenoVitrina extends DisenoPublico {
     promedio: number | null;
     resenas: number;
     verificado?: boolean;
+    /** Tiene Pro o Negocio: insignia «Pro». */
+    destacado?: boolean;
   };
 }
 

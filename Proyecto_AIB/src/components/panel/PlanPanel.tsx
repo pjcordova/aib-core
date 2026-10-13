@@ -9,16 +9,19 @@ import {
   fechaCorta,
   miEquipo,
   miPlan,
+  misDisenosIa,
   nombrePlan,
   pedirPlan,
   PLANES,
   quitarMiembro,
   renovarEnlaceEquipo,
   salirDelEquipo,
+  type DisenosIa,
   type MiEquipo,
   type MiPlan,
   type Plan,
 } from '../../lib/planes';
+import { ComparativaPlanes } from '../ingenieros/ComparativaPlanes';
 
 // ---------------------------------------------------------------------------
 // Mi plan
@@ -30,6 +33,7 @@ import {
 export function PlanPanel({ onCambio }: { onCambio?: () => void }) {
   const [plan, setPlan] = useState<MiPlan | null | undefined>(undefined);
   const [equipo, setEquipo] = useState<MiEquipo | null>(null);
+  const [disenosIa, setDisenosIa] = useState<DisenosIa | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,10 +45,11 @@ export function PlanPanel({ onCambio }: { onCambio?: () => void }) {
 
   useEffect(() => {
     let vigente = true;
-    void Promise.all([miPlan(), miEquipo()]).then(([p, e]) => {
+    void Promise.all([miPlan(), miEquipo(), misDisenosIa()]).then(([p, e, d]) => {
       if (!vigente) return;
       setPlan(p);
       setEquipo(e);
+      setDisenosIa(d);
     });
     return () => {
       vigente = false;
@@ -98,6 +103,11 @@ export function PlanPanel({ onCambio }: { onCambio?: () => void }) {
               Tienes el plan <strong className="text-ink">Negocio</strong> por ser parte del equipo de{' '}
               {equipo?.agencia ?? 'tu equipo'}.
             </>
+          ) : propioVigente?.prueba ? (
+            <>
+              Estás probando el plan <strong className="text-ink">Pro</strong> gratis hasta el{' '}
+              {fechaCorta(propioVigente.vence_en)}. Después pasas a Free, salvo que lo pidas aquí.
+            </>
           ) : propioVigente ? (
             <>
               Tienes el plan <strong className="text-ink">{nombrePlan(propioVigente.plan)}</strong> hasta el{' '}
@@ -114,6 +124,15 @@ export function PlanPanel({ onCambio }: { onCambio?: () => void }) {
             </>
           )}
         </p>
+        {disenosIa && disenosIa.limite !== null && (
+          <p className="mt-1 text-sm text-ink-muted">
+            Diseños con IA este mes:{' '}
+            <strong className="text-ink tabular-nums">
+              {disenosIa.usados} de {disenosIa.limite}
+            </strong>
+            .
+          </p>
+        )}
       </header>
 
       {plan.pedido && (
@@ -200,17 +219,21 @@ export function PlanPanel({ onCambio }: { onCambio?: () => void }) {
                 >
                   {pedido
                     ? 'Pedido enviado'
-                    : actual
-                      ? 'Renovar un mes'
-                      : propioVigente
-                        ? `Cambiar a ${p.nombre}`
-                        : `Quiero ${p.nombre}`}
+                    : actual && propioVigente?.prueba
+                      ? `Quiero seguir con ${p.nombre}`
+                      : actual
+                        ? 'Renovar un mes'
+                        : propioVigente
+                          ? `Cambiar a ${p.nombre}`
+                          : `Quiero ${p.nombre}`}
                 </button>
               )}
             </article>
           );
         })}
       </div>
+
+      <ComparativaPlanes actual={plan.por_equipo ? 'negocio' : (propioVigente?.plan ?? 'free')} />
 
       {(equipo || propioVigente?.plan === 'negocio') && (
         <EquipoSeccion equipo={equipo} onCambio={() => void recargar()} />

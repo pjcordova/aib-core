@@ -7,7 +7,8 @@ import LoginRegistro from '../LoginRegistro';
 import { Wordmark } from '../ui/Primitives';
 import { FormularioPerfil } from './FormularioPerfil';
 import { PiePagina } from '../ui/PiePagina';
-import { PLANES, preciosPlanes } from '../../lib/planes';
+import { DIAS_PRUEBA, PLANES, preciosPlanes } from '../../lib/planes';
+import { ComparativaPlanes } from './ComparativaPlanes';
 import { solesEnteros } from '../../lib/servicios';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +30,7 @@ const VENTAJAS = [
   },
   {
     titulo: 'Empiezas gratis',
-    texto: 'El plan Free no cuesta nada. Con Pro sumas a ABI, tu asistente con IA, y con Negocio, a tu equipo.',
+    texto: `Al aprobar tu perfil tienes ${DIAS_PRUEBA} días de Pro gratis. Después sigues en Free sin pagar nada, o con Pro para aparecer primero y tener a ABI.`,
   },
 ];
 
@@ -266,8 +267,10 @@ function PlanesIngeniero() {
             </article>
           ))}
         </div>
+        <ComparativaPlanes />
         <p className="mt-6 text-center text-xs text-ink-subtle">
-          Empiezas en Free. Cambias de plan cuando quieras desde tu panel, en «Mi plan».
+          Al aprobar tu perfil tienes {DIAS_PRUEBA} días de Pro gratis. Después sigues en Free o eliges tu plan desde
+          tu panel, en «Mi plan».
         </p>
       </div>
     </section>
