@@ -13,7 +13,8 @@
 --   - invitaciones.entrada: la página por la que entró quien empezó una prueba
 --     sin cuenta.
 --   - llegadas_admin(p_semanas): para Métricas, por canal y por página de
---     entrada: visitas → pruebas → maqueta → encargo.
+--     entrada: visitas → pruebas → maqueta → encargo; y los ingenieros que
+--     postularon por canal (sección 4).
 --
 -- Solo se cuentan totales: ni cookies, ni IP, ni nada que identifique a nadie.
 -- Ejecutar después de supabase_medicion_portada.sql y supabase_metricas.sql.
@@ -27,7 +28,7 @@ ALTER TABLE public.visitas_portada ADD COLUMN IF NOT EXISTS pagina TEXT NOT NULL
 
 ALTER TABLE public.visitas_portada DROP CONSTRAINT IF EXISTS visitas_portada_pagina_check;
 ALTER TABLE public.visitas_portada ADD CONSTRAINT visitas_portada_pagina_check
-  CHECK (pagina ~ '^(portada|explorar|otra|(servicios|rubros)/[a-z0-9-]{1,40})$');
+  CHECK (pagina ~ '^(portada|explorar|ingenieros|otra|(servicios|rubros)/[a-z0-9-]{1,40})$');
 
 DO $$
 BEGIN
@@ -63,7 +64,7 @@ BEGIN
     RETURN;
   END IF;
 
-  IF v_pagina !~ '^(portada|explorar|(servicios|rubros)/[a-z0-9-]{1,40})$' THEN
+  IF v_pagina !~ '^(portada|explorar|ingenieros|(servicios|rubros)/[a-z0-9-]{1,40})$' THEN
     v_pagina := 'otra';
   END IF;
   IF v_canal !~ '^[a-z0-9_-]{1,30}$' THEN
@@ -108,7 +109,7 @@ ALTER TABLE public.invitaciones ADD COLUMN IF NOT EXISTS entrada TEXT;
 
 ALTER TABLE public.invitaciones DROP CONSTRAINT IF EXISTS invitaciones_entrada_check;
 ALTER TABLE public.invitaciones ADD CONSTRAINT invitaciones_entrada_check
-  CHECK (entrada IS NULL OR entrada ~ '^(portada|explorar|(servicios|rubros)/[a-z0-9-]{1,40})$');
+  CHECK (entrada IS NULL OR entrada ~ '^(portada|explorar|ingenieros|(servicios|rubros)/[a-z0-9-]{1,40})$');
 
 -- Igual que en supabase_invitaciones.sql (sección 8), más p_entrada.
 DROP FUNCTION IF EXISTS public.empezar_prueba_libre(TEXT);
@@ -127,7 +128,7 @@ BEGIN
   IF v_canal !~ '^[a-z0-9_-]{1,30}$' THEN
     v_canal := NULL;
   END IF;
-  IF v_entrada !~ '^(portada|explorar|(servicios|rubros)/[a-z0-9-]{1,40})$' THEN
+  IF v_entrada !~ '^(portada|explorar|ingenieros|(servicios|rubros)/[a-z0-9-]{1,40})$' THEN
     v_entrada := NULL;
   END IF;
 
@@ -220,6 +221,21 @@ BEGIN
           GROUP BY canal
         ) c
       ),
+      -- Ingenieros que postularon en el periodo, por el canal con el que llegaron.
+      'ingenieros', (
+        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'canal', g.canal, 'postularon', g.postularon, 'aprobados', g.aprobados
+        ) ORDER BY g.postularon DESC, g.canal), '[]'::jsonb)
+        FROM (
+          SELECT COALESCE(pi.canal, 'directo') AS canal,
+                 count(*)::int AS postularon,
+                 count(*) FILTER (WHERE pi.estado = 'aprobado')::int AS aprobados
+          FROM public.perfiles_ingeniero pi
+          JOIN public.perfiles pf ON pf.user_id = pi.user_id AND NOT pf.es_admin
+          WHERE (pi.creado_en AT TIME ZONE 'America/Lima')::date >= v_inicio
+          GROUP BY COALESCE(pi.canal, 'directo')
+        ) g
+      ),
       'paginas', (
         SELECT COALESCE(jsonb_agg(jsonb_build_object(
           'pagina', p.pagina, 'visitas', p.visitas, 'google', p.google, 'pruebas', p.pruebas, 'encargos', p.encargos
@@ -248,3 +264,54 @@ $$;
 
 REVOKE ALL ON FUNCTION public.llegadas_admin(INTEGER) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.llegadas_admin(INTEGER) TO authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 4. Por dónde llegó cada ingeniero que postula (por ejemplo, CodeOn)
+-- ----------------------------------------------------------------------------
+-- El canal (?c=codeon) se guarda al crear la cuenta, en los metadatos del
+-- usuario (LoginRegistro.tsx), porque confirmar el correo suele abrir otra
+-- pestaña. Al postular, se copia a su perfil; si ya tenía cuenta, el panel lo
+-- marca con marcar_canal_postulacion. Solo estadística: nunca se cambia uno
+-- que ya está puesto.
+ALTER TABLE public.perfiles_ingeniero ADD COLUMN IF NOT EXISTS canal TEXT;
+ALTER TABLE public.perfiles_ingeniero DROP CONSTRAINT IF EXISTS perfiles_ingeniero_canal_check;
+ALTER TABLE public.perfiles_ingeniero ADD CONSTRAINT perfiles_ingeniero_canal_check
+  CHECK (canal IS NULL OR canal ~ '^[a-z0-9_-]{1,30}$');
+
+CREATE OR REPLACE FUNCTION public.canal_de_postulacion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_canal TEXT;
+BEGIN
+  IF NEW.canal IS NULL THEN
+    SELECT lower(btrim(u.raw_user_meta_data->>'canal')) INTO v_canal FROM auth.users u WHERE u.id = NEW.user_id;
+    IF v_canal ~ '^[a-z0-9_-]{1,30}$' THEN
+      NEW.canal := v_canal;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS canal_de_postulacion ON public.perfiles_ingeniero;
+CREATE TRIGGER canal_de_postulacion
+  BEFORE INSERT ON public.perfiles_ingeniero
+  FOR EACH ROW EXECUTE FUNCTION public.canal_de_postulacion();
+
+CREATE OR REPLACE FUNCTION public.marcar_canal_postulacion(p_canal TEXT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  UPDATE public.perfiles_ingeniero
+  SET canal = lower(btrim(p_canal))
+  WHERE user_id = auth.uid() AND canal IS NULL AND lower(btrim(p_canal)) ~ '^[a-z0-9_-]{1,30}$';
+$$;
+
+REVOKE ALL ON FUNCTION public.marcar_canal_postulacion(TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.marcar_canal_postulacion(TEXT) TO authenticated;
