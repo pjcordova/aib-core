@@ -88,11 +88,15 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
   const inicio = Date.now();
 
   try {
-    // Su nombre, su enlace de agenda, lo que le pidió recordar y si conectó su calendario.
-    const [ajustes, recuerdos, calendario] = await Promise.all([
-      leerOpcional(req.tokenUsuario, 'ajustes_ingeniero', [['select', 'nombre,enlace_agenda']], []).then(
-        (filas) => filas[0] ?? null
-      ),
+    // Su nombre, su enlace de agenda, su estilo, lo que le pidió recordar, cómo
+    // corrigió los últimos borradores y si conectó su calendario.
+    const [ajustes, recuerdos, correcciones, calendario] = await Promise.all([
+      leerOpcional(
+        req.tokenUsuario,
+        'ajustes_ingeniero',
+        [['select', 'nombre,enlace_agenda,estilo_trato,estilo_tono,estilo_largo,estilo_emojis,firma']],
+        []
+      ).then((filas) => filas[0] ?? null),
       leerOpcional(
         req.tokenUsuario,
         'abi_memoria',
@@ -103,6 +107,16 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
         ],
         []
       ).then((filas) => filas.map((f) => f.texto)),
+      leerOpcional(
+        req.tokenUsuario,
+        'abi_correcciones',
+        [
+          ['select', 'borrador,final'],
+          ['order', 'created_at.desc'],
+          ['limit', '5'],
+        ],
+        []
+      ),
       leerOpcional(req.tokenUsuario, 'calendarios_ingeniero', [['select', 'correo']], []),
     ]);
 
@@ -111,6 +125,7 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
       conversacion,
       ajustes,
       recuerdos,
+      correcciones,
       usuarioId: req.usuario.id,
       calendarioConectado: calendario.length > 0,
     });

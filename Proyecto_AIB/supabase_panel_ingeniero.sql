@@ -69,7 +69,8 @@ GRANT SELECT ON public.encargos TO authenticated;
 -- Lo que ABI necesita saber del ingeniero para escribir en su nombre: cómo se
 -- llama (para firmar los mensajes) y su enlace para agendar reuniones (Google
 -- Calendar, Calendly…), que ABI incluye cuando propone una reunión. Cada
--- ingeniero ve y cambia solo los suyos.
+-- ingeniero ve y cambia solo los suyos. Su estilo con los clientes y sus
+-- correcciones a los borradores están en supabase_abi_estilo.sql.
 CREATE TABLE IF NOT EXISTS public.ajustes_ingeniero (
   user_id       UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
   nombre        TEXT CHECK (nombre IS NULL OR char_length(nombre) BETWEEN 1 AND 80),

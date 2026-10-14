@@ -12,13 +12,17 @@ import {
 import {
   guardarAjustes,
   guardarConversacion,
+  guardarCorreccion,
   guardarRecuerdo,
   leerAjustes,
   leerConversacion,
+  listarCorrecciones,
   listarRecuerdos,
+  olvidarCorreccion,
   olvidarRecuerdo,
   usoDeLaSemana,
   type AjustesAbi,
+  type Correccion,
   type MensajeAbi,
   type Recuerdo,
   type ResultadoAccion,
@@ -394,30 +398,87 @@ function EnlaceCreado({ negocio, token }: { negocio: string; token: string }) {
   );
 }
 
-/** Un borrador de WhatsApp: se abre con el texto escrito y el ingeniero decide si lo envía. */
+/** Sin diferencias de espacios ni saltos de línea. */
+const normalizar = (texto: string) => texto.replace(/\s+/g, ' ').trim();
+
+/**
+ * Un borrador de WhatsApp: se abre con el texto escrito y el ingeniero decide
+ * si lo envía. Lo puede editar antes: al abrirlo o copiarlo ya corregido, ABI
+ * guarda la corrección para escribir como él la próxima vez.
+ */
 function BorradorWhatsapp({ accion }: { accion: Extract<AccionAbi, { tipo: 'whatsapp' }> }) {
+  const [texto, setTexto] = useState(accion.mensaje);
+  const [editando, setEditando] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  // La última versión que ABI ya aprendió, para no guardarla dos veces.
+  const aprendida = useRef<string | null>(null);
+  const [aprendio, setAprendio] = useState(false);
+
+  const final = texto.trim() || accion.mensaje;
+  const url = accion.url.replace(/([?&]text=)[^&]*/, `$1${encodeURIComponent(final)}`);
+
+  const aprender = () => {
+    const corregido = normalizar(final);
+    if (corregido === normalizar(accion.mensaje) || corregido === aprendida.current) return;
+    aprendida.current = corregido;
+    void guardarCorreccion(accion.mensaje, final, accion.para).then((ok) => setAprendio(ok));
+  };
+
   const copiar = async () => {
+    aprender();
     try {
-      await navigator.clipboard.writeText(accion.mensaje);
+      await navigator.clipboard.writeText(final);
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
     } catch {
       setCopiado(false);
     }
   };
+
   return (
     <div className="rounded-xl border border-positive/30 bg-positive/5 p-3">
       <p className="text-[11px] font-semibold tracking-wide text-positive uppercase">WhatsApp para {accion.para}</p>
-      <p className="mt-1.5 text-sm break-words whitespace-pre-wrap text-ink">{accion.mensaje}</p>
+      {editando ? (
+        <label className="mt-1.5 block">
+          <span className="sr-only">Edita el mensaje</span>
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value.slice(0, 1500))}
+            rows={Math.min(10, Math.max(4, texto.split('\n').length + 1))}
+            className="field text-sm"
+            autoFocus
+          />
+        </label>
+      ) : (
+        <p className="mt-1.5 text-sm break-words whitespace-pre-wrap text-ink">{final}</p>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <a href={accion.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-3 !py-1.5 text-xs">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={aprender}
+          className="btn btn-primary !px-3 !py-1.5 text-xs"
+        >
           Abrir en WhatsApp
         </a>
         <button type="button" onClick={() => void copiar()} className="btn btn-ghost !px-3 !py-1.5 text-xs">
           {copiado ? '✓ Copiado' : 'Copiar texto'}
         </button>
+        <button
+          type="button"
+          onClick={() => setEditando((e) => !e)}
+          className="btn btn-ghost !px-3 !py-1.5 text-xs"
+          aria-expanded={editando}
+        >
+          {editando ? 'Listo' : 'Editar'}
+        </button>
       </div>
+      <p className="mt-2 text-[11px] text-ink-subtle">
+        {aprendio
+          ? '✓ ABI aprendió de tu corrección: la próxima vez escribirá más como tú.'
+          : 'Si lo editas antes de enviarlo, ABI aprende cómo escribes.'}
+      </p>
     </div>
   );
 }
@@ -583,18 +644,22 @@ function CalendarioAjustes() {
 function AjustesAbiForm({ onListo }: { onListo: () => void }) {
   const [ajustes, setAjustes] = useState<AjustesAbi | null>(null);
   const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const [correcciones, setCorrecciones] = useState<Correccion[]>([]);
   const [uso, setUso] = useState<{ preguntas: number; costoUsd: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
-    void Promise.all([leerAjustes(), listarRecuerdos(), usoDeLaSemana()]).then(([a, r, u]) => {
-      if (!vigente) return;
-      setAjustes(a);
-      setRecuerdos(r);
-      setUso(u);
-    });
+    void Promise.all([leerAjustes(), listarRecuerdos(), listarCorrecciones(), usoDeLaSemana()]).then(
+      ([a, r, c, u]) => {
+        if (!vigente) return;
+        setAjustes(a);
+        setRecuerdos(r);
+        setCorrecciones(c);
+        setUso(u);
+      }
+    );
     return () => {
       vigente = false;
     };
@@ -603,6 +668,12 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
   const olvidar = async (id: number) => {
     setError(null);
     if (await olvidarRecuerdo(id)) setRecuerdos((previos) => previos.filter((r) => r.id !== id));
+    else setError('No se pudo olvidar. Vuelve a intentarlo.');
+  };
+
+  const olvidarLaCorreccion = async (id: number) => {
+    setError(null);
+    if (await olvidarCorreccion(id)) setCorrecciones((previas) => previas.filter((c) => c.id !== id));
     else setError('No se pudo olvidar. Vuelve a intentarlo.');
   };
 
@@ -635,6 +706,59 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
           className="field"
         />
       </label>
+      <fieldset className="space-y-2.5 rounded-lg border border-line p-3">
+        <legend className="px-1 text-sm text-ink-muted">Cómo escribes a tus clientes</legend>
+        <ElegirEstilo
+          titulo="Trato"
+          valor={ajustes.trato}
+          opciones={[
+            ['tu', 'De tú'],
+            ['usted', 'De usted'],
+          ]}
+          onCambio={(trato) => setAjustes({ ...ajustes, trato })}
+        />
+        <ElegirEstilo
+          titulo="Tono"
+          valor={ajustes.tono}
+          opciones={[
+            ['cercano', 'Cercano'],
+            ['formal', 'Formal'],
+          ]}
+          onCambio={(tono) => setAjustes({ ...ajustes, tono })}
+        />
+        <ElegirEstilo
+          titulo="Largo"
+          valor={ajustes.largo}
+          opciones={[
+            ['breve', 'Breve'],
+            ['detallado', 'Detallado'],
+          ]}
+          onCambio={(largo) => setAjustes({ ...ajustes, largo })}
+        />
+        <ElegirEstilo
+          titulo="Emojis"
+          valor={ajustes.emojis === null ? null : ajustes.emojis ? 'si' : 'no'}
+          opciones={[
+            ['si', 'Sí'],
+            ['no', 'No'],
+          ]}
+          onCambio={(emojis) => setAjustes({ ...ajustes, emojis: emojis === null ? null : emojis === 'si' })}
+        />
+        <label className="block">
+          <span className="mb-1.5 block text-xs text-ink-muted">Firma (opcional)</span>
+          <input
+            type="text"
+            value={ajustes.firma}
+            onChange={(e) => setAjustes({ ...ajustes, firma: e.target.value.slice(0, 120) })}
+            placeholder="Ej: Piero · Desarrollo web"
+            className="field"
+          />
+        </label>
+        <p className="text-[11px] text-ink-subtle">
+          Lo que no elijas, ABI lo escribe cercano y profesional, en mensajes cortos. Toca de nuevo una opción para
+          quitarla.
+        </p>
+      </fieldset>
       <label className="block">
         <span className="mb-1.5 block text-sm text-ink-muted">Tu enlace para agendar reuniones</span>
         <input
@@ -690,6 +814,36 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
           </ul>
         )}
       </div>
+      <div>
+        <p className="mb-1.5 text-sm text-ink-muted">Lo que ABI aprendió de tus correcciones</p>
+        {correcciones.length === 0 ? (
+          <p className="text-[11px] text-ink-subtle">
+            Nada todavía. Edita un borrador de WhatsApp antes de abrirlo o copiarlo, y ABI imitará cómo escribes.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {correcciones.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-start justify-between gap-3 rounded-lg border border-line px-3 py-2 text-sm text-ink"
+              >
+                <span className="line-clamp-3 min-w-0 break-words whitespace-pre-wrap">{c.final}</span>
+                <button
+                  type="button"
+                  onClick={() => void olvidarLaCorreccion(c.id)}
+                  className="shrink-0 text-xs text-ink-subtle hover:text-negative"
+                >
+                  Olvidar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-1.5 text-[11px] text-ink-subtle">
+          Se guardan tus últimas 5, sin el nombre del cliente. Si ABI ve que siempre corriges lo mismo, te propondrá
+          recordarlo como regla.
+        </p>
+      </div>
       {uso && (
         <p className="text-[11px] text-ink-subtle">
           Últimos 7 días: {uso.preguntas} {uso.preguntas === 1 ? 'pregunta' : 'preguntas'} a ABI · unos{' '}
@@ -710,6 +864,43 @@ function AjustesAbiForm({ onListo }: { onListo: () => void }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/** Una fila de opciones del estilo. Tocar la elegida la quita: null es lo de siempre. */
+function ElegirEstilo<T extends string>({
+  titulo,
+  valor,
+  opciones,
+  onCambio,
+}: {
+  titulo: string;
+  valor: T | null;
+  opciones: [T, string][];
+  onCambio: (valor: T | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-14 shrink-0 text-xs text-ink-muted">{titulo}</span>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={titulo}>
+        {opciones.map(([id, texto]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={valor === id}
+            onClick={() => onCambio(valor === id ? null : id)}
+            className={
+              'rounded-full border px-3 py-1 text-xs transition-colors ' +
+              (valor === id
+                ? 'border-accent bg-accent text-white'
+                : 'border-line text-ink-muted hover:border-accent/50 hover:text-ink')
+            }
+          >
+            {texto}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
