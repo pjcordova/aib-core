@@ -9,6 +9,7 @@ import { FormularioPerfil } from './FormularioPerfil';
 import { PiePagina } from '../ui/PiePagina';
 import { DIAS_PRUEBA, PLANES, preciosPlanes } from '../../lib/planes';
 import { ComparativaPlanes } from './ComparativaPlanes';
+import { canalDeLaVisita, marcarCanalPostulacion, registrarVisita } from '../../lib/medicionPortada';
 import { solesEnteros } from '../../lib/servicios';
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,10 @@ export function UneteIngeniero() {
   useEffect(() => {
     const anterior = document.title;
     document.title = 'Únete como ingeniero y consigue clientes · AIB+';
+    // Para saber cuántos llegan (por ejemplo, desde CodeOn con ?c=codeon). El
+    // canal se recuerda en la pestaña aunque la visita ya se hubiera contado.
+    canalDeLaVisita();
+    registrarVisita('ingenieros');
     // Al salir sin recargar, que no se quede este título.
     return () => {
       document.title = anterior;
@@ -185,6 +190,8 @@ export function UneteIngeniero() {
                 inicial={miPerfil}
                 textoBoton={estado === 'pendiente' ? 'Guardar cambios' : 'Enviar solicitud'}
                 onGuardado={(nuevo) => {
+                  // Si ya tenía cuenta, su canal no vino al crearla: se marca ahora.
+                  if (!estado) marcarCanalPostulacion();
                   setRecienEnviada(nuevo);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}

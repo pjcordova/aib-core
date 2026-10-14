@@ -113,9 +113,17 @@ export interface PaginaLlegada {
   encargos: number;
 }
 
+/** Ingenieros que postularon en el periodo, por el canal con el que llegaron. */
+export interface IngenierosPorCanal {
+  canal: string;
+  postularon: number;
+  aprobados: number;
+}
+
 export interface Llegadas {
   canales: CanalLlegada[];
   paginas: PaginaLlegada[];
+  ingenieros?: IngenierosPorCanal[];
 }
 
 export async function leerLlegadas(semanas = 8): Promise<Llegadas | null> {
@@ -150,6 +158,7 @@ export const nombreCanal = (canal: string) => NOMBRES_CANAL[canal] ?? canal.char
 export function nombrePagina(pagina: string): string {
   if (pagina === 'portada') return 'Portada';
   if (pagina === 'explorar') return 'Buscador de ingenieros';
+  if (pagina === 'ingenieros') return 'Únete como ingeniero';
   if (pagina === 'otra') return 'Otras';
   if (pagina === 'sin-dato') return 'Sin dato (pruebas de antes del 12 oct)';
   const [tipo, slug] = pagina.split('/');
@@ -254,6 +263,9 @@ export async function descargarExcel(m: Metricas, llegadas?: Llegadas | null): P
       [],
       ['Página de entrada', 'Visitas', 'Desde Google', 'Pruebas', 'Encargos'],
       ...llegadas.paginas.map((p) => [nombrePagina(p.pagina), p.visitas, p.google, p.pruebas, p.encargos]),
+      [],
+      ['Ingenieros por canal', 'Postularon', 'Aprobados'],
+      ...(llegadas.ingenieros ?? []).map((g) => [nombreCanal(g.canal), g.postularon, g.aprobados]),
     ];
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(hoja), 'De dónde llegan');
   }

@@ -74,7 +74,8 @@ function esRobot(): boolean {
 
 /**
  * Cuenta una visita, una sola vez por pestaña: en la primera página pública
- * que abre ('portada', 'servicios/<slug>', 'rubros/<slug>' o 'explorar'), que
+ * que abre ('portada', 'servicios/<slug>', 'rubros/<slug>', 'explorar' o
+ * 'ingenieros'), que
  * queda como su página de entrada. En desarrollo no cuenta: la app local usa
  * la misma base de datos que producción.
  */
@@ -89,6 +90,19 @@ export function registrarVisita(pagina: string): void {
   }
   void supabase.rpc('registrar_visita', { p_pagina: pagina, p_canal: canalDeLaVisita() }).then(({ error }) => {
     if (error) console.warn('[AIB+] No se pudo contar la visita:', error.message);
+  });
+}
+
+/**
+ * El ingeniero que postula: guarda el canal por el que llegó (?c=codeon) si su
+ * perfil aún no tiene uno (supabase_llegadas.sql, sección 4). Estadística: si
+ * falla, no pasa nada.
+ */
+export function marcarCanalPostulacion(): void {
+  const canal = canalDeLaVisita();
+  if (!canal) return;
+  void supabase.rpc('marcar_canal_postulacion', { p_canal: canal }).then(({ error }) => {
+    if (error) console.warn('[AIB+] No se pudo guardar el canal de la postulación:', error.message);
   });
 }
 

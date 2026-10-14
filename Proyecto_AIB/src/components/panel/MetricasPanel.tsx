@@ -416,6 +416,29 @@ function DeDondeLlegan({ llegadas, semanas }: { llegadas: Llegadas; semanas: num
           </table>
         </div>
       </div>
+      {!!llegadas.ingenieros?.length && (
+        <div className="card mt-3 overflow-x-auto p-5">
+          <p className="mb-3 text-sm font-medium text-ink">Ingenieros que postularon, por canal</p>
+          <table className="w-full min-w-[320px] text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs text-ink-subtle">
+                <th className="py-2 pr-3 font-medium">Canal</th>
+                <th className="px-2 py-2 text-right font-medium">Postularon</th>
+                <th className="py-2 pl-2 text-right font-medium">Aprobados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {llegadas.ingenieros.map((g) => (
+                <tr key={g.canal} className="border-b border-line/60">
+                  <td className="py-2 pr-3 text-ink">{nombreCanal(g.canal)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-ink">{numero(g.postularon)}</td>
+                  <td className="py-2 pl-2 text-right tabular-nums text-ink">{numero(g.aprobados)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <p className="mt-3 text-xs text-ink-subtle">
         Google y las demás webs se distinguen desde el 12 de octubre de 2026; antes, todo figura como «Directo» y en la portada.
         «Directo» es quien escribió la dirección o abrió un enlace desde WhatsApp u otra app que no dice de dónde viene. Una

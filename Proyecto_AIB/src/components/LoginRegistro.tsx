@@ -4,6 +4,7 @@ import { Logo } from './ui/Primitives';
 import { AccesoCliente } from './AccesoCliente';
 import { hayAcceso, useAccesos } from '../lib/cuentaCliente';
 import { MENSAJE_CAPTCHA, conCaptcha, esErrorDeCaptcha } from '../lib/captcha';
+import { canalDeLaVisita } from '../lib/medicionPortada';
 
 // ---------------------------------------------------------------------------
 // LoginRegistro — autenticación con Supabase
@@ -98,6 +99,9 @@ const LoginRegistro: React.FC<LoginRegistroProps> = ({
           // esto, Supabase usa su dirección por defecto (Site URL).
           options: {
             emailRedirectTo: redirigirA ?? `${window.location.origin}${window.location.pathname}`,
+            // Por dónde llegó (?c=codeon): confirmar el correo suele abrir otra
+            // pestaña, así que va con la cuenta (supabase_llegadas.sql, sección 4).
+            ...(canalDeLaVisita() ? { data: { canal: canalDeLaVisita() } } : {}),
             ...(await conCaptcha()),
           },
         });
