@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
@@ -39,11 +39,6 @@ export function PanelIngeniero() {
   const perfil = usePerfil(session?.user.id);
   const navigate = useNavigate();
   const [pestana, setPestana] = useState<Pestana>('hoy');
-  // En el celular la barra de pestañas se desliza: la elegida queda a la vista.
-  const barra = useRef<HTMLElement>(null);
-  useEffect(() => {
-    barra.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [pestana]);
   // Encargos de clientes reales que aún nadie ha revisado. Lo informan «Hoy» y Encargos.
   const [nuevos, setNuevos] = useState(0);
   // Cómo se abre la pestaña de encargos. Cambiar `vez` la monta de nuevo con ese filtro.
@@ -121,27 +116,34 @@ export function PanelIngeniero() {
   }
 
   return (
-    <div className="min-h-screen">
+    // En el celular la página nunca se desliza hacia los lados: lo ancho (tablas,
+    // pestañas) se desliza dentro de su propia caja.
+    <div className="min-h-screen overflow-x-clip">
       <header className="cabecera-marca sticky top-0 z-20">
         <Shell>
-          <div className="flex items-center justify-between gap-2 py-1 sm:gap-4">
+          {/* Si con la letra grande del celular no cabe, los botones bajan a otra línea. */}
+          <div className="flex flex-wrap items-center justify-between gap-2 py-1 sm:gap-4">
             <Wordmark subtitle="Panel del ingeniero" />
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Link to="/" state={{ comoCliente: true }} onClick={activarModoCliente} className="btn btn-ghost">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
+              <Link
+                to="/"
+                state={{ comoCliente: true }}
+                onClick={activarModoCliente}
+                className="btn btn-ghost px-3 py-2 text-sm sm:px-[1.125rem] sm:py-2.5 sm:text-[0.9375rem]"
+              >
                 <span className="sm:hidden">Ver como cliente</span>
                 <span className="hidden sm:inline">Probar como cliente</span>
               </Link>
-              <button type="button" onClick={signOut} className="btn btn-ghost">
+              <button
+                type="button"
+                onClick={signOut}
+                className="btn btn-ghost px-3 py-2 text-sm sm:px-[1.125rem] sm:py-2.5 sm:text-[0.9375rem]"
+              >
                 Salir
               </button>
             </div>
           </div>
-          {/* En el celular no caben todas: la barra se desliza. */}
-          <nav
-            ref={barra}
-            className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="Secciones del panel"
-          >
+          <BarraPestanas activa={pestana}>
             {(
               [
                 ['hoy', 'Hoy con ABI', 'Hoy'],
@@ -151,7 +153,7 @@ export function PanelIngeniero() {
                 ['comentarios', 'Comentarios', 'Comentarios'],
                 // Cada ingeniero sube sus diseños; el administrador además tiene la biblioteca.
                 perfil.esAdmin
-                  ? (['catalogo', 'Catálogo de plantillas', 'Catálogo'] as const)
+                  ? (['catalogo', 'Catálogo', 'Catálogo'] as const)
                   : (['catalogo', 'Mis plantillas', 'Plantillas'] as const),
                 perfil.esAdmin
                   ? (['ingenieros', 'Ingenieros', 'Ingenieros'] as const)
@@ -184,7 +186,7 @@ export function PanelIngeniero() {
                 )}
               </button>
             ))}
-          </nav>
+          </BarraPestanas>
         </Shell>
       </header>
 
@@ -253,6 +255,97 @@ export function PanelIngeniero() {
           <CatalogoPlantillas esAdmin={perfil.esAdmin} />
         )}
       </main>
+    </div>
+  );
+}
+
+/**
+ * Barra de pestañas. Si no caben todas (en el celular, o en la PC con las del
+ * administrador), se desliza con el dedo, con la rueda del mouse o con las
+ * flechas que aparecen en el lado donde quedan pestañas ocultas.
+ */
+function BarraPestanas({ activa, children }: { activa: string; children: ReactNode }) {
+  const barra = useRef<HTMLElement>(null);
+  const [ocultas, setOcultas] = useState({ izquierda: false, derecha: false });
+
+  const medir = useCallback(() => {
+    const el = barra.current;
+    if (!el) return;
+    const izquierda = el.scrollLeft > 2;
+    const derecha = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+    setOcultas((previo) =>
+      previo.izquierda === izquierda && previo.derecha === derecha ? previo : { izquierda, derecha },
+    );
+  }, []);
+
+  // La pestaña elegida queda a la vista.
+  useEffect(() => {
+    barra.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activa]);
+
+  // El aviso de encargos nuevos cambia el ancho de las pestañas.
+  useEffect(medir);
+
+  useEffect(() => {
+    const el = barra.current;
+    if (!el) return;
+    // La rueda del mouse mueve hacia abajo: aquí desliza la barra, hasta su borde.
+    const rueda = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const tope = el.scrollWidth - el.clientWidth;
+      if (tope <= 0 || (e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= tope)) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('scroll', medir, { passive: true });
+    el.addEventListener('wheel', rueda, { passive: false });
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => {
+      el.removeEventListener('scroll', medir);
+      el.removeEventListener('wheel', rueda);
+      observador.disconnect();
+    };
+  }, [medir]);
+
+  const deslizar = (sentido: 1 | -1) => {
+    const el = barra.current;
+    el?.scrollBy({ left: sentido * el.clientWidth * 0.7, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative -mb-px">
+      <nav
+        ref={barra}
+        className="flex scroll-px-10 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Secciones del panel"
+      >
+        {children}
+      </nav>
+      {ocultas.izquierda && (
+        <button
+          type="button"
+          onClick={() => deslizar(-1)}
+          className="absolute inset-y-0 left-0 flex w-10 items-center justify-start bg-gradient-to-r from-[#1a2d4d] from-50% to-transparent text-ink hover:text-accent"
+          aria-label="Ver las pestañas anteriores"
+        >
+          <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path d="M12.5 15 7.5 10l5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+      {ocultas.derecha && (
+        <button
+          type="button"
+          onClick={() => deslizar(1)}
+          className="absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-l from-[#1a2d4d] from-50% to-transparent text-ink hover:text-accent"
+          aria-label="Ver más pestañas"
+        >
+          <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path d="m7.5 5 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
