@@ -12,7 +12,7 @@ import { PiePagina } from './ui/PiePagina';
 // cambiar la fecha.
 // ---------------------------------------------------------------------------
 
-const ACTUALIZADA = '12 de octubre de 2026';
+const ACTUALIZADA = '13 de octubre de 2026';
 const RESPONSABLE = 'Cordova Solutions';
 const CORREO_CONTACTO = 'contacto@aibplus.app';
 
@@ -106,6 +106,10 @@ export function Privacidad() {
           <li>Al enviar tu encargo: tu nombre y tu número de WhatsApp, para que el ingeniero te contacte.</li>
           <li>Los comentarios que dejas en tu diseño y la reseña que escribas sobre tu ingeniero.</li>
           <li>
+            Si tu ingeniero te agenda una reunión desde AIB+: el correo de tu cuenta, para que Google Calendar te envíe
+            la invitación con el enlace de Google Meet.
+          </li>
+          <li>
             Si guardas tu proyecto con Google: tu nombre, tu correo y tu foto de perfil de Google. No accedemos a tu
             Gmail, tus contactos ni tus archivos. Si lo guardas con tu correo: tu dirección de correo.
           </li>
@@ -123,6 +127,10 @@ export function Privacidad() {
           </li>
           <li>Tu plan y el registro de sus pagos (monto, fecha y medio). No guardamos datos de tarjetas.</li>
           <li>Tus encargos, propuestas, ingresos registrados y lo que consultas a ABI, tu asistente.</li>
+          <li>
+            Si conectas tu Google Calendar: tu correo de Google y el permiso para ver tu disponibilidad y crear eventos
+            (te lo explicamos en la sección 6).
+          </li>
         </Lista>
         <p className="font-medium text-ink">De cualquier visitante:</p>
         <Lista>
@@ -172,7 +180,10 @@ export function Privacidad() {
                 Anthropic: inteligencia artificial que arma las vistas previas, los textos y los diseños, y que responde
                 a ABI. Recibe la información del proyecto necesaria para cada respuesta.
               </li>
-              <li>Google: si eliges guardar o ingresar con tu cuenta de Google.</li>
+              <li>
+                Google: si eliges guardar o ingresar con tu cuenta de Google y, para los ingenieros que lo conectan,
+                Google Calendar y Google Meet.
+              </li>
               <li>
                 CallMeBot: avisos por WhatsApp a los ingenieros. Esos avisos no incluyen el nombre ni el número del
                 cliente.
@@ -193,7 +204,59 @@ export function Privacidad() {
         </p>
       </Seccion>
 
-      <Seccion titulo="6. Cuánto tiempo los guardamos">
+      <Seccion titulo="6. Google Calendar de los ingenieros">
+        <p>
+          Un ingeniero puede conectar su Google Calendar desde los ajustes de ABI, su asistente. Es opcional y lo puede
+          desconectar cuando quiera.
+        </p>
+        <Lista>
+          <li>
+            <strong className="text-ink">Qué datos de Google usamos:</strong> solo dos permisos. Ver tu disponibilidad
+            (los bloques de tiempo libres y ocupados, sin el título ni el contenido de tus eventos) y crear eventos en
+            los calendarios que te pertenecen. También tu dirección de correo de Google, para mostrarte qué cuenta
+            conectaste.
+          </li>
+          <li>
+            <strong className="text-ink">Para qué:</strong> ABI mira tu disponibilidad para proponerte horarios de
+            reunión con tus clientes. Cuando tú lo confirmas con un botón, AIB+ crea la reunión en tu calendario con un
+            enlace de Google Meet e invita al correo de tu cliente. No creamos, cambiamos ni borramos nada sin tu
+            confirmación, y no leemos tus otros eventos.
+          </li>
+          <li>
+            <strong className="text-ink">Qué guardamos:</strong> el permiso que Google nos da para tu cuenta, cifrado, y
+            tu correo de Google. No guardamos tu disponibilidad ni tus eventos: los consultamos en el momento.
+          </li>
+          <li>
+            <strong className="text-ink">Con quién se comparte:</strong> tu disponibilidad se envía al servicio de
+            inteligencia artificial que usa ABI (Anthropic) solo para proponerte horarios en esa conversación. Los datos
+            de Google no se venden, no se usan para publicidad ni para entrenar modelos de inteligencia artificial, y
+            nadie de AIB+ los lee, salvo que tú lo pidas para resolver un problema o que la ley lo exija.
+          </li>
+          <li>
+            <strong className="text-ink">Cómo desconectarlo:</strong> desde los ajustes de ABI o desde la seguridad de
+            tu cuenta de Google, en «Apps y servicios de terceros». Al desconectarlo, borramos el permiso guardado.
+          </li>
+        </Lista>
+        <p>
+          El uso y la transferencia a cualquier otra aplicación de la información recibida de las API de Google por
+          parte de AIB+ se ajustarán a la{' '}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-accent hover:underline"
+          >
+            Política de Datos del Usuario de los Servicios de API de Google
+          </a>
+          , incluidos los requisitos de Uso Limitado.
+        </p>
+        <p className="text-sm italic">
+          AIB+&apos;s use and transfer to any other app of information received from Google APIs will adhere to the
+          Google API Services User Data Policy, including the Limited Use requirements.
+        </p>
+      </Seccion>
+
+      <Seccion titulo="7. Cuánto tiempo los guardamos">
         <p>
           Mientras tu proyecto o tu cuenta existan. Las pruebas sin guardar pueden eliminarse después de un tiempo sin
           actividad. Puedes pedirnos en cualquier momento que eliminemos tus datos, salvo los que debamos conservar por
@@ -201,7 +264,7 @@ export function Privacidad() {
         </p>
       </Seccion>
 
-      <Seccion titulo="7. Tus derechos">
+      <Seccion titulo="8. Tus derechos">
         <p>
           Puedes pedir acceder a tus datos, corregirlos, eliminarlos u oponerte a su uso, y retirar tu consentimiento,
           escribiendo a <Correo />. Te responderemos dentro de los plazos que fija la ley. Si no estás conforme con la
@@ -210,7 +273,7 @@ export function Privacidad() {
         </p>
       </Seccion>
 
-      <Seccion titulo="8. Seguridad">
+      <Seccion titulo="9. Seguridad">
         <p>
           La conexión con AIB+ va cifrada y el acceso a los datos está restringido: cada cliente ve solo sus proyectos y
           cada ingeniero, solo sus encargos. Aun así, ningún sistema es infalible: si detectamos un problema que afecte
@@ -218,11 +281,11 @@ export function Privacidad() {
         </p>
       </Seccion>
 
-      <Seccion titulo="9. Menores de edad">
+      <Seccion titulo="10. Menores de edad">
         <p>AIB+ está pensada para mayores de 18 años. No recogemos a sabiendas datos de menores.</p>
       </Seccion>
 
-      <Seccion titulo="10. Cambios">
+      <Seccion titulo="11. Cambios">
         <p>
           Si cambiamos esta política, publicaremos la nueva versión aquí con su fecha. Si el cambio es importante, te lo
           haremos saber en la plataforma.
