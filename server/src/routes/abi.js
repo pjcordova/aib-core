@@ -1,10 +1,11 @@
 // --- ABI: EL ASISTENTE DEL INGENIERO ---
 // El panel le manda la conversación y recibe la respuesta de ABI, con los
-// borradores de WhatsApp que haya preparado. Solo para ingenieros: un cliente
-// no tiene nada que preguntarle y cada pregunta cuesta dinero real.
+// borradores de WhatsApp que haya preparado. También le pide que prepare la
+// propuesta de un encargo. Solo para ingenieros: un cliente no tiene nada que
+// preguntarle y cada pregunta cuesta dinero real.
 
 const { Router } = require('express');
-const { conversarConAbi } = require('../abi');
+const { armarPropuesta, conversarConAbi, PropuestaError } = require('../abi');
 const { consultarComo } = require('../supabaseUsuario');
 const { crearLimitador } = require('../rateLimit');
 const { requireAuth } = require('../auth');
@@ -79,6 +80,39 @@ async function anotar(token, pregunta, r) {
   }
 }
 
+/** Su nombre, su enlace de agenda, su estilo, lo que le pidió recordar y cómo corrigió los últimos borradores. */
+async function leerPerfil(token) {
+  const [ajustes, recuerdos, correcciones] = await Promise.all([
+    leerOpcional(
+      token,
+      'ajustes_ingeniero',
+      [['select', 'nombre,enlace_agenda,estilo_trato,estilo_tono,estilo_largo,estilo_emojis,firma']],
+      []
+    ).then((filas) => filas[0] ?? null),
+    leerOpcional(
+      token,
+      'abi_memoria',
+      [
+        ['select', 'texto'],
+        ['order', 'created_at.asc'],
+        ['limit', '40'],
+      ],
+      []
+    ).then((filas) => filas.map((f) => f.texto)),
+    leerOpcional(
+      token,
+      'abi_correcciones',
+      [
+        ['select', 'borrador,final'],
+        ['order', 'created_at.desc'],
+        ['limit', '5'],
+      ],
+      []
+    ),
+  ]);
+  return { ajustes, recuerdos, correcciones };
+}
+
 router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), mantenerConexion, async (req, res, next) => {
   const conversacion = leerConversacion(req.body);
   if (!conversacion) {
@@ -88,35 +122,9 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
   const inicio = Date.now();
 
   try {
-    // Su nombre, su enlace de agenda, su estilo, lo que le pidió recordar, cómo
-    // corrigió los últimos borradores y si conectó su calendario.
-    const [ajustes, recuerdos, correcciones, calendario] = await Promise.all([
-      leerOpcional(
-        req.tokenUsuario,
-        'ajustes_ingeniero',
-        [['select', 'nombre,enlace_agenda,estilo_trato,estilo_tono,estilo_largo,estilo_emojis,firma']],
-        []
-      ).then((filas) => filas[0] ?? null),
-      leerOpcional(
-        req.tokenUsuario,
-        'abi_memoria',
-        [
-          ['select', 'texto'],
-          ['order', 'created_at.asc'],
-          ['limit', '40'],
-        ],
-        []
-      ).then((filas) => filas.map((f) => f.texto)),
-      leerOpcional(
-        req.tokenUsuario,
-        'abi_correcciones',
-        [
-          ['select', 'borrador,final'],
-          ['order', 'created_at.desc'],
-          ['limit', '5'],
-        ],
-        []
-      ),
+    // Lo que sabe del ingeniero y si conectó su calendario.
+    const [{ ajustes, recuerdos, correcciones }, calendario] = await Promise.all([
+      leerPerfil(req.tokenUsuario),
       leerOpcional(req.tokenUsuario, 'calendarios_ingeniero', [['select', 'correo']], []),
     ]);
 
@@ -133,6 +141,24 @@ router.post('/abi', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), man
     return res.json({ success: true, respuesta: r.texto, acciones: r.acciones });
   } catch (error) {
     await anotar(req.tokenUsuario, pregunta, { resultado: 'error', milisegundos: Date.now() - inicio });
+    return next(error);
+  }
+});
+
+// «Que ABI la prepare»: la propuesta de un encargo, para que el ingeniero la
+// revise en el formulario. No guarda nada.
+router.post('/abi/propuesta', limitar, requireAuth, soloIngeniero, cobrarCuota('abi'), mantenerConexion, async (req, res, next) => {
+  const encargoId = typeof req.body?.encargo_id === 'string' ? req.body.encargo_id : '';
+  const pregunta = 'Preparar la propuesta de un encargo';
+  const inicio = Date.now();
+  try {
+    const perfil = await leerPerfil(req.tokenUsuario);
+    const r = await armarPropuesta({ token: req.tokenUsuario, encargoId, ...perfil });
+    await anotar(req.tokenUsuario, pregunta, r);
+    return res.json({ success: true, propuesta: r.propuesta });
+  } catch (error) {
+    await anotar(req.tokenUsuario, pregunta, error.registro ?? { resultado: 'error', milisegundos: Date.now() - inicio });
+    if (error instanceof PropuestaError) return res.status(error.estado).json({ success: false, error: error.message });
     return next(error);
   }
 });

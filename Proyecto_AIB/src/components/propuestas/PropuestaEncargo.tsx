@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { ApiError, prepararPropuestaAbi } from '../../lib/api';
 import { enlaceWhatsapp } from '../../lib/contacto';
+import { miPlan } from '../../lib/planes';
 import type { ProyectoCompleto } from '../../lib/proyectos';
 import {
   ETAPAS_SUGERIDAS,
@@ -23,7 +25,8 @@ import { TarjetaPropuesta } from './TarjetaPropuesta';
 // ---------------------------------------------------------------------------
 // Arma la propuesta (precio, plazo, qué incluye, forma de pago, validez), se
 // la manda al cliente por WhatsApp con su enlace, ve su respuesta y, aceptada,
-// marca lo que cobró. Por etapas, además entrega cada una (Entregas.tsx).
+// marca lo que cobró. Por etapas, además entrega cada una (Entregas.tsx). Con
+// Pro, ABI llena el formulario («Que ABI la prepare») y él la revisa.
 // ---------------------------------------------------------------------------
 
 /** Hoy + n días, como AAAA-MM-DD (en Lima). */
@@ -333,6 +336,47 @@ function FormularioPropuesta({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
+  // ABI viene con Pro y Negocio. Si no se puede leer el plan, se ofrece: el servidor lo comprueba.
+  const [conAbi, setConAbi] = useState<boolean | null>(null);
+  const [preparando, setPreparando] = useState(false);
+  const [razon, setRazon] = useState('');
+  const [errorAbi, setErrorAbi] = useState('');
+
+  useEffect(() => {
+    let vigente = true;
+    void miPlan().then((p) => {
+      if (vigente) setConAbi(p ? p.plan !== 'free' : true);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  /** Llena el formulario con la propuesta de ABI. No guarda nada. */
+  const prepararConAbi = async () => {
+    setPreparando(true);
+    setErrorAbi('');
+    try {
+      const p = await prepararPropuestaAbi(encargo.id);
+      setPrecio(String(p.precio));
+      if (p.etapas.length >= 2) {
+        setPago('etapas');
+        setEtapas(p.etapas.map((h) => ({ titulo: h.titulo, porcentaje: String(h.porcentaje), dias: String(h.dias) })));
+      } else {
+        setPago(p.adelanto_pct);
+        setPlazo(String(p.plazo_dias % 7 === 0 ? p.plazo_dias / 7 : p.plazo_dias));
+        setUnidad(p.plazo_dias % 7 === 0 ? 'semanas' : 'dias');
+      }
+      if (p.incluye.length) setIncluye(p.incluye.join('\n'));
+      setNota(p.nota.slice(0, 800));
+      setRazon(p.razon || 'Lista según la documentación y el presupuesto del cliente.');
+    } catch (e) {
+      setErrorAbi(e instanceof ApiError ? e.message : 'ABI no pudo preparar la propuesta. Vuelve a intentarlo.');
+    } finally {
+      setPreparando(false);
+    }
+  };
+
   const porEtapas = pago === 'etapas';
   const adelanto = porEtapas ? 0 : pago;
   const valorPrecio = Number(precio.replace(/[^\d]/g, ''));
@@ -406,6 +450,43 @@ function FormularioPropuesta({
         <p className="text-xs text-ink-subtle">
           Las etapas vienen del plan de la documentación. Ajusta nombres, porcentajes y días si quieres, y pon tu precio.
         </p>
+      )}
+      {conAbi === false ? (
+        <p className="text-xs text-ink-subtle">Con el plan Pro, ABI te prepara la propuesta con un clic.</p>
+      ) : (
+        conAbi && (
+          <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="min-w-0 text-sm text-ink">
+                <span className="font-medium">¿Te la prepara ABI?</span>{' '}
+                <span className="text-ink-muted">Con la documentación, el presupuesto del cliente y tu estilo.</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => void prepararConAbi()}
+                disabled={preparando}
+                className="btn btn-primary !px-3 !py-1.5 text-xs"
+              >
+                {preparando ? 'ABI la está preparando…' : razon ? 'Prepararla de nuevo' : '✨ Que ABI la prepare'}
+              </button>
+            </div>
+            {razon && !preparando && (
+              <div className="mt-2 text-sm text-ink-muted" role="status">
+                <p>
+                  <strong className="text-ink">Por qué así:</strong> {razon}
+                </p>
+                <p className="mt-1 text-xs text-ink-subtle">
+                  Revísala y ajusta lo que quieras: el cliente no ve nada hasta que la guardes.
+                </p>
+              </div>
+            )}
+            {errorAbi && (
+              <p role="alert" className="mt-2 text-sm text-negative">
+                {errorAbi}
+              </p>
+            )}
+          </div>
+        )
       )}
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="block text-sm">

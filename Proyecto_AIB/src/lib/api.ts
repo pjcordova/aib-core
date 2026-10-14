@@ -433,6 +433,49 @@ export async function preguntarAbi(
   return { respuesta: data.respuesta, acciones: (data.acciones ?? []).filter(esAccionValida) };
 }
 
+/** La propuesta que prepara ABI para un encargo (server/src/abi.js, armarPropuesta). */
+export interface PropuestaAbi {
+  precio: number;
+  /** Días hasta la entrega; por etapas, la suma de sus días. */
+  plazo_dias: number;
+  /** 0, 30, 50 o 100. Con etapas, 0. */
+  adelanto_pct: number;
+  /** Vacío: se paga con adelanto. */
+  etapas: { titulo: string; porcentaje: number; dias: number }[];
+  incluye: string[];
+  nota: string;
+  /** Solo para el ingeniero: por qué ese precio, plazo y forma de pago. */
+  razon: string;
+}
+
+function esPropuestaAbi(p: unknown): p is PropuestaAbi {
+  const x = p as PropuestaAbi | null;
+  return (
+    typeof x?.precio === 'number' &&
+    typeof x.plazo_dias === 'number' &&
+    typeof x.adelanto_pct === 'number' &&
+    Array.isArray(x.etapas) &&
+    x.etapas.every((e) => typeof e?.titulo === 'string' && typeof e.porcentaje === 'number' && typeof e.dias === 'number') &&
+    Array.isArray(x.incluye) &&
+    x.incluye.every((l) => typeof l === 'string') &&
+    typeof x.nota === 'string' &&
+    typeof x.razon === 'string'
+  );
+}
+
+/** «Que ABI la prepare»: no guarda nada, solo llena el formulario. */
+export async function prepararPropuestaAbi(encargoId: string): Promise<PropuestaAbi> {
+  const data = await post<{ success: boolean; propuesta?: unknown; error?: string }>(
+    '/api/abi/propuesta',
+    { encargo_id: encargoId },
+    TIMEOUT_MS.abi
+  );
+  if (!data.success || !esPropuestaAbi(data.propuesta)) {
+    throw new ApiError(data.error ?? 'ABI no pudo preparar la propuesta. Vuelve a intentarlo.', 502, true);
+  }
+  return data.propuesta;
+}
+
 /* ------------------------------------------------- Google Calendar de ABI */
 
 export interface EstadoCalendario {
