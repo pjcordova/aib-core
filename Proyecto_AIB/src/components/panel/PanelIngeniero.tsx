@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfil } from '../../hooks/usePerfil';
@@ -39,6 +39,11 @@ export function PanelIngeniero() {
   const perfil = usePerfil(session?.user.id);
   const navigate = useNavigate();
   const [pestana, setPestana] = useState<Pestana>('hoy');
+  // En el celular la barra de pestañas se desliza: la elegida queda a la vista.
+  const barra = useRef<HTMLElement>(null);
+  useEffect(() => {
+    barra.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [pestana]);
   // Encargos de clientes reales que aún nadie ha revisado. Lo informan «Hoy» y Encargos.
   const [nuevos, setNuevos] = useState(0);
   // Cómo se abre la pestaña de encargos. Cambiar `vez` la monta de nuevo con ese filtro.
@@ -119,9 +124,9 @@ export function PanelIngeniero() {
     <div className="min-h-screen">
       <header className="cabecera-marca sticky top-0 z-20">
         <Shell>
-          <div className="flex items-center justify-between gap-4 py-1">
+          <div className="flex items-center justify-between gap-2 py-1 sm:gap-4">
             <Wordmark subtitle="Panel del ingeniero" />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link to="/" state={{ comoCliente: true }} onClick={activarModoCliente} className="btn btn-ghost">
                 <span className="sm:hidden">Ver como cliente</span>
                 <span className="hidden sm:inline">Probar como cliente</span>
@@ -132,7 +137,11 @@ export function PanelIngeniero() {
             </div>
           </div>
           {/* En el celular no caben todas: la barra se desliza. */}
-          <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Secciones del panel">
+          <nav
+            ref={barra}
+            className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Secciones del panel"
+          >
             {(
               [
                 ['hoy', 'Hoy con ABI', 'Hoy'],
@@ -179,7 +188,9 @@ export function PanelIngeniero() {
         </Shell>
       </header>
 
-      <main>
+      {/* Correos, enlaces y textos largos saltan de línea en vez de ensanchar la
+          página: en el celular, nada se desliza hacia los lados. */}
+      <main className="[overflow-wrap:anywhere]">
         {avisoCalendario && (
           <div className="mx-auto mt-4 max-w-4xl px-5">
             <div role="status" className="flex items-start justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-ink">
