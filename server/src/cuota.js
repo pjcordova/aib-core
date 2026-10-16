@@ -91,7 +91,9 @@ function cobrarCuota(tipo) {
       }
 
       if (estado === 'limite_global') {
-        console.error('[AIB+] ⚠ TOPE DIARIO GLOBAL DE IA ALCANZADO. Se sube en la tabla limites_ia.');
+        console.error(
+          '[AIB+] ⚠ TOPE DIARIO GLOBAL DE IA ALCANZADO. Se sube en la tabla limites_ia (o solo para hoy, en limites_ia_dias).'
+        );
         return res.status(503).json({ success: false, error: MENSAJES.limite_global });
       }
       // Sesión anónima sin invitación activa (supabase_invitaciones.sql).

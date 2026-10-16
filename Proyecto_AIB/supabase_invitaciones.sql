@@ -523,7 +523,8 @@ ALTER TABLE public.limites_ia ADD COLUMN IF NOT EXISTS pruebas_libres_dia INTEGE
   CHECK (pruebas_libres_dia >= 0);
 
 -- Se pregunta ANTES de abrir la sesión anónima, para no dejar sesiones vacías
--- cuando ya no quedan pruebas por hoy.
+-- cuando ya no quedan pruebas por hoy. supabase_topes_por_dia.sql la cambia
+-- para usar el tope del día (public.pruebas_libres_hoy()).
 CREATE OR REPLACE FUNCTION public.hay_cupo_prueba_libre()
 RETURNS BOOLEAN
 LANGUAGE sql

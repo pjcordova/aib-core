@@ -268,6 +268,9 @@ GRANT EXECUTE ON FUNCTION public.mis_disenos_ia() TO authenticated;
 
 -- Igual que en supabase_invitaciones.sql, más el tope mensual de diseños:
 -- devuelve 'limite_plan' si ya usó los de su plan este mes.
+-- Ojo: supabase_topes_por_dia.sql cambia el tope global por el del día
+-- (public.global_centimos_hoy()); si vuelves a ejecutar este archivo, ejecuta
+-- también aquel.
 CREATE OR REPLACE FUNCTION public.reservar_cuota_ia(p_tipo TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
