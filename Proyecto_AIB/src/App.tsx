@@ -511,6 +511,11 @@ export default function Home() {
                     conSeguimiento={abierto.aceptado}
                     precio={precioAbierto}
                     servicio={servicioAbierto}
+                    autor={
+                      !vinoConSuIngeniero && abierto.plantilla?.ingeniero_id && abierto.plantilla.ingeniero
+                        ? { nombre: abierto.plantilla.ingeniero, foto: null }
+                        : null
+                    }
                   />
                 ) : (
                   <PrototypePreview

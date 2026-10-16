@@ -42,11 +42,12 @@ import { obtenerPlantillaBase } from '../../plantillas';
 import { ContactoEncargo, type DatosEncargo } from '../ContactoEncargo';
 import { ErrorState } from '../ui/Primitives';
 import { MiniVista } from '../panel/MiniVista';
-import { WebPreview } from './WebPreview';
+import { WebPreview, type AutorDiseno } from './WebPreview';
 import { nuevaSesionDeCuestionario, registrarProgreso } from '../../lib/embudo';
 import { conPrecioMostrado, miPrecio } from '../../lib/pruebaPrecio';
 import { ElegirIngeniero } from '../ingenieros/ElegirIngeniero';
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
+import { Bandera } from '../ui/Bandera';
 import { elegirIngeniero as asignarIngeniero, textoEstrellas } from '../../lib/ingenieros';
 import { etiquetaNivel } from '../../lib/plantillaPropia';
 
@@ -105,6 +106,8 @@ export function FlujoWeb({ onGuardado, onEnviado, empresaInicial, onEmpezar, ele
   // Plantillas
   const [candidatas, setCandidatas] = useState<PlantillaDelCatalogo[]>([]);
   const [plantillaUsada, setPlantillaUsada] = useState<PlantillaUsada | null>(null);
+  // Quien hizo el diseño elegido, para mostrarlo junto a «¡Me gusta, sigamos!».
+  const [autorDiseno, setAutorDiseno] = useState<AutorDiseno | null>(null);
   const ultimaElegida = useRef<PlantillaDelCatalogo | null>(null);
 
   // Resultado
@@ -309,6 +312,11 @@ export function FlujoWeb({ onGuardado, onEnviado, empresaInicial, onEmpezar, ele
 
     if (esNueva) void registrarEvento(c.fila.id, 'elegida');
     setPlantillaUsada(usada);
+    setAutorDiseno(
+      autor?.nombre
+        ? { nombre: autor.nombre, foto: autor.foto_url, pais: autor.pais, promedio: autor.promedio, resenas: autor.resenas }
+        : null
+    );
     setCuerpo('');
     setFase('generando');
     setError(null);
@@ -488,6 +496,7 @@ export function FlujoWeb({ onGuardado, onEnviado, empresaInicial, onEmpezar, ele
           onGuardarEdicion={guardarCambios}
           precio={precioPrueba}
           proyectoId={idGuardado}
+          autor={elegirIngeniero && plantillaUsada?.ingeniero_id ? autorDiseno : null}
         />
         {eligiendoIngeniero && idGuardado && (
           <ElegirIngeniero
@@ -643,16 +652,18 @@ export function EleccionPlantilla({
                   </span>
                 )}
               </div>
-              {c.base.descripcion && <p className="mt-1 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>}
+              {/* Arriba y bien visible: al aceptar, el encargo va a quien lo diseñó. */}
               {mostrarAutor && c.fila.ingeniero && !c.fila.ingeniero.es_admin && c.fila.ingeniero.nombre && (
-                <div className="mt-3 flex items-center gap-2">
-                  <FotoIngeniero nombre={c.fila.ingeniero.nombre} foto={c.fila.ingeniero.foto_url} tamano={28} />
-                  <p className="min-w-0 text-xs text-ink-muted">
-                    Lo construye <span className="font-medium text-ink">{c.fila.ingeniero.nombre}</span>
-                    <span className="block">{textoEstrellas(c.fila.ingeniero.promedio, c.fila.ingeniero.resenas)}</span>
+                <div className="mt-2.5 flex items-center gap-2.5 rounded-lg bg-surface-overlay/60 px-2.5 py-2">
+                  <FotoIngeniero nombre={c.fila.ingeniero.nombre} foto={c.fila.ingeniero.foto_url} tamano={36} />
+                  <p className="min-w-0 text-sm text-ink-muted">
+                    Lo construye <span className="font-semibold text-ink">{c.fila.ingeniero.nombre}</span>{' '}
+                    <Bandera pais={c.fila.ingeniero.pais} />
+                    <span className="block text-xs">{textoEstrellas(c.fila.ingeniero.promedio, c.fila.ingeniero.resenas)}</span>
                   </p>
                 </div>
               )}
+              {c.base.descripcion && <p className="mt-2 line-clamp-2 text-sm text-ink-muted">{c.base.descripcion}</p>}
               {c.fila.tipo === 'biblioteca' && <Cobertura faltan={seccionesQueFaltan(c.base, ficha.secciones)} />}
               {conPrecios && c.fila.precio_desde !== null && (
                 <PrecioOrientativo precio={c.fila.precio_desde} presupuesto={ficha.presupuesto} />

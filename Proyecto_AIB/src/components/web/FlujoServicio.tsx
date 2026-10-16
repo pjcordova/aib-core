@@ -36,7 +36,7 @@ import { ElegirIngeniero } from '../ingenieros/ElegirIngeniero';
 import { PrototypePreview } from '../PrototypePreviewDiferido';
 import { ErrorState } from '../ui/Primitives';
 import { EleccionPlantilla, PasoLogo, PasoMultiple, PasoOpcion, PasoPaleta, Progreso } from './FlujoWeb';
-import { WebPreview } from './WebPreview';
+import { WebPreview, type AutorDiseno } from './WebPreview';
 
 type Fase = 'preguntas' | 'buscando' | 'eligiendo' | 'construyendo' | 'listo' | 'error';
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
@@ -121,6 +121,8 @@ export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEm
   // Resultado
   const [candidatas, setCandidatas] = useState<PlantillaDelCatalogo[]>([]);
   const [plantillaUsada, setPlantillaUsada] = useState<PlantillaUsada | null>(null);
+  // Quien hizo el diseño elegido, para mostrarlo junto a «¡Me gusta, sigamos!».
+  const [autorDiseno, setAutorDiseno] = useState<AutorDiseno | null>(null);
   const [documento, setDocumento] = useState('');
   const [codigo, setCodigo] = useState('');
   const [consumo, setConsumo] = useState<TokenUsage | null>(null);
@@ -295,6 +297,11 @@ export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEm
     if (plantillaUsada?.id !== c.fila.id) void registrarEvento(c.fila.id, 'elegida');
     const doc = renderizarPlantilla(c.base, { descripcion: f.rubro }, f);
     setPlantillaUsada(usada);
+    setAutorDiseno(
+      autor?.nombre
+        ? { nombre: autor.nombre, foto: autor.foto_url, pais: autor.pais, promedio: autor.promedio, resenas: autor.resenas }
+        : null
+    );
     setDocumento(doc);
     setCodigo('');
     setConsumo(null);
@@ -441,6 +448,7 @@ export function FlujoServicio({ tipo, otro, empresaInicial, conSuIngeniero, onEm
             onGuardarEdicion={guardarCambios}
             proyectoId={idGuardado}
             servicio={{ nombre, icono: servicio.icono }}
+            autor={!conSuIngeniero && plantillaUsada?.ingeniero_id ? autorDiseno : null}
           />
         ) : (
           <PrototypePreview

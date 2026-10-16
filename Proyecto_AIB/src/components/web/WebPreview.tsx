@@ -19,6 +19,19 @@ import { CompartirMaqueta } from './CompartirMaqueta';
 import { ComentarioMaqueta } from './ComentarioMaqueta';
 import { conAnimaciones } from '../../lib/animaciones';
 import { registrarInteres } from '../../lib/medicionPortada';
+import { textoEstrellas } from '../../lib/ingenieros';
+import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
+import { Bandera } from '../ui/Bandera';
+
+/** El ingeniero que hizo el diseño elegido: al aceptar, el encargo va a él. */
+export interface AutorDiseno {
+  nombre: string;
+  foto: string | null;
+  pais?: string | null;
+  /** Sin promedio ni reseñas (un proyecto reabierto), no se muestran las estrellas. */
+  promedio?: number | null;
+  resenas?: number;
+}
 
 type EstadoGuardado = 'inactivo' | 'guardando' | 'guardado' | 'fallo';
 type EstadoAceptacion = 'inactivo' | 'procesando' | 'aceptado' | 'fallo';
@@ -66,6 +79,8 @@ interface Props {
    * textos. Su nombre es el que se muestra ("CRM", "Chatbots"…).
    */
   servicio?: { nombre: string; icono: string };
+  /** Quién lo construye, si eligió el diseño de un ingeniero: se ve junto a «¡Me gusta, sigamos!». */
+  autor?: AutorDiseno | null;
 }
 
 /**
@@ -89,6 +104,7 @@ export function WebPreview({
   conSeguimiento = false,
   precio = null,
   servicio,
+  autor = null,
 }: Props) {
   const [vista, setVista] = useState<Vista>('escritorio');
   const [copiado, setCopiado] = useState(false);
@@ -330,6 +346,19 @@ export function WebPreview({
                 · Precio referencial: el ingeniero te confirma el final según lo que necesites.
               </span>
             </p>
+          )}
+          {autor && onAceptar && !aceptado && (
+            <div className="mt-3 flex items-center gap-2.5">
+              <FotoIngeniero nombre={autor.nombre} foto={autor.foto} tamano={36} />
+              <p className="min-w-0 text-sm text-ink-muted">
+                Lo construye <span className="font-semibold text-ink">{autor.nombre}</span>
+                <Bandera pais={autor.pais} className="ml-1" />, quien
+                hizo este diseño
+                {autor.resenas !== undefined && (
+                  <span className="block text-xs text-ink-subtle">{textoEstrellas(autor.promedio ?? null, autor.resenas)}</span>
+                )}
+              </p>
+            </div>
           )}
         </div>
 
