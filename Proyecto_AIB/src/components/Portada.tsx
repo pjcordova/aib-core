@@ -21,6 +21,7 @@ import { FotoIngeniero, TarjetaIngeniero } from './ingenieros/TarjetaIngeniero';
 import { GaleriaDisenos } from './GaleriaDisenos';
 import { PAGINAS_SERVICIO } from '../lib/paginasServicio';
 import { PiePagina } from './ui/PiePagina';
+import { Bandera } from './ui/Bandera';
 import { AccesoCliente } from './AccesoCliente';
 import { hayAcceso, useAccesos } from '../lib/cuentaCliente';
 
@@ -532,7 +533,8 @@ function Destacado({ diseno, cargando }: { diseno: DisenoVitrina | undefined; ca
         <figcaption className="mt-3 flex items-center justify-center gap-2 text-xs text-ink-subtle">
           <FotoIngeniero nombre={diseno.ingeniero.nombre} foto={diseno.ingeniero.foto_url} tamano={24} />
           <span>
-            Diseño de <span className="font-medium text-ink-muted">{diseno.ingeniero.nombre.split(/\s+/)[0]}</span>
+            Diseño de <span className="font-medium text-ink-muted">{diseno.ingeniero.nombre.split(/\s+/)[0]}</span>{' '}
+            <Bandera pais={diseno.ingeniero.pais} />
             {diseno.precio_desde ? ` · desde ${solesEnteros(diseno.precio_desde)}` : ''}
             <span className="block font-medium text-ink-muted">Desliza dentro para recorrerlo ↕</span>
           </span>

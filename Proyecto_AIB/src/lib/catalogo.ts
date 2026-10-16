@@ -48,6 +48,8 @@ export interface IngenieroDePlantilla {
   es_admin: boolean;
   nombre: string | null;
   foto_url: string | null;
+  /** Código ISO de su país ('PE', 'AR', 'MX'…): se ve su bandera. */
+  pais?: string | null;
   promedio: number | null;
   resenas: number;
 }

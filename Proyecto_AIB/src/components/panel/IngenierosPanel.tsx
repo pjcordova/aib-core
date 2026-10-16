@@ -15,6 +15,7 @@ import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { primerosPasosIngenieros, textoFaltantes, type Paso } from '../../lib/primerosPasos';
 import { FormularioPerfil } from '../ingenieros/FormularioPerfil';
 import { FotoIngeniero } from '../ingenieros/TarjetaIngeniero';
+import { Bandera } from '../ui/Bandera';
 import { AvisosWhatsapp } from '../ingenieros/AvisosWhatsapp';
 import { TuPaginaPublica } from '../ingenieros/TuPaginaPublica';
 import { MisTrabajos } from '../ingenieros/MisTrabajos';
@@ -282,7 +283,9 @@ function FilaIngeniero({
         <FotoIngeniero nombre={ing.nombre} foto={ing.foto_url} tamano={48} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold text-ink">{ing.nombre}</p>
+            <p className="font-semibold text-ink">
+              {ing.nombre} <Bandera pais={ing.pais} />
+            </p>
             {ing.estado === 'pausado' && (
               <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-subtle">Pausado</span>
             )}

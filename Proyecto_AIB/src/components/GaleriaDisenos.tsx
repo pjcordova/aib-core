@@ -10,6 +10,7 @@ import { MiniVista } from './panel/MiniVista';
 import { FotoIngeniero } from './ingenieros/TarjetaIngeniero';
 import { InsigniaVerificado } from './ui/InsigniaVerificado';
 import { InsigniaPro } from './ui/InsigniaPro';
+import { Bandera } from './ui/Bandera';
 
 type Clave = Exclude<TipoServicio, 'otro'>;
 
@@ -100,7 +101,7 @@ function TarjetaDiseno({
         <div className="mt-3 flex items-center gap-2">
           <FotoIngeniero nombre={nombre} foto={d.ingeniero.foto_url} tamano={28} />
           <p className="min-w-0 text-xs text-ink-muted">
-            Lo construye <span className="font-medium text-ink">{nombre}</span>
+            Lo construye <span className="font-medium text-ink">{nombre}</span> <Bandera pais={d.ingeniero.pais} />
             {d.ingeniero.verificado && (
               <>
                 {' '}

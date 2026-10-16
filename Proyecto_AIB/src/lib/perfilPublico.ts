@@ -47,6 +47,8 @@ export interface PerfilPublico {
   ciudad: string | null;
   portafolio_url: string | null;
   foto_url: string | null;
+  /** Código ISO de su país ('PE', 'AR', 'MX'…): se ve su bandera. */
+  pais?: string | null;
   /** Tiene la insignia «Verificado». */
   verificado?: boolean;
   /** Tiene Pro o Negocio: insignia «Pro». */

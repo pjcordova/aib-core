@@ -50,6 +50,8 @@ export interface DatosPerfil {
   portafolio_url: string | null;
   foto_url: string | null;
   whatsapp: string | null;
+  /** Código ISO de su país ('PE', 'AR', 'MX'…): el cliente ve su bandera. */
+  pais: string | null;
 }
 
 export interface MiPerfil extends DatosPerfil {
@@ -80,6 +82,8 @@ export interface IngenieroPublico {
   ciudad: string | null;
   portafolio_url: string | null;
   foto_url: string | null;
+  /** Código ISO de su país ('PE', 'AR', 'MX'…): se ve su bandera. */
+  pais?: string | null;
   promedio: number | null;
   resenas: number;
   ultimas: ResenaPublica[];
@@ -117,7 +121,7 @@ export async function miPerfilIngeniero(): Promise<MiPerfil | null> {
   if (!user) return null;
   const { data, error } = await supabase
     .from('perfiles_ingeniero')
-    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, estado, servicios, servicios_otros, slug')
+    .select('nombre, titular, bio, especialidades, anios_experiencia, ciudad, portafolio_url, foto_url, whatsapp, pais, estado, servicios, servicios_otros, slug')
     .eq('user_id', user.id)
     .maybeSingle();
   if (error) {
@@ -140,6 +144,7 @@ export async function guardarPerfilIngeniero(
     p_portafolio: datos.portafolio_url,
     p_foto: datos.foto_url,
     p_whatsapp: datos.whatsapp,
+    p_pais: datos.pais,
   });
   if (error) {
     console.error('[AIB+] No se pudo guardar el perfil:', error.message);
@@ -235,6 +240,8 @@ export interface MiIngeniero {
   nombre: string;
   titular: string | null;
   foto_url: string | null;
+  /** Código ISO de su país ('PE', 'AR', 'MX'…): se ve su bandera. */
+  pais?: string | null;
   resena: { estrellas: number; comentario: string } | null;
 }
 

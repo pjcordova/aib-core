@@ -3,6 +3,7 @@ import { textoEstrellas, textoServicios, type IngenieroPublico } from '../../lib
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { InsigniaVerificado } from '../ui/InsigniaVerificado';
 import { InsigniaPro } from '../ui/InsigniaPro';
+import { Bandera } from '../ui/Bandera';
 
 const etiquetaRubro = (valor: string) => CATEGORIAS_NEGOCIO.find((c) => c.valor === valor)?.etiqueta ?? valor;
 
@@ -68,6 +69,7 @@ export function TarjetaIngeniero({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="truncate text-lg">{ingeniero.nombre}</h3>
+            <Bandera pais={ingeniero.pais} />
             {ingeniero.verificado && <InsigniaVerificado />}
             {ingeniero.destacado && <InsigniaPro />}
           </div>

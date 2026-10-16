@@ -25,6 +25,7 @@ export interface DisenoVitrina extends DisenoPublico {
   ingeniero: {
     nombre: string;
     foto_url: string | null;
+    pais?: string | null;
     slug: string | null;
     promedio: number | null;
     resenas: number;

@@ -11,6 +11,7 @@ import {
 } from '../../lib/ingenieros';
 import { CATEGORIAS_NEGOCIO } from '../../lib/plantillas';
 import { enlaceValido, normalizarEnlace } from '../../lib/portafolio';
+import { PAISES, paisDelNavegador } from '../../lib/paises';
 
 // ---------------------------------------------------------------------------
 // Perfil del ingeniero
@@ -30,6 +31,7 @@ const VACIO: DatosPerfil = {
   portafolio_url: null,
   foto_url: null,
   whatsapp: null,
+  pais: null,
 };
 
 interface Props {
@@ -40,7 +42,11 @@ interface Props {
 }
 
 export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
-  const [datos, setDatos] = useState<DatosPerfil>(inicial ?? VACIO);
+  // Sin país guardado, empieza con el que sugiere el navegador (o Perú).
+  const [datos, setDatos] = useState<DatosPerfil>(() => {
+    const base = inicial ?? VACIO;
+    return base.pais ? base : { ...base, pais: paisDelNavegador() ?? 'PE' };
+  });
   const [whatsapp, setWhatsapp] = useState(inicial?.whatsapp ?? '');
   const [anios, setAnios] = useState(inicial?.anios_experiencia != null ? String(inicial.anios_experiencia) : '');
   // Qué servicios ofrece (web, CRM, ERP…): se guardan aparte del perfil.
@@ -169,16 +175,29 @@ export function FormularioPerfil({ inicial, textoBoton, onGuardado }: Props) {
             autoComplete="name"
           />
         </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-muted">Ciudad (opcional)</span>
-          <input
-            className="field"
-            value={datos.ciudad ?? ''}
-            maxLength={60}
-            onChange={(e) => cambiar('ciudad', e.target.value)}
-            placeholder="Ej: Lima"
-          />
-        </label>
+        {/* El cliente ve la bandera de su país junto a su nombre. */}
+        <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-2">
+          <label className="block">
+            <span className="mb-1.5 block text-sm text-ink-muted">País</span>
+            <select className="field" value={datos.pais ?? 'PE'} onChange={(e) => cambiar('pais', e.target.value)}>
+              {PAISES.map((p) => (
+                <option key={p.codigo} value={p.codigo}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm text-ink-muted">Ciudad (opcional)</span>
+            <input
+              className="field"
+              value={datos.ciudad ?? ''}
+              maxLength={60}
+              onChange={(e) => cambiar('ciudad', e.target.value)}
+              placeholder="Ej: Lima"
+            />
+          </label>
+        </div>
       </div>
 
       <label className="block">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { dejarResena, miIngeniero, type MiIngeniero } from '../../lib/ingenieros';
 import { FotoIngeniero } from './TarjetaIngeniero';
+import { Bandera } from '../ui/Bandera';
 
 /**
  * En el seguimiento del cliente: quién le construye la web y, cuando ya está
@@ -50,7 +51,9 @@ export function TuIngeniero({ proyectoId, publicada }: { proyectoId: string; pub
         <FotoIngeniero nombre={ingeniero.nombre} foto={ingeniero.foto_url} tamano={44} />
         <div>
           <p className="text-[11px] tracking-wide text-ink-subtle uppercase">Tu ingeniero</p>
-          <p className="font-medium text-ink">{ingeniero.nombre}</p>
+          <p className="font-medium text-ink">
+            {ingeniero.nombre} <Bandera pais={ingeniero.pais} />
+          </p>
           {ingeniero.titular && <p className="text-xs text-ink-muted">{ingeniero.titular}</p>}
         </div>
       </div>
