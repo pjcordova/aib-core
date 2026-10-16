@@ -34,6 +34,19 @@ const DIBUJOS: Record<string, ReactNode> = {
   PE: vertical('#D91023', '#FFFFFF', '#D91023'),
   AR: [...franjas('#74ACDF', '#FFFFFF', '#74ACDF'), <circle key="sol" cx="15" cy="10" r="2" fill="#F6B40E" />],
   BO: franjas('#D52B1E', '#F9E300', '#007934'),
+  BR: [
+    <rect key="verde" width="30" height="20" fill="#009C3B" />,
+    <polygon key="rombo" points="15,2.2 27.4,10 15,17.8 2.6,10" fill="#FFDF00" />,
+    <circle key="globo" cx="15" cy="10" r="4.4" fill="#002776" />,
+    <path key="lema" d="M10.9 9.1 Q15 7.9 19.3 10.4" stroke="#FFFFFF" strokeWidth="0.9" fill="none" />,
+  ],
+  // La flor de cinco pétalos sobre rojo.
+  HK: [
+    <rect key="rojo" width="30" height="20" fill="#DE2910" />,
+    ...[0, 72, 144, 216, 288].map((giro) => (
+      <ellipse key={giro} cx="15" cy="6.9" rx="1.5" ry="3" fill="#FFFFFF" transform={`rotate(${giro} 15 10)`} />
+    )),
+  ],
   CL: [
     <rect key="rojo" width="30" height="20" fill="#D52B1E" />,
     <rect key="blanco" width="30" height="10" fill="#FFFFFF" />,
